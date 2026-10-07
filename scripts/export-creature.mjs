@@ -20,6 +20,8 @@
 //   --lods full,8000,3000|none     LOD chain, level 0 first ('full' = the unreduced skin, first only); none = one mesh
 //   --seamless                     idle and display as crossfaded loops (last key = first key, bit for bit)
 //   --seamless-blend <s>           crossfade length (default 1 s, at most half the clip)
+//   --no-reduce-skeleton           v3: keep every joint even over the profile's bone budget (the export then fails on
+//                                  bones); by default such a graph gets the fauna-composer-skeleton-1 reduced skeleton
 //   --brief <file.json>            take the target and budget from an asset brief (assets/briefs/creature-export-*.json):
 //                                  devices quest-3/quest-3s -> quest-3; geometry.maxTriangles/maxMaterials and
 //                                  textures.maxDimension may only tighten the profile; geometry.lodCount picks the
@@ -76,7 +78,7 @@ export function generatorSourceHash(repo = REPO, sources = CREATURE_EXPORT_GENER
 }
 
 export function parseArgs(argv) {
-  const out = {out: null, selections: [], motions: null, fps: undefined, gloss: undefined, forward: undefined, target: undefined, lods: undefined, seamless: false, seamlessBlend: undefined, brief: undefined};
+  const out = {out: null, selections: [], motions: null, fps: undefined, gloss: undefined, forward: undefined, target: undefined, lods: undefined, seamless: false, seamlessBlend: undefined, brief: undefined, reduceSkeleton: undefined};
   let count = null, prefix = null, archetype;
   for (let i = 0; i < argv.length; i++) {
     const flag = argv[i], value = () => { if (i + 1 >= argv.length) throw new Error(`${flag} needs a value`); return argv[++i]; };
@@ -100,6 +102,7 @@ export function parseArgs(argv) {
     else if (flag === '--seamless') out.seamless = true;
     else if (flag === '--seamless-blend') { out.seamlessBlend = Number(value()); if (!(Number.isFinite(out.seamlessBlend) && out.seamlessBlend > 0)) throw new Error('--seamless-blend must be a positive number of seconds'); }
     else if (flag === '--brief') out.brief = value();
+    else if (flag === '--no-reduce-skeleton') out.reduceSkeleton = false;
     else throw new Error(`unknown argument ${flag}`);
   }
   if ((count === null) !== (prefix === null)) throw new Error('--count and --seed-prefix go together');
@@ -190,6 +193,7 @@ export function buildCreatureFiles(sel, options = {}, sourceHash) {
   if (options.lods !== undefined) exportOptions.lods = options.lods;
   if (options.seamless) exportOptions.seamless = true;
   if (options.seamlessBlend !== undefined) exportOptions.seamlessBlend = options.seamlessBlend;
+  if (options.reduceSkeleton === false) exportOptions.reduceSkeleton = false;
   const {glb, report} = exportCreatureGlb(recipe, exportOptions);
   // profiled export (any v2 option): the report carries the target, the LOD rows and the budget
   const v2 = report.target !== undefined;
@@ -198,6 +202,10 @@ export function buildCreatureFiles(sel, options = {}, sourceHash) {
   const key = `${slug(label)}-${hex8(composerHash(report.recipeText))}`;
   const prov = provenance(report, key, source);
   const lodRows = v2 && report.lods ? report.lods.map(({sourceVertex, ...rest}) => rest) : null;
+  // v3: full and written joint counts, the rule, the collapsed joints and a hash of the full joint -> written joint mapping
+  const sk = v2 ? report.skeleton : null;
+  const skeleton = sk ? {version: sk.version, fullJoints: sk.fullJoints, joints: sk.joints, reduced: sk.reduced, stage: sk.stage, collapsed: sk.collapsed,
+    mappingSha256: sha256(JSON.stringify(sk.mapping)), skinError: sk.skinError} : null;
   const sidecar = {
     schema: CREATURE_EXPORT_SIDECAR_SCHEMA_V3,
     asset: {id: key, file: `${key}.glb`, bytes: glb.byteLength, sha256: sha256(glb)},
@@ -210,7 +218,7 @@ export function buildCreatureFiles(sel, options = {}, sourceHash) {
     playback: 'Clips marked seamless loop with LoopRepeat; the others are exact poseComposer windows whose end differs from the start by the listed seam: play them with LoopPingPong or crossfade. Walk is a treadmill: move the creature along the forward axis at travelSpeed.',
     ...(v2 ? {
       status: 'experimental: generated creature; topology, deformation and in-headset checks are not signed off',
-      target: report.target, budget: report.budget, lods: lodRows,
+      target: report.target, budget: report.budget, lods: lodRows, skeleton,
       lodPlayback: lodRows.length > 1 ? 'Level 0 is the scene mesh. Lower levels are skinned meshes on nodes outside the scene, listed by MSFT_lod on node 0 with MSFT_screencoverage hints; all levels share the skin and the clips. three.js: gltf.parser.getDependency(\'node\', id) for each id, then a THREE.LOD.' : null,
       seamlessPlayback: report.clips.some(c => c.method === 'crossfade') ? 'Clips with method crossfade loop exactly (last key = first key); inside the last crossfade.blendSeconds they blend into the pre-roll and are not poseComposer.' : null,
     } : {}),
@@ -237,6 +245,7 @@ export function buildCreatureFiles(sel, options = {}, sourceHash) {
       technical: v2
         ? ['assetctl validate passes', `${report.target} budget: level 0 at most ${report.budget.limits.maxTriangles} triangles, at most ${report.budget.limits.maxBones} joints, ${report.budget.limits.maxDrawCallsPerLevel} draw call per level, texture bytes at most ${report.budget.limits.maxTextureBytes}`,
           ...(lodRows.length > 1 ? [`LOD levels at most ${lodRows.map(l => l.target ?? l.triangles).join(' / ')} triangles`] : []),
+          ...(skeleton?.reduced ? [`reduced skeleton ${skeleton.version}: ${skeleton.fullJoints} -> ${skeleton.joints} joints, skin error ${(100 * skeleton.skinError.fraction).toFixed(3)} % of the body diagonal (bound ${100 * skeleton.skinError.bound} %)`] : []),
           'clips match poseComposer at their keys (crossfaded loops: outside the blend)', 'second export byte-identical']
         : ['assetctl validate passes', `at most ${COMPOSER_BUDGET.maxBones} joints`, 'clips match poseComposer at their keys', 'second export byte-identical'],
       ...(v2 && report.target === 'quest-3' ? {runtime: ['experimental until an in-headset check on Quest 3 passes']} : {}),
@@ -284,7 +293,7 @@ export function main(argv = process.argv.slice(2)) {
     seen.add(built.key);
     const status = built.files.map(([name, bytes]) => `${name}:${writeOnce(join(dir, name), bytes)}`);
     const m = built.sidecar.mesh;
-    rows.push({key: built.key, triangles: m.triangles, bones: m.bones, bytes: built.sidecar.asset.bytes,
+    rows.push({key: built.key, triangles: m.triangles, bones: m.bones, ...(built.sidecar.skeleton?.reduced ? {fullJoints: built.sidecar.skeleton.fullJoints} : {}), bytes: built.sidecar.asset.bytes,
       ...(built.sidecar.lods ? {lods: built.sidecar.lods.map(l => l.triangles).join('/')} : {}),
       clips: built.sidecar.clips.map(c => `${c.motion} ${c.duration.toFixed(2)}s${c.method === 'crossfade' ? ' (crossfade loop)' : c.seamless ? '' : ' (seam)'}`).join(', '), status: status.join(' ')});
   }
