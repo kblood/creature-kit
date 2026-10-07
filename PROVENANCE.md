@@ -13,7 +13,7 @@
 - **Owner decision:** Kasper, 2026-10-07: the creature kit is its own repo, consumed by Atlas (universe-atlas
   `docs/owner-decisions-2026-10-04.md`, "Owner answers 2026-10-07", A18 Q6). Plan:
   `C:/LLM/IWSDK/docs/creature-kit-extraction-plan-2026-10-04.md`.
-- **Licence:** `NOASSERTION`. Owner question A13 (licence) is still open; nothing here chooses one.
+- **Licence:** `UNLICENSED` (private, all rights reserved), the same as the rest of the owner's projects. Owner decision A13, 2026-10-07: "Den licens skal være den samme som resten".
 
 ## Per-file record (at the import commit)
 
