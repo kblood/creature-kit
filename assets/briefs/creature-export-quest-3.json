@@ -1,0 +1,41 @@
+{
+  "schema": "https://iwsdk.local/schemas/asset-brief/v1",
+  "id": "atlas-creature-export-quest-3",
+  "kind": "creature",
+  "purpose": "TEMPLATE: export-creature.mjs --brief input for a Quest 3 composer creature export (creature export v2, docs/creature-export-v2.md). It sets the target device, the level-0 triangle budget and the LOD count; the exporter writes a per-creature brief with the measured numbers next to each GLB.",
+  "target": {"engine": "IWSDK", "project": "universe-atlas", "devices": ["quest-3"], "metersPerUnit": 1, "runtimeCoordinates": "right-handed-y-up"},
+  "artDirection": {
+    "summary": "Stylised procedural animal from the universe-atlas fauna composer: one skinned vertex-coloured mesh per LOD level, composer skeleton, baked motion clips.",
+    "styleTags": ["procedural", "vertex-colour", "skinned", "quest-3", "template"]
+  },
+  "deliverables": [
+    {"type": "runtime", "path": "<key>.glb", "format": "glb", "required": true},
+    {"type": "animation", "path": "<key>.glb", "format": "glb-embedded-clips", "required": true},
+    {"type": "lod", "path": "<key>.glb", "format": "glb-msft-lod", "required": true},
+    {"type": "manifest", "path": "<key>.creature.json", "format": "creature-export-sidecar-2", "required": true}
+  ],
+  "constraints": {
+    "geometry": {"maxTriangles": 8000, "maxMaterials": 1, "lodCount": 2, "collision": "none"}
+  },
+  "acceptance": {
+    "visual": ["animal intact at normal viewing size at every LOD level", "no skinning tears while the clips play", "clips visibly play"],
+    "technical": [
+      "assetctl validate passes",
+      "quest-3 budget: level 0 at most 8000 triangles, at most 80 joints, 1 material, 1 draw call per level; LOD levels at most 8000 / 3000 / 1000 triangles; an export over budget fails with exit code 3 and writes nothing",
+      "clips match poseComposer at their keys (crossfaded loops: outside the blend)",
+      "second export byte-identical"
+    ],
+    "runtime": ["experimental until an in-headset check on Quest 3 passes"]
+  },
+  "provenance": {
+    "sourceType": "generated",
+    "generator": {"provider": "universe-atlas", "model": "fauna-composer", "checkpoint": null, "version": "fauna-composer-export-2", "workflow": "scripts/export-creature.mjs"},
+    "prompt": "TEMPLATE: the recipe text of each exported creature is its whole input; the per-creature brief written by the exporter carries it.",
+    "seed": "template",
+    "sourceUrl": null,
+    "sourceConsent": "not-applicable",
+    "parents": [],
+    "license": {"expression": "NOASSERTION", "attribution": null, "restrictions": ["Template only; each exported creature carries its own provenance. Licence open until the owner answers the creature-kit licence question."]},
+    "notes": "Procedural; no external inputs (no model checkpoint, texture, scan or third-party asset). The brief may tighten the quest-3 profile budget (8000 triangles, 80 joints, 1 material, 4 MiB textures, 1 draw call per level) but never loosen it."
+  }
+}

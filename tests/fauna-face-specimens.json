@@ -1,0 +1,965 @@
+{
+ "schema": "fauna-face-specimens-1",
+ "note": "Frozen review specimens for the fauna face/eye round. Each text is the recipe text encoded at the capture commit, so later runs decode the SAME animals through recipe migration even though the generators change. Build from text; source is provenance only (the close-up page can rebuild presets live with --live-presets).",
+ "capturedAt": {
+  "commit": "a9e3654b3d630ede39c43394bca38bbbaffcd958",
+  "recipeVersion": 2,
+  "date": "2026-10-02",
+  "fauna_src_equal_to": "c80c8dd (git diff c80c8dd..HEAD -- src/fauna* is empty)"
+ },
+ "count": 71,
+ "specimens": [
+  {
+   "name": "preset-dinosaur",
+   "group": "preset",
+   "face": "jaws",
+   "why": "Dinosaur-like",
+   "source": {
+    "kind": "preset",
+    "id": "dinosaur"
+   },
+   "text": "v2*layout_biped*legPairs_1*bodyLength_1.6*girth_1.05*posture_0.12*torso_deep-chest*neckLength_0.45*head_jaws*headSize_1.35*snoutLength_1*horns_crest*legs_digitigrade*legLength_1.05*feet_claw*arms_small*armLength_0.38*hands_claw*tail_reptile*tailLength_1.6*armor_none*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_reptile*colorSeed_17*pattern_auto*marks_16*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0"
+  },
+  {
+   "name": "preset-turtle",
+   "group": "preset",
+   "face": "beak",
+   "why": "Turtle-like",
+   "source": {
+    "kind": "preset",
+    "id": "turtle"
+   },
+   "text": "v2*layout_sprawled*legPairs_2*bodyLength_0.55*girth_1.1*posture_0*torso_flat*neckLength_0.35*head_beak*headSize_0.9*snoutLength_0.25*horns_none*legs_pillar*legLength_0.42*feet_pad*arms_none*armLength_0.6*hands_hand*tail_stub*tailLength_0.25*armor_dome*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_reptile*colorSeed_211*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0"
+  },
+  {
+   "name": "preset-giraffe",
+   "group": "preset",
+   "face": "muzzle",
+   "why": "Giraffe-like",
+   "source": {
+    "kind": "preset",
+    "id": "giraffe"
+   },
+   "text": "v2*layout_quadruped*legPairs_2*bodyLength_1.5*girth_0.9*posture_0.7*torso_slim*neckLength_1.5*head_muzzle*headSize_0.85*snoutLength_0.8*horns_ossicones*legs_unguligrade*legLength_1.45*feet_hoof*arms_none*armLength_0.6*hands_hand*tail_tufted*tailLength_0.6*armor_none*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_savanna*colorSeed_37*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0.3*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0"
+  },
+  {
+   "name": "preset-bird",
+   "group": "preset",
+   "face": "beak",
+   "why": "Bird-like",
+   "source": {
+    "kind": "preset",
+    "id": "bird"
+   },
+   "text": "v2*layout_biped*legPairs_1*bodyLength_0.22*girth_1.2*posture_0.45*torso_barrel*neckLength_0.45*head_beak*headSize_1.2*snoutLength_0.55*horns_none*legs_digitigrade*legLength_0.85*feet_claw*arms_none*armLength_0.6*hands_hand*tail_feather-fan*tailLength_0.9*armor_none*wings_feathered*wingSpan_3.2*trunk_none*trunkLength_0.8*palette_plumage*colorSeed_5*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0.6*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0"
+  },
+  {
+   "name": "preset-ostrich",
+   "group": "preset",
+   "face": "beak",
+   "why": "Ostrich-like",
+   "source": {
+    "kind": "preset",
+    "id": "ostrich"
+   },
+   "text": "v2*layout_biped*legPairs_1*bodyLength_0.8*girth_1.1*posture_0.3*torso_barrel*neckLength_1.5*head_beak*headSize_0.75*snoutLength_0.45*horns_none*legs_digitigrade*legLength_1.8*feet_claw*arms_none*armLength_0.6*hands_hand*tail_feather-fan*tailLength_0.4*armor_none*wings_feathered*wingSpan_1.3*trunk_none*trunkLength_0.8*palette_ink*colorSeed_88*pattern_auto*marks_1*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0.8*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0"
+  },
+  {
+   "name": "preset-rhinoceros",
+   "group": "preset",
+   "face": "muzzle",
+   "why": "Rhinoceros-like",
+   "source": {
+    "kind": "preset",
+    "id": "rhinoceros"
+   },
+   "text": "v2*layout_quadruped*legPairs_2*bodyLength_2.1*girth_1.4*posture_0.1*torso_barrel*neckLength_0.2*head_muzzle*headSize_1.15*snoutLength_0.75*horns_nasal*legs_pillar*legLength_0.5*feet_pad*arms_none*armLength_0.6*hands_hand*tail_tufted*tailLength_0.25*armor_osteoderms*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_slate*colorSeed_61*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.3*dimorphism_0.2*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0"
+  },
+  {
+   "name": "preset-ape",
+   "group": "preset",
+   "face": "flat-face",
+   "why": "Ape-like",
+   "source": {
+    "kind": "preset",
+    "id": "ape"
+   },
+   "text": "v2*layout_biped*legPairs_1*bodyLength_0.6*girth_1.15*posture_0.85*torso_deep-chest*neckLength_0.1*head_flat-face*headSize_1.1*snoutLength_0.35*horns_none*legs_plantigrade*legLength_1.05*feet_hand*arms_grasping*armLength_1.25*hands_hand*tail_none*tailLength_0*armor_none*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_ink*colorSeed_143*pattern_auto*marks_2*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0.5*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0"
+  },
+  {
+   "name": "preset-worm",
+   "group": "preset",
+   "face": "blunt",
+   "why": "Worm-like",
+   "source": {
+    "kind": "preset",
+    "id": "worm"
+   },
+   "text": "v2*layout_limbless*legPairs_0*bodyLength_1.1*girth_1*posture_0*torso_annulated*neckLength_0*head_blunt*headSize_1*snoutLength_0.2*horns_none*legs_pillar*legLength_0.8*feet_pad*arms_none*armLength_0.6*hands_hand*tail_none*tailLength_0*armor_none*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_earth*colorSeed_401*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0"
+  },
+  {
+   "name": "preset-centipede",
+   "group": "preset",
+   "face": "mandibles",
+   "why": "Centipede-like",
+   "source": {
+    "kind": "preset",
+    "id": "centipede"
+   },
+   "text": "v2*layout_many-legged*legPairs_11*bodyLength_0.55*girth_0.9*posture_0*torso_segmented*neckLength_0*head_mandibles*headSize_1*snoutLength_0.3*horns_none*legs_arthropod*legLength_0.2*feet_spike*arms_none*armLength_0.6*hands_hand*tail_none*tailLength_0*armor_bands*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_ink*colorSeed_909*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0"
+  },
+  {
+   "name": "preset-shelled-giraffe-bird",
+   "group": "preset",
+   "face": "beak",
+   "why": "Hybrid: shelled giraffe-bird",
+   "source": {
+    "kind": "preset",
+    "id": "shelled-giraffe-bird"
+   },
+   "text": "v2*layout_biped*legPairs_1*bodyLength_0.9*girth_1.2*posture_0.3*torso_barrel*neckLength_1.3*head_beak*headSize_0.9*snoutLength_0.5*horns_ossicones*legs_unguligrade*legLength_1.3*feet_hoof*arms_none*armLength_0.6*hands_hand*tail_stub*tailLength_0.3*armor_dome*wings_feathered*wingSpan_1.6*trunk_none*trunkLength_0.8*palette_savanna*colorSeed_2718*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0"
+  },
+  {
+   "name": "preset-trunked-centipede",
+   "group": "preset",
+   "face": "muzzle",
+   "why": "Hybrid: trunked centipede",
+   "source": {
+    "kind": "preset",
+    "id": "trunked-centipede"
+   },
+   "text": "v2*layout_many-legged*legPairs_7*bodyLength_1.4*girth_1.3*posture_0*torso_segmented*neckLength_0.3*head_muzzle*headSize_1*snoutLength_0.4*horns_nasal*legs_pillar*legLength_0.24*feet_pad*arms_none*armLength_0.6*hands_hand*tail_tufted*tailLength_0.2*armor_bands*wings_none*wingSpan_2*trunk_trunk*trunkLength_1*palette_slate*colorSeed_3141*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0"
+  },
+  {
+   "name": "preset-winged-ape-rhino",
+   "group": "preset",
+   "face": "flat-face",
+   "why": "Hybrid: winged ape-rhino",
+   "source": {
+    "kind": "preset",
+    "id": "winged-ape-rhino"
+   },
+   "text": "v2*layout_quadruped*legPairs_2*bodyLength_1.2*girth_1.25*posture_0.25*torso_deep-chest*neckLength_0.15*head_flat-face*headSize_1.1*snoutLength_0.5*horns_nasal*legs_plantigrade*legLength_0.7*feet_hand*arms_grasping*armLength_0.8*hands_hand*tail_club*tailLength_0.8*armor_none*wings_membrane*wingSpan_2.4*trunk_none*trunkLength_0.8*palette_earth*colorSeed_1618*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0"
+  },
+  {
+   "name": "wild-composer-16-beak-trunk-nasal",
+   "group": "wild",
+   "face": "beak",
+   "why": "wild hybrid: beak+trunk+nasal",
+   "source": {
+    "kind": "wild",
+    "seed": "composer-16",
+    "generator": "randomComposerRecipe (composer-random-v1)"
+   },
+   "text": "v2*layout_biped*legPairs_1*bodyLength_1.75*girth_1.24*posture_0.64*torso_slim*neckLength_0.68*head_beak*headSize_0.96*snoutLength_0.56*horns_nasal*legs_pillar*legLength_0.64*feet_hand*arms_grasping*armLength_1.08*hands_hand*tail_reptile*tailLength_0.21*armor_plates*wings_none*wingSpan_2.88*trunk_trunk*trunkLength_0.91*palette_savanna*colorSeed_1883*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0*variability_0*allometry_0*individualSeed_0*sex_auto*maturity_1*condition_0"
+  },
+  {
+   "name": "wild-composer-8-beak-trunk-paired",
+   "group": "wild",
+   "face": "beak",
+   "why": "wild hybrid: beak+trunk+paired",
+   "source": {
+    "kind": "wild",
+    "seed": "composer-8",
+    "generator": "randomComposerRecipe (composer-random-v1)"
+   },
+   "text": "v2*layout_biped*legPairs_1*bodyLength_0.48*girth_1.25*posture_0.77*torso_slim*neckLength_0.46*head_beak*headSize_0.8*snoutLength_0.69*horns_paired*legs_digitigrade*legLength_1.41*feet_hoof*arms_none*armLength_0.88*hands_hand*tail_none*tailLength_0*armor_none*wings_membrane*wingSpan_2.67*trunk_trunk*trunkLength_0.5*palette_plumage*colorSeed_2067*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0*variability_0*allometry_0*individualSeed_0*sex_auto*maturity_1*condition_0"
+  },
+  {
+   "name": "wild-composer-43-mandibles-trunk",
+   "group": "wild",
+   "face": "mandibles",
+   "why": "wild hybrid: mandibles+trunk",
+   "source": {
+    "kind": "wild",
+    "seed": "composer-43",
+    "generator": "randomComposerRecipe (composer-random-v1)"
+   },
+   "text": "v2*layout_biped*legPairs_1*bodyLength_1.38*girth_1.15*posture_0.5*torso_deep-chest*neckLength_0.8*head_mandibles*headSize_0.72*snoutLength_0.38*horns_none*legs_pillar*legLength_1.28*feet_paw*arms_none*armLength_1.1*hands_pincer*tail_reptile*tailLength_1.58*armor_dome*wings_none*wingSpan_1.14*trunk_trunk*trunkLength_0.76*palette_slate*colorSeed_1941*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0*variability_0*allometry_0*individualSeed_0*sex_auto*maturity_1*condition_0"
+  },
+  {
+   "name": "wild-composer-40-flat-face-trunk-nasal",
+   "group": "wild",
+   "face": "flat-face",
+   "why": "wild hybrid: flat-face+trunk+nasal",
+   "source": {
+    "kind": "wild",
+    "seed": "composer-40",
+    "generator": "randomComposerRecipe (composer-random-v1)"
+   },
+   "text": "v2*layout_limbless*legPairs_0*bodyLength_1.34*girth_1.08*posture_0.98*torso_annulated*neckLength_0*head_flat-face*headSize_0.71*snoutLength_0.51*horns_nasal*legs_plantigrade*legLength_1.22*feet_hoof*arms_grasping*armLength_0.99*hands_claw*tail_feather-fan*tailLength_0.49*armor_plates*wings_feathered*wingSpan_1.88*trunk_trunk*trunkLength_0.53*palette_ink*colorSeed_6186*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0*variability_0*allometry_0*individualSeed_0*sex_auto*maturity_1*condition_0"
+  },
+  {
+   "name": "wild-composer-31-flat-face-ossicones",
+   "group": "wild",
+   "face": "flat-face",
+   "why": "wild hybrid: flat-face+ossicones",
+   "source": {
+    "kind": "wild",
+    "seed": "composer-31",
+    "generator": "randomComposerRecipe (composer-random-v1)"
+   },
+   "text": "v2*layout_biped*legPairs_1*bodyLength_0.86*girth_0.95*posture_0.12*torso_deep-chest*neckLength_0.4*head_flat-face*headSize_1.04*snoutLength_1.02*horns_ossicones*legs_digitigrade*legLength_0.61*feet_spike*arms_grasping*armLength_0.59*hands_pincer*tail_stub*tailLength_0.21*armor_dome*wings_feathered*wingSpan_2.89*trunk_none*trunkLength_0.72*palette_savanna*colorSeed_255*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0*variability_0*allometry_0*individualSeed_0*sex_auto*maturity_1*condition_0"
+  },
+  {
+   "name": "wild-composer-1-flat-face-crest",
+   "group": "wild",
+   "face": "flat-face",
+   "why": "wild hybrid: flat-face+crest",
+   "source": {
+    "kind": "wild",
+    "seed": "composer-1",
+    "generator": "randomComposerRecipe (composer-random-v1)"
+   },
+   "text": "v2*layout_biped*legPairs_1*bodyLength_1.68*girth_1.31*posture_0.7*torso_slim*neckLength_0.17*head_flat-face*headSize_1*snoutLength_0.22*horns_crest*legs_pillar*legLength_1.07*feet_hoof*arms_grasping*armLength_0.32*hands_hand*tail_stub*tailLength_1.36*armor_none*wings_membrane*wingSpan_2.63*trunk_none*trunkLength_0.83*palette_earth*colorSeed_7886*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0*variability_0*allometry_0*individualSeed_0*sex_auto*maturity_1*condition_0"
+  },
+  {
+   "name": "wild-composer-5-blunt-paired",
+   "group": "wild",
+   "face": "blunt",
+   "why": "wild hybrid: blunt+paired",
+   "source": {
+    "kind": "wild",
+    "seed": "composer-5",
+    "generator": "randomComposerRecipe (composer-random-v1)"
+   },
+   "text": "v2*layout_sprawled*legPairs_2*bodyLength_1.45*girth_1.01*posture_0.36*torso_deep-chest*neckLength_0.93*head_blunt*headSize_1.29*snoutLength_0.37*horns_paired*legs_plantigrade*legLength_0.61*feet_pad*arms_none*armLength_0.98*hands_pincer*tail_club*tailLength_1.54*armor_dome*wings_membrane*wingSpan_1.63*trunk_none*trunkLength_0.91*palette_savanna*colorSeed_3698*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0*variability_0*allometry_0*individualSeed_0*sex_auto*maturity_1*condition_0"
+  },
+  {
+   "name": "wild-composer-26-blunt-trunk",
+   "group": "wild",
+   "face": "blunt",
+   "why": "wild hybrid: blunt+trunk",
+   "source": {
+    "kind": "wild",
+    "seed": "composer-26",
+    "generator": "randomComposerRecipe (composer-random-v1)"
+   },
+   "text": "v2*layout_quadruped*legPairs_2*bodyLength_0.36*girth_1.08*posture_0.01*torso_flat*neckLength_0.8*head_blunt*headSize_1.27*snoutLength_0.51*horns_none*legs_plantigrade*legLength_1.14*feet_paw*arms_none*armLength_1.15*hands_pincer*tail_reptile*tailLength_0.58*armor_none*wings_membrane*wingSpan_1.96*trunk_trunk*trunkLength_0.62*palette_savanna*colorSeed_6232*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0*variability_0*allometry_0*individualSeed_0*sex_auto*maturity_1*condition_0"
+  },
+  {
+   "name": "wild-composer-51-mandibles-nasal",
+   "group": "wild",
+   "face": "mandibles",
+   "why": "wild hybrid: mandibles+nasal",
+   "source": {
+    "kind": "wild",
+    "seed": "composer-51",
+    "generator": "randomComposerRecipe (composer-random-v1)"
+   },
+   "text": "v2*layout_limbless*legPairs_0*bodyLength_1.04*girth_1.21*posture_0.96*torso_annulated*neckLength_0*head_mandibles*headSize_0.95*snoutLength_0.66*horns_nasal*legs_pillar*legLength_1.02*feet_hand*arms_none*armLength_1.2*hands_claw*tail_tufted*tailLength_0.93*armor_none*wings_none*wingSpan_1.52*trunk_none*trunkLength_0.4*palette_slate*colorSeed_7162*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0*variability_0*allometry_0*individualSeed_0*sex_auto*maturity_1*condition_0"
+  },
+  {
+   "name": "custom-ape-paired-horns",
+   "group": "custom",
+   "face": "flat-face",
+   "why": "ape + paired horns",
+   "source": {
+    "kind": "custom",
+    "preset": "ape",
+    "override": {
+     "horns": "paired"
+    }
+   },
+   "text": "v2*layout_biped*legPairs_1*bodyLength_0.6*girth_1.15*posture_0.85*torso_deep-chest*neckLength_0.1*head_flat-face*headSize_1.1*snoutLength_0.35*horns_paired*legs_plantigrade*legLength_1.05*feet_hand*arms_grasping*armLength_1.25*hands_hand*tail_none*tailLength_0*armor_none*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_ink*colorSeed_143*pattern_auto*marks_2*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0.5*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0"
+  },
+  {
+   "name": "custom-bird-nasal-horns",
+   "group": "custom",
+   "face": "beak",
+   "why": "bird + nasal horn",
+   "source": {
+    "kind": "custom",
+    "preset": "bird",
+    "override": {
+     "horns": "nasal"
+    }
+   },
+   "text": "v2*layout_biped*legPairs_1*bodyLength_0.22*girth_1.2*posture_0.45*torso_barrel*neckLength_0.45*head_beak*headSize_1.2*snoutLength_0.55*horns_nasal*legs_digitigrade*legLength_0.85*feet_claw*arms_none*armLength_0.6*hands_hand*tail_feather-fan*tailLength_0.9*armor_none*wings_feathered*wingSpan_3.2*trunk_none*trunkLength_0.8*palette_plumage*colorSeed_5*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0.6*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0"
+  },
+  {
+   "name": "custom-giraffe-trunk",
+   "group": "custom",
+   "face": "muzzle",
+   "why": "giraffe + trunk",
+   "source": {
+    "kind": "custom",
+    "preset": "giraffe",
+    "override": {
+     "trunk": "trunk",
+     "trunkLength": 0.9
+    }
+   },
+   "text": "v2*layout_quadruped*legPairs_2*bodyLength_1.5*girth_0.9*posture_0.7*torso_slim*neckLength_1.5*head_muzzle*headSize_0.85*snoutLength_0.8*horns_ossicones*legs_unguligrade*legLength_1.45*feet_hoof*arms_none*armLength_0.6*hands_hand*tail_tufted*tailLength_0.6*armor_none*wings_none*wingSpan_2*trunk_trunk*trunkLength_0.9*palette_savanna*colorSeed_37*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0.3*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0"
+  },
+  {
+   "name": "custom-rhinoceros-trunk",
+   "group": "custom",
+   "face": "muzzle",
+   "why": "rhinoceros + trunk",
+   "source": {
+    "kind": "custom",
+    "preset": "rhinoceros",
+    "override": {
+     "trunk": "trunk",
+     "trunkLength": 0.9
+    }
+   },
+   "text": "v2*layout_quadruped*legPairs_2*bodyLength_2.1*girth_1.4*posture_0.1*torso_barrel*neckLength_0.2*head_muzzle*headSize_1.15*snoutLength_0.75*horns_nasal*legs_pillar*legLength_0.5*feet_pad*arms_none*armLength_0.6*hands_hand*tail_tufted*tailLength_0.25*armor_osteoderms*wings_none*wingSpan_2*trunk_trunk*trunkLength_0.9*palette_slate*colorSeed_61*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.3*dimorphism_0.2*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0"
+  },
+  {
+   "name": "plausible-pachyderm-1",
+   "group": "plausible",
+   "face": "muzzle",
+   "why": "coherent pachyderm",
+   "source": {
+    "kind": "plausible",
+    "seed": "face-pachyderm-1",
+    "archetype": "pachyderm",
+    "generator": "composer-species-v1"
+   },
+   "text": "v2*layout_quadruped*legPairs_2*bodyLength_2.14*girth_1.5*posture_0.16*torso_barrel*neckLength_0.18*head_muzzle*headSize_1.11*snoutLength_0.57*horns_none*legs_pillar*legLength_0.59*feet_hoof*arms_none*armLength_0.6*hands_hand*tail_tufted*tailLength_0.3*armor_none*wings_none*wingSpan_1.86*trunk_trunk*trunkLength_1.01*palette_grey*colorSeed_4846*pattern_plain*marks_0*patternScale_1.05*patternContrast_0.65*countershade_0.35*dimorphism_0.5*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0"
+  },
+  {
+   "name": "plausible-primate-1",
+   "group": "plausible",
+   "face": "flat-face",
+   "why": "coherent primate",
+   "source": {
+    "kind": "plausible",
+    "seed": "face-primate-1",
+    "archetype": "primate",
+    "generator": "composer-species-v1"
+   },
+   "text": "v2*layout_biped*legPairs_1*bodyLength_0.52*girth_1.18*posture_0.8*torso_deep-chest*neckLength_0.12*head_flat-face*headSize_1.18*snoutLength_0.23*horns_none*legs_plantigrade*legLength_0.99*feet_hand*arms_grasping*armLength_1.11*hands_hand*tail_none*tailLength_0*armor_none*wings_none*wingSpan_1.57*trunk_none*trunkLength_0.8*palette_ink*colorSeed_6263*pattern_plain*marks_0*patternScale_0.95*patternContrast_0.65*countershade_0.35*dimorphism_0.65*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0"
+  },
+  {
+   "name": "plausible-ungulate-grazer-2",
+   "group": "plausible",
+   "face": "muzzle",
+   "why": "coherent ungulate-grazer",
+   "source": {
+    "kind": "plausible",
+    "seed": "face-ungulate-grazer-2",
+    "archetype": "ungulate-grazer",
+    "generator": "composer-species-v1"
+   },
+   "text": "v2*layout_quadruped*legPairs_2*bodyLength_1.74*girth_1.16*posture_0.15*torso_deep-chest*neckLength_0.53*head_muzzle*headSize_0.89*snoutLength_0.91*horns_paired*legs_unguligrade*legLength_1.27*feet_hoof*arms_none*armLength_0.6*hands_hand*tail_stub*tailLength_0.41*armor_none*wings_none*wingSpan_1.97*trunk_none*trunkLength_0.8*palette_grey*colorSeed_8721*pattern_plain*marks_64*patternScale_1.25*patternContrast_0.95*countershade_0.7*dimorphism_0.6*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0"
+  },
+  {
+   "name": "plausible-theropod-3",
+   "group": "plausible",
+   "face": "jaws",
+   "why": "coherent theropod",
+   "source": {
+    "kind": "plausible",
+    "seed": "face-theropod-3",
+    "archetype": "theropod",
+    "generator": "composer-species-v1"
+   },
+   "text": "v2*layout_biped*legPairs_1*bodyLength_1.67*girth_1*posture_0.2*torso_slim*neckLength_0.4*head_jaws*headSize_0.94*snoutLength_0.74*horns_crest*legs_digitigrade*legLength_1.22*feet_claw*arms_grasping*armLength_0.43*hands_claw*tail_reptile*tailLength_1.67*armor_osteoderms*wings_none*wingSpan_1.68*trunk_none*trunkLength_0.8*palette_ochre*colorSeed_1027*pattern_stripes*marks_0*patternScale_1.15*patternContrast_0.75*countershade_0.8*dimorphism_0.3*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0"
+  },
+  {
+   "name": "eye-giraffe",
+   "group": "eye",
+   "face": "muzzle",
+   "why": "grazer muzzle: horizontal pupil expected",
+   "source": {
+    "kind": "preset",
+    "id": "giraffe"
+   },
+   "text": "v2*layout_quadruped*legPairs_2*bodyLength_1.5*girth_0.9*posture_0.7*torso_slim*neckLength_1.5*head_muzzle*headSize_0.85*snoutLength_0.8*horns_ossicones*legs_unguligrade*legLength_1.45*feet_hoof*arms_none*armLength_0.6*hands_hand*tail_tufted*tailLength_0.6*armor_none*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_savanna*colorSeed_37*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0.3*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0"
+  },
+  {
+   "name": "eye-cat",
+   "group": "eye",
+   "face": "muzzle",
+   "why": "small paw carnivore muzzle (bodyLength < 0.9): vertical slit expected",
+   "source": {
+    "kind": "plausible",
+    "seed": "face-cursorial-carnivore-12",
+    "archetype": "cursorial-carnivore",
+    "override": {
+     "snoutLength": 0.42
+    }
+   },
+   "text": "v2*layout_quadruped*legPairs_2*bodyLength_0.72*girth_0.95*posture_0.22*torso_deep-chest*neckLength_0.56*head_muzzle*headSize_0.98*snoutLength_0.42*horns_none*legs_digitigrade*legLength_0.91*feet_paw*arms_none*armLength_0.6*hands_hand*tail_tufted*tailLength_0.5*armor_none*wings_none*wingSpan_1.78*trunk_none*trunkLength_0.8*palette_tawny*colorSeed_9366*pattern_rosettes*marks_0*patternScale_1*patternContrast_0.95*countershade_0.7*dimorphism_0.15*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0"
+  },
+  {
+   "name": "eye-crocodile",
+   "group": "eye",
+   "face": "jaws",
+   "why": "sprawled jaws: vertical slit expected",
+   "source": {
+    "kind": "plausible",
+    "seed": "face-sprawler-lizard-10",
+    "archetype": "sprawler-lizard",
+    "override": {
+     "bodyLength": 1.8,
+     "snoutLength": 1.15,
+     "armor": "osteoderms"
+    }
+   },
+   "text": "v2*layout_sprawled*legPairs_2*bodyLength_1.8*girth_1*posture_0.7*torso_flat*neckLength_0.3*head_jaws*headSize_1.17*snoutLength_1.15*horns_none*legs_plantigrade*legLength_0.54*feet_claw*arms_none*armLength_0.6*hands_hand*tail_reptile*tailLength_1.29*armor_osteoderms*wings_none*wingSpan_1.81*trunk_none*trunkLength_0.8*palette_reptile*colorSeed_4159*pattern_spots*marks_16*patternScale_1.4*patternContrast_1.1*countershade_0.8*dimorphism_0.05*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0"
+  },
+  {
+   "name": "eye-bird",
+   "group": "eye",
+   "face": "beak",
+   "why": "beak: round pupil expected",
+   "source": {
+    "kind": "preset",
+    "id": "bird"
+   },
+   "text": "v2*layout_biped*legPairs_1*bodyLength_0.22*girth_1.2*posture_0.45*torso_barrel*neckLength_0.45*head_beak*headSize_1.2*snoutLength_0.55*horns_none*legs_digitigrade*legLength_0.85*feet_claw*arms_none*armLength_0.6*hands_hand*tail_feather-fan*tailLength_0.9*armor_none*wings_feathered*wingSpan_3.2*trunk_none*trunkLength_0.8*palette_plumage*colorSeed_5*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0.6*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0"
+  },
+  {
+   "name": "eye-ape",
+   "group": "eye",
+   "face": "flat-face",
+   "why": "flat face on an ink coat: round pupil, eye must read on a dark coat",
+   "source": {
+    "kind": "preset",
+    "id": "ape"
+   },
+   "text": "v2*layout_biped*legPairs_1*bodyLength_0.6*girth_1.15*posture_0.85*torso_deep-chest*neckLength_0.1*head_flat-face*headSize_1.1*snoutLength_0.35*horns_none*legs_plantigrade*legLength_1.05*feet_hand*arms_grasping*armLength_1.25*hands_hand*tail_none*tailLength_0*armor_none*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_ink*colorSeed_143*pattern_auto*marks_2*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0.5*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0"
+  },
+  {
+   "name": "eye-centipede",
+   "group": "eye",
+   "face": "mandibles",
+   "why": "mandibles on an ink coat: compound eyes expected",
+   "source": {
+    "kind": "preset",
+    "id": "centipede"
+   },
+   "text": "v2*layout_many-legged*legPairs_11*bodyLength_0.55*girth_0.9*posture_0*torso_segmented*neckLength_0*head_mandibles*headSize_1*snoutLength_0.3*horns_none*legs_arthropod*legLength_0.2*feet_spike*arms_none*armLength_0.6*hands_hand*tail_none*tailLength_0*armor_bands*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_ink*colorSeed_909*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0"
+  },
+  {
+   "name": "eye-giraffe-juvenile",
+   "group": "eye-juvenile",
+   "face": "muzzle",
+   "why": "grazer muzzle: horizontal pupil expected; juvenile (maturity 0.3): relatively larger eyes",
+   "source": {
+    "kind": "preset",
+    "id": "giraffe",
+    "override": {
+     "maturity": 0.3
+    }
+   },
+   "text": "v2*layout_quadruped*legPairs_2*bodyLength_1.5*girth_0.9*posture_0.7*torso_slim*neckLength_1.5*head_muzzle*headSize_0.85*snoutLength_0.8*horns_ossicones*legs_unguligrade*legLength_1.45*feet_hoof*arms_none*armLength_0.6*hands_hand*tail_tufted*tailLength_0.6*armor_none*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_savanna*colorSeed_37*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0.3*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_0.3*condition_0"
+  },
+  {
+   "name": "eye-cat-juvenile",
+   "group": "eye-juvenile",
+   "face": "muzzle",
+   "why": "small paw carnivore muzzle (bodyLength < 0.9): vertical slit expected; juvenile (maturity 0.3): relatively larger eyes",
+   "source": {
+    "kind": "plausible",
+    "seed": "face-cursorial-carnivore-12",
+    "archetype": "cursorial-carnivore",
+    "override": {
+     "snoutLength": 0.42,
+     "maturity": 0.3
+    }
+   },
+   "text": "v2*layout_quadruped*legPairs_2*bodyLength_0.72*girth_0.95*posture_0.22*torso_deep-chest*neckLength_0.56*head_muzzle*headSize_0.98*snoutLength_0.42*horns_none*legs_digitigrade*legLength_0.91*feet_paw*arms_none*armLength_0.6*hands_hand*tail_tufted*tailLength_0.5*armor_none*wings_none*wingSpan_1.78*trunk_none*trunkLength_0.8*palette_tawny*colorSeed_9366*pattern_rosettes*marks_0*patternScale_1*patternContrast_0.95*countershade_0.7*dimorphism_0.15*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_0.3*condition_0"
+  },
+  {
+   "name": "eye-crocodile-juvenile",
+   "group": "eye-juvenile",
+   "face": "jaws",
+   "why": "sprawled jaws: vertical slit expected; juvenile (maturity 0.3): relatively larger eyes",
+   "source": {
+    "kind": "plausible",
+    "seed": "face-sprawler-lizard-10",
+    "archetype": "sprawler-lizard",
+    "override": {
+     "bodyLength": 1.8,
+     "snoutLength": 1.15,
+     "armor": "osteoderms",
+     "maturity": 0.3
+    }
+   },
+   "text": "v2*layout_sprawled*legPairs_2*bodyLength_1.8*girth_1*posture_0.7*torso_flat*neckLength_0.3*head_jaws*headSize_1.17*snoutLength_1.15*horns_none*legs_plantigrade*legLength_0.54*feet_claw*arms_none*armLength_0.6*hands_hand*tail_reptile*tailLength_1.29*armor_osteoderms*wings_none*wingSpan_1.81*trunk_none*trunkLength_0.8*palette_reptile*colorSeed_4159*pattern_spots*marks_16*patternScale_1.4*patternContrast_1.1*countershade_0.8*dimorphism_0.05*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_0.3*condition_0"
+  },
+  {
+   "name": "eye-bird-juvenile",
+   "group": "eye-juvenile",
+   "face": "beak",
+   "why": "beak: round pupil expected; juvenile (maturity 0.3): relatively larger eyes",
+   "source": {
+    "kind": "preset",
+    "id": "bird",
+    "override": {
+     "maturity": 0.3
+    }
+   },
+   "text": "v2*layout_biped*legPairs_1*bodyLength_0.22*girth_1.2*posture_0.45*torso_barrel*neckLength_0.45*head_beak*headSize_1.2*snoutLength_0.55*horns_none*legs_digitigrade*legLength_0.85*feet_claw*arms_none*armLength_0.6*hands_hand*tail_feather-fan*tailLength_0.9*armor_none*wings_feathered*wingSpan_3.2*trunk_none*trunkLength_0.8*palette_plumage*colorSeed_5*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0.6*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_0.3*condition_0"
+  },
+  {
+   "name": "eye-ape-juvenile",
+   "group": "eye-juvenile",
+   "face": "flat-face",
+   "why": "flat face on an ink coat: round pupil, eye must read on a dark coat; juvenile (maturity 0.3): relatively larger eyes",
+   "source": {
+    "kind": "preset",
+    "id": "ape",
+    "override": {
+     "maturity": 0.3
+    }
+   },
+   "text": "v2*layout_biped*legPairs_1*bodyLength_0.6*girth_1.15*posture_0.85*torso_deep-chest*neckLength_0.1*head_flat-face*headSize_1.1*snoutLength_0.35*horns_none*legs_plantigrade*legLength_1.05*feet_hand*arms_grasping*armLength_1.25*hands_hand*tail_none*tailLength_0*armor_none*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_ink*colorSeed_143*pattern_auto*marks_2*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0.5*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_0.3*condition_0"
+  },
+  {
+   "name": "eye-centipede-juvenile",
+   "group": "eye-juvenile",
+   "face": "mandibles",
+   "why": "mandibles on an ink coat: compound eyes expected; juvenile (maturity 0.3): relatively larger eyes",
+   "source": {
+    "kind": "preset",
+    "id": "centipede",
+    "override": {
+     "maturity": 0.3
+    }
+   },
+   "text": "v2*layout_many-legged*legPairs_11*bodyLength_0.55*girth_0.9*posture_0*torso_segmented*neckLength_0*head_mandibles*headSize_1*snoutLength_0.3*horns_none*legs_arthropod*legLength_0.2*feet_spike*arms_none*armLength_0.6*hands_hand*tail_none*tailLength_0*armor_bands*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_ink*colorSeed_909*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_0.3*condition_0"
+  },
+  {
+   "name": "cat-raptor-bird",
+   "group": "eye-catalogue",
+   "face": "beak",
+   "why": "raptor eyes on a bird: forward gaze, shaded brow shelf [built: raptor, gold; stand-in round]",
+   "source": {
+    "kind": "preset",
+    "id": "bird",
+    "override": {
+     "eyes": "raptor"
+    }
+   },
+   "text": "v4*layout_biped*legPairs_1*bodyLength_0.22*girth_1.2*posture_0.45*torso_barrel*neckLength_0.45*head_beak*headSize_1.2*snoutLength_0.55*horns_none*legs_digitigrade*legLength_0.85*feet_claw*arms_none*armLength_0.6*hands_hand*tail_feather-fan*tailLength_0.9*armor_none*wings_feathered*wingSpan_3.2*trunk_none*trunkLength_0.8*palette_plumage*colorSeed_5*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0.6*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0*eyes_raptor*iris_auto*eyeRules_2"
+  },
+  {
+   "name": "cat-owl-bird",
+   "group": "eye-catalogue",
+   "face": "beak",
+   "why": "owl eyes on a bird: huge frontal eyes, facial disc [built: owl, orange; stand-in round]",
+   "source": {
+    "kind": "preset",
+    "id": "bird",
+    "override": {
+     "eyes": "owl"
+    }
+   },
+   "text": "v4*layout_biped*legPairs_1*bodyLength_0.22*girth_1.2*posture_0.45*torso_barrel*neckLength_0.45*head_beak*headSize_1.2*snoutLength_0.55*horns_none*legs_digitigrade*legLength_0.85*feet_claw*arms_none*armLength_0.6*hands_hand*tail_feather-fan*tailLength_0.9*armor_none*wings_feathered*wingSpan_3.2*trunk_none*trunkLength_0.8*palette_plumage*colorSeed_5*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0.6*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0*eyes_owl*iris_auto*eyeRules_2"
+  },
+  {
+   "name": "cat-cat-carnivore",
+   "group": "eye-catalogue",
+   "face": "muzzle",
+   "why": "auto under the current rules on a small carnivore muzzle: cat slit [built: cat, green; stand-in vertical-slit]",
+   "source": {
+    "kind": "coherent",
+    "seed": "14",
+    "generator": "coherentComposerSpecies (composer-species-v1 + composer-species-eyes-1)",
+    "archetype": "cursorial-carnivore",
+    "override": {}
+   },
+   "text": "v4*layout_quadruped*legPairs_2*bodyLength_0.85*girth_0.87*posture_0.13*torso_deep-chest*neckLength_0.43*head_muzzle*headSize_0.97*snoutLength_1*horns_none*legs_digitigrade*legLength_0.95*feet_paw*arms_none*armLength_0.6*hands_hand*tail_tufted*tailLength_0.73*armor_none*wings_none*wingSpan_1.35*trunk_none*trunkLength_0.8*palette_rufous*colorSeed_734*pattern_plain*marks_1*patternScale_1.1*patternContrast_0.8*countershade_0.6*dimorphism_0.3*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0*eyes_auto*iris_auto*eyeRules_2"
+  },
+  {
+   "name": "cat-gecko-lizard",
+   "group": "eye-catalogue",
+   "face": "jaws",
+   "why": "coherent lizard eye flavour: gecko (beaded slit, lidless) [built: gecko, pale; stand-in vertical-slit]",
+   "source": {
+    "kind": "coherent",
+    "seed": "4",
+    "generator": "coherentComposerSpecies (composer-species-v1 + composer-species-eyes-1)",
+    "archetype": "sprawler-lizard",
+    "override": {}
+   },
+   "text": "v4*layout_sprawled*legPairs_2*bodyLength_0.39*girth_1.15*posture_0.7*torso_flat*neckLength_0.25*head_jaws*headSize_0.93*snoutLength_0.88*horns_none*legs_pillar*legLength_0.5*feet_claw*arms_none*armLength_0.6*hands_hand*tail_reptile*tailLength_1.66*armor_none*wings_none*wingSpan_1.7*trunk_none*trunkLength_0.8*palette_olive*colorSeed_4250*pattern_bands*marks_16*patternScale_1.4*patternContrast_0.75*countershade_0.75*dimorphism_0.1*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0*eyes_gecko*iris_auto*eyeRules_2"
+  },
+  {
+   "name": "cat-frog-lizard",
+   "group": "eye-catalogue",
+   "face": "jaws",
+   "why": "coherent lizard eye flavour: frog (bulging dorsal eyes) [built: frog, amber; stand-in horizontal]",
+   "source": {
+    "kind": "coherent",
+    "seed": "623",
+    "generator": "coherentComposerSpecies (composer-species-v1 + composer-species-eyes-1)",
+    "archetype": "sprawler-lizard",
+    "override": {}
+   },
+   "text": "v4*layout_sprawled*legPairs_2*bodyLength_1*girth_1.02*posture_0.7*torso_slim*neckLength_0.28*head_jaws*headSize_0.98*snoutLength_0.59*horns_none*legs_plantigrade*legLength_0.44*feet_hand*arms_none*armLength_0.6*hands_hand*tail_reptile*tailLength_1.54*armor_none*wings_none*wingSpan_1.13*trunk_none*trunkLength_0.8*palette_olive*colorSeed_5776*pattern_spots*marks_0*patternScale_0.95*patternContrast_1.15*countershade_0.75*dimorphism_0.25*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0*eyes_frog*iris_auto*eyeRules_2"
+  },
+  {
+   "name": "cat-chameleon-lizard",
+   "group": "eye-catalogue",
+   "face": "jaws",
+   "why": "coherent lizard eye flavour: chameleon (turret eyes) [built: chameleon, dark-brown; stand-in round]",
+   "source": {
+    "kind": "coherent",
+    "seed": "33",
+    "generator": "coherentComposerSpecies (composer-species-v1 + composer-species-eyes-1)",
+    "archetype": "sprawler-lizard",
+    "override": {}
+   },
+   "text": "v4*layout_sprawled*legPairs_2*bodyLength_1*girth_0.97*posture_0.7*torso_flat*neckLength_0.3*head_jaws*headSize_1.12*snoutLength_1*horns_none*legs_plantigrade*legLength_0.53*feet_hand*arms_none*armLength_0.6*hands_hand*tail_reptile*tailLength_1.34*armor_none*wings_none*wingSpan_1.15*trunk_none*trunkLength_0.8*palette_olive*colorSeed_6159*pattern_bands*marks_0*patternScale_1.5*patternContrast_1*countershade_0.65*dimorphism_0.15*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0*eyes_chameleon*iris_auto*eyeRules_2"
+  },
+  {
+   "name": "cat-crocodile-sprawler",
+   "group": "eye-catalogue",
+   "face": "jaws",
+   "why": "auto under the current rules on large sprawled jaws: crocodile [built: crocodile, grey-green; stand-in vertical-slit]",
+   "source": {
+    "kind": "coherent",
+    "seed": "75",
+    "generator": "coherentComposerSpecies (composer-species-v1 + composer-species-eyes-1)",
+    "archetype": "sprawler-lizard",
+    "override": {}
+   },
+   "text": "v4*layout_sprawled*legPairs_2*bodyLength_1.27*girth_1.08*posture_0.7*torso_slim*neckLength_0.24*head_jaws*headSize_0.99*snoutLength_0.85*horns_crest*legs_pillar*legLength_0.36*feet_hand*arms_none*armLength_0.6*hands_hand*tail_reptile*tailLength_1.27*armor_none*wings_none*wingSpan_1.14*trunk_none*trunkLength_0.8*palette_ochre*colorSeed_7409*pattern_dorsal-stripe*marks_0*patternScale_1.15*patternContrast_0.7*countershade_0.8*dimorphism_0.3*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0*eyes_auto*iris_auto*eyeRules_2"
+  },
+  {
+   "name": "cat-sclera-ape",
+   "group": "eye-catalogue",
+   "face": "flat-face",
+   "why": "human-like white sclera on a flat face, ink coat [built: sclera, dark-brown; stand-in round]",
+   "source": {
+    "kind": "preset",
+    "id": "ape",
+    "override": {
+     "eyes": "sclera"
+    }
+   },
+   "text": "v4*layout_biped*legPairs_1*bodyLength_0.6*girth_1.15*posture_0.85*torso_deep-chest*neckLength_0.1*head_flat-face*headSize_1.1*snoutLength_0.35*horns_none*legs_plantigrade*legLength_1.05*feet_hand*arms_grasping*armLength_1.25*hands_hand*tail_none*tailLength_0*armor_none*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_ink*colorSeed_143*pattern_auto*marks_2*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0.5*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0*eyes_sclera*iris_auto*eyeRules_2"
+  },
+  {
+   "name": "cat-nocturnal-primate",
+   "group": "eye-catalogue",
+   "face": "flat-face",
+   "why": "coherent primate eye flavour: nocturnal (huge pupils) [built: nocturnal, amber; stand-in round]",
+   "source": {
+    "kind": "coherent",
+    "seed": "57",
+    "generator": "coherentComposerSpecies (composer-species-v1 + composer-species-eyes-1)",
+    "archetype": "primate",
+    "override": {}
+   },
+   "text": "v4*layout_biped*legPairs_1*bodyLength_0.58*girth_1.05*posture_0.75*torso_deep-chest*neckLength_0.11*head_flat-face*headSize_1.16*snoutLength_0.28*horns_none*legs_plantigrade*legLength_1.1*feet_hand*arms_grasping*armLength_1.09*hands_hand*tail_tufted*tailLength_0.88*armor_none*wings_none*wingSpan_1.63*trunk_none*trunkLength_0.8*palette_grey*colorSeed_2985*pattern_plain*marks_32*patternScale_1.1*patternContrast_0.75*countershade_0.55*dimorphism_0.3*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0*eyes_nocturnal*iris_auto*eyeRules_2"
+  },
+  {
+   "name": "cat-cephalopod-ape",
+   "group": "eye-catalogue",
+   "face": "flat-face",
+   "why": "cuttlefish W pupil, copper iris (appended colour) [built: cephalopod, copper; stand-in horizontal]",
+   "source": {
+    "kind": "preset",
+    "id": "ape",
+    "override": {
+     "eyes": "cephalopod",
+     "iris": "copper"
+    }
+   },
+   "text": "v4*layout_biped*legPairs_1*bodyLength_0.6*girth_1.15*posture_0.85*torso_deep-chest*neckLength_0.1*head_flat-face*headSize_1.1*snoutLength_0.35*horns_none*legs_plantigrade*legLength_1.05*feet_hand*arms_grasping*armLength_1.25*hands_hand*tail_none*tailLength_0*armor_none*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_ink*colorSeed_143*pattern_auto*marks_2*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0.5*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0*eyes_cephalopod*iris_copper*eyeRules_2"
+  },
+  {
+   "name": "cat-insect-centipede",
+   "group": "eye-catalogue",
+   "face": "mandibles",
+   "why": "insect compound eyes and ocelli on mandibles [built: insect; stand-in compound]",
+   "source": {
+    "kind": "preset",
+    "id": "centipede",
+    "override": {
+     "eyes": "insect"
+    }
+   },
+   "text": "v4*layout_many-legged*legPairs_11*bodyLength_0.55*girth_0.9*posture_0*torso_segmented*neckLength_0*head_mandibles*headSize_1*snoutLength_0.3*horns_none*legs_arthropod*legLength_0.2*feet_spike*arms_none*armLength_0.6*hands_hand*tail_none*tailLength_0*armor_bands*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_ink*colorSeed_909*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0*eyes_insect*iris_auto*eyeRules_2"
+  },
+  {
+   "name": "cat-spider-4pairs",
+   "group": "eye-catalogue",
+   "face": "mandibles",
+   "why": "auto under the current rules on mandibles with 4 leg pairs: spider (8 simple eyes) [built: spider; stand-in compound]",
+   "source": {
+    "kind": "preset",
+    "id": "centipede",
+    "override": {
+     "legPairs": 4
+    }
+   },
+   "text": "v4*layout_many-legged*legPairs_4*bodyLength_0.55*girth_0.9*posture_0*torso_segmented*neckLength_0*head_mandibles*headSize_1*snoutLength_0.3*horns_none*legs_arthropod*legLength_0.2*feet_spike*arms_none*armLength_0.6*hands_hand*tail_none*tailLength_0*armor_bands*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_ink*colorSeed_909*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0*eyes_auto*iris_auto*eyeRules_2"
+  },
+  {
+   "name": "cat-stalk-worm",
+   "group": "eye-catalogue",
+   "face": "blunt",
+   "why": "stalk eyes on a worm (snail) [built: stalk; stand-in eyespot]",
+   "source": {
+    "kind": "preset",
+    "id": "worm",
+    "override": {
+     "eyes": "stalk"
+    }
+   },
+   "text": "v4*layout_limbless*legPairs_0*bodyLength_1.1*girth_1*posture_0*torso_annulated*neckLength_0*head_blunt*headSize_1*snoutLength_0.2*horns_none*legs_pillar*legLength_0.8*feet_pad*arms_none*armLength_0.6*hands_hand*tail_none*tailLength_0*armor_none*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_earth*colorSeed_401*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0*eyes_stalk*iris_auto*eyeRules_2"
+  },
+  {
+   "name": "odd-cephalopod-horse",
+   "group": "eye-odd",
+   "face": "muzzle",
+   "why": "odd: cuttlefish W pupil on a horse-like muzzle, blue iris [built: cephalopod, blue; stand-in horizontal]",
+   "source": {
+    "kind": "preset",
+    "id": "giraffe",
+    "override": {
+     "eyes": "cephalopod",
+     "iris": "blue"
+    }
+   },
+   "text": "v4*layout_quadruped*legPairs_2*bodyLength_1.5*girth_0.9*posture_0.7*torso_slim*neckLength_1.5*head_muzzle*headSize_0.85*snoutLength_0.8*horns_ossicones*legs_unguligrade*legLength_1.45*feet_hoof*arms_none*armLength_0.6*hands_hand*tail_tufted*tailLength_0.6*armor_none*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_savanna*colorSeed_37*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0.3*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0*eyes_cephalopod*iris_blue*eyeRules_2"
+  },
+  {
+   "name": "odd-owl-rhino",
+   "group": "eye-odd",
+   "face": "muzzle",
+   "why": "odd: owl eyes on a rhino (dark coat) [built: owl, orange; stand-in round]",
+   "source": {
+    "kind": "preset",
+    "id": "rhinoceros",
+    "override": {
+     "eyes": "owl"
+    }
+   },
+   "text": "v4*layout_quadruped*legPairs_2*bodyLength_2.1*girth_1.4*posture_0.1*torso_barrel*neckLength_0.2*head_muzzle*headSize_1.15*snoutLength_0.75*horns_nasal*legs_pillar*legLength_0.5*feet_pad*arms_none*armLength_0.6*hands_hand*tail_tufted*tailLength_0.25*armor_osteoderms*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_slate*colorSeed_61*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.3*dimorphism_0.2*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0*eyes_owl*iris_auto*eyeRules_2"
+  },
+  {
+   "name": "odd-cat-centipede",
+   "group": "eye-odd",
+   "face": "mandibles",
+   "why": "odd: a lidded camera eye on mandibles (mandibles-camera profile) [built: cat, grey-green; stand-in vertical-slit]",
+   "source": {
+    "kind": "preset",
+    "id": "centipede",
+    "override": {
+     "eyes": "cat",
+     "iris": "grey-green"
+    }
+   },
+   "text": "v4*layout_many-legged*legPairs_11*bodyLength_0.55*girth_0.9*posture_0*torso_segmented*neckLength_0*head_mandibles*headSize_1*snoutLength_0.3*horns_none*legs_arthropod*legLength_0.2*feet_spike*arms_none*armLength_0.6*hands_hand*tail_none*tailLength_0*armor_bands*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_ink*colorSeed_909*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0*eyes_cat*iris_grey-green*eyeRules_2"
+  },
+  {
+   "name": "odd-sclera-worm",
+   "group": "eye-odd",
+   "face": "blunt",
+   "why": "odd: a lidded camera eye on a worm head (blunt-camera profile) [built: sclera, brown; stand-in round]",
+   "source": {
+    "kind": "preset",
+    "id": "worm",
+    "override": {
+     "eyes": "sclera"
+    }
+   },
+   "text": "v4*layout_limbless*legPairs_0*bodyLength_1.1*girth_1*posture_0*torso_annulated*neckLength_0*head_blunt*headSize_1*snoutLength_0.2*horns_none*legs_pillar*legLength_0.8*feet_pad*arms_none*armLength_0.6*hands_hand*tail_none*tailLength_0*armor_none*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_earth*colorSeed_401*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0*eyes_sclera*iris_auto*eyeRules_2"
+  },
+  {
+   "name": "odd-eyespot-giraffe",
+   "group": "eye-odd",
+   "face": "muzzle",
+   "why": "odd: eyespots on a muzzle (stood in by an iris-less round eye at the face size until EC2) [built: eyespot; stand-in round]",
+   "source": {
+    "kind": "preset",
+    "id": "giraffe",
+    "override": {
+     "eyes": "eyespot"
+    }
+   },
+   "text": "v4*layout_quadruped*legPairs_2*bodyLength_1.5*girth_0.9*posture_0.7*torso_slim*neckLength_1.5*head_muzzle*headSize_0.85*snoutLength_0.8*horns_ossicones*legs_unguligrade*legLength_1.45*feet_hoof*arms_none*armLength_0.6*hands_hand*tail_tufted*tailLength_0.6*armor_none*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_savanna*colorSeed_37*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0.3*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0*eyes_eyespot*iris_auto*eyeRules_2"
+  },
+  {
+   "name": "odd-stalk-dinosaur",
+   "group": "eye-odd",
+   "face": "jaws",
+   "why": "odd: stalk eyes on jaws (stood in by a compound bulb until EC2) [built: stalk; stand-in compound]",
+   "source": {
+    "kind": "preset",
+    "id": "dinosaur",
+    "override": {
+     "eyes": "stalk"
+    }
+   },
+   "text": "v4*layout_biped*legPairs_1*bodyLength_1.6*girth_1.05*posture_0.12*torso_deep-chest*neckLength_0.45*head_jaws*headSize_1.35*snoutLength_1*horns_crest*legs_digitigrade*legLength_1.05*feet_claw*arms_small*armLength_0.38*hands_claw*tail_reptile*tailLength_1.6*armor_none*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_reptile*colorSeed_17*pattern_auto*marks_16*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0*eyes_stalk*iris_auto*eyeRules_2"
+  },
+  {
+   "name": "odd-insect-bird",
+   "group": "eye-odd",
+   "face": "beak",
+   "why": "odd: compound eyes on a beak [built: insect; stand-in compound]",
+   "source": {
+    "kind": "preset",
+    "id": "bird",
+    "override": {
+     "eyes": "insect"
+    }
+   },
+   "text": "v4*layout_biped*legPairs_1*bodyLength_0.22*girth_1.2*posture_0.45*torso_barrel*neckLength_0.45*head_beak*headSize_1.2*snoutLength_0.55*horns_none*legs_digitigrade*legLength_0.85*feet_claw*arms_none*armLength_0.6*hands_hand*tail_feather-fan*tailLength_0.9*armor_none*wings_feathered*wingSpan_3.2*trunk_none*trunkLength_0.8*palette_plumage*colorSeed_5*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0.6*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0*eyes_insect*iris_auto*eyeRules_2"
+  },
+  {
+   "name": "odd-earlier-rules-worm",
+   "group": "eye-odd",
+   "face": "blunt",
+   "why": "Earlier eye rules (eyeRules 1): horizontal chosen on a worm is built as eyespots and disclosed [built: eyespot; stand-in eyespot]",
+   "source": {
+    "kind": "preset",
+    "id": "worm",
+    "override": {
+     "eyes": "horizontal",
+     "eyeRules": 1
+    }
+   },
+   "text": "v4*layout_limbless*legPairs_0*bodyLength_1.1*girth_1*posture_0*torso_annulated*neckLength_0*head_blunt*headSize_1*snoutLength_0.2*horns_none*legs_pillar*legLength_0.8*feet_pad*arms_none*armLength_0.6*hands_hand*tail_none*tailLength_0*armor_none*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_earth*colorSeed_401*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0*eyes_horizontal*iris_auto*eyeRules_1"
+  },
+  {
+   "name": "odd-wild-33",
+   "group": "eye-odd",
+   "face": "flat-face",
+   "why": "wild seed 33: rare unusual eye kind owl from the hash pass [built: owl, yellow; stand-in round]",
+   "source": {
+    "kind": "wild",
+    "seed": "33",
+    "generator": "randomComposerRecipe (composer-random-v1 + composer-wild-eyes-1)"
+   },
+   "text": "v4*layout_biped*legPairs_1*bodyLength_0.8*girth_0.76*posture_0.58*torso_deep-chest*neckLength_0.64*head_flat-face*headSize_0.84*snoutLength_0.16*horns_none*legs_unguligrade*legLength_1.13*feet_claw*arms_none*armLength_0.7*hands_pincer*tail_club*tailLength_0.59*armor_plates*wings_none*wingSpan_1.49*trunk_none*trunkLength_0.83*palette_slate*colorSeed_3329*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0*variability_0*allometry_0*individualSeed_0*sex_auto*maturity_1*condition_0*eyes_owl*iris_auto*eyeRules_2"
+  },
+  {
+   "name": "odd-wild-81",
+   "group": "eye-odd",
+   "face": "beak",
+   "why": "wild seed 81: rare unusual eye kind cephalopod from the hash pass [built: cephalopod, gold; stand-in horizontal]",
+   "source": {
+    "kind": "wild",
+    "seed": "81",
+    "generator": "randomComposerRecipe (composer-random-v1 + composer-wild-eyes-1)"
+   },
+   "text": "v4*layout_quadruped*legPairs_2*bodyLength_2.38*girth_1.29*posture_0.6*torso_barrel*neckLength_0.71*head_beak*headSize_0.73*snoutLength_0.15*horns_none*legs_digitigrade*legLength_0.89*feet_hoof*arms_none*armLength_1.15*hands_hand*tail_reptile*tailLength_0.85*armor_plates*wings_none*wingSpan_1.63*trunk_none*trunkLength_0.66*palette_plumage*colorSeed_3016*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0*variability_0*allometry_0*individualSeed_0*sex_auto*maturity_1*condition_0*eyes_cephalopod*iris_auto*eyeRules_2"
+  },
+  {
+   "name": "odd-wild-139",
+   "group": "eye-odd",
+   "face": "mandibles",
+   "why": "wild seed 139: rare unusual eye kind crocodile from the hash pass [built: crocodile, grey-green; stand-in vertical-slit]",
+   "source": {
+    "kind": "wild",
+    "seed": "139",
+    "generator": "randomComposerRecipe (composer-random-v1 + composer-wild-eyes-1)"
+   },
+   "text": "v4*layout_quadruped*legPairs_2*bodyLength_1.11*girth_0.84*posture_0.58*torso_flat*neckLength_0.05*head_mandibles*headSize_0.95*snoutLength_0.75*horns_none*legs_pillar*legLength_0.49*feet_spike*arms_grasping*armLength_0.49*hands_pincer*tail_none*tailLength_0*armor_dome*wings_membrane*wingSpan_1.47*trunk_none*trunkLength_1.05*palette_savanna*colorSeed_168*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0*variability_0*allometry_0*individualSeed_0*sex_auto*maturity_1*condition_0*eyes_crocodile*iris_auto*eyeRules_2"
+  },
+  {
+   "name": "upgrade-v3-eyespot-giraffe",
+   "group": "eye-upgrade",
+   "face": "muzzle",
+   "why": "old v3 link that explicitly chose eyespot on a muzzle face (the face round built the auto eye and disclosed it); opens with the current rules, which build the chosen kind (EC1 review round 3)",
+   "source": {
+    "kind": "v3-text",
+    "encoder": "07036b0 encodeComposerRecipe",
+    "id": "giraffe",
+    "override": {
+     "eyes": "eyespot"
+    }
+   },
+   "text": "v3*layout_quadruped*legPairs_2*bodyLength_1.5*girth_0.9*posture_0.7*torso_slim*neckLength_1.5*head_muzzle*headSize_0.85*snoutLength_0.8*horns_ossicones*legs_unguligrade*legLength_1.45*feet_hoof*arms_none*armLength_0.6*hands_hand*tail_tufted*tailLength_0.6*armor_none*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_savanna*colorSeed_37*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0.3*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0*eyes_eyespot*iris_auto"
+  },
+  {
+   "name": "upgrade-before-eyespot-giraffe",
+   "group": "eye-upgrade",
+   "face": "muzzle",
+   "why": "the same link under Earlier eye rules (eyeRules 1 = the face round's build, byte-identical): what the old link showed before the upgrade",
+   "source": {
+    "kind": "v3-text+eyeRules1",
+    "id": "giraffe",
+    "override": {
+     "eyes": "eyespot",
+     "eyeRules": 1
+    }
+   },
+   "text": "v4*layout_quadruped*legPairs_2*bodyLength_1.5*girth_0.9*posture_0.7*torso_slim*neckLength_1.5*head_muzzle*headSize_0.85*snoutLength_0.8*horns_ossicones*legs_unguligrade*legLength_1.45*feet_hoof*arms_none*armLength_0.6*hands_hand*tail_tufted*tailLength_0.6*armor_none*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_savanna*colorSeed_37*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0.3*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0*eyes_eyespot*iris_auto*eyeRules_1"
+  },
+  {
+   "name": "upgrade-v3-compound-giraffe",
+   "group": "eye-upgrade",
+   "face": "muzzle",
+   "why": "old v3 link that explicitly chose compound on a muzzle face (the face round built the auto eye and disclosed it); opens with the current rules, which build the chosen kind (EC1 review round 3)",
+   "source": {
+    "kind": "v3-text",
+    "encoder": "07036b0 encodeComposerRecipe",
+    "id": "giraffe",
+    "override": {
+     "eyes": "compound"
+    }
+   },
+   "text": "v3*layout_quadruped*legPairs_2*bodyLength_1.5*girth_0.9*posture_0.7*torso_slim*neckLength_1.5*head_muzzle*headSize_0.85*snoutLength_0.8*horns_ossicones*legs_unguligrade*legLength_1.45*feet_hoof*arms_none*armLength_0.6*hands_hand*tail_tufted*tailLength_0.6*armor_none*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_savanna*colorSeed_37*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0.3*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0*eyes_compound*iris_auto"
+  },
+  {
+   "name": "upgrade-before-compound-giraffe",
+   "group": "eye-upgrade",
+   "face": "muzzle",
+   "why": "the same link under Earlier eye rules (eyeRules 1 = the face round's build, byte-identical): what the old link showed before the upgrade",
+   "source": {
+    "kind": "v3-text+eyeRules1",
+    "id": "giraffe",
+    "override": {
+     "eyes": "compound",
+     "eyeRules": 1
+    }
+   },
+   "text": "v4*layout_quadruped*legPairs_2*bodyLength_1.5*girth_0.9*posture_0.7*torso_slim*neckLength_1.5*head_muzzle*headSize_0.85*snoutLength_0.8*horns_ossicones*legs_unguligrade*legLength_1.45*feet_hoof*arms_none*armLength_0.6*hands_hand*tail_tufted*tailLength_0.6*armor_none*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_savanna*colorSeed_37*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0.3*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0*eyes_compound*iris_auto*eyeRules_1"
+  },
+  {
+   "name": "upgrade-v3-round-centipede",
+   "group": "eye-upgrade",
+   "face": "mandibles",
+   "why": "old v3 link that explicitly chose round on a mandibles face (the face round built the auto eye and disclosed it); opens with the current rules, which build the chosen kind (EC1 review round 3)",
+   "source": {
+    "kind": "v3-text",
+    "encoder": "07036b0 encodeComposerRecipe",
+    "id": "centipede",
+    "override": {
+     "eyes": "round"
+    }
+   },
+   "text": "v3*layout_many-legged*legPairs_11*bodyLength_0.55*girth_0.9*posture_0*torso_segmented*neckLength_0*head_mandibles*headSize_1*snoutLength_0.3*horns_none*legs_arthropod*legLength_0.2*feet_spike*arms_none*armLength_0.6*hands_hand*tail_none*tailLength_0*armor_bands*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_ink*colorSeed_909*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0*eyes_round*iris_auto"
+  },
+  {
+   "name": "upgrade-before-round-centipede",
+   "group": "eye-upgrade",
+   "face": "mandibles",
+   "why": "the same link under Earlier eye rules (eyeRules 1 = the face round's build, byte-identical): what the old link showed before the upgrade",
+   "source": {
+    "kind": "v3-text+eyeRules1",
+    "id": "centipede",
+    "override": {
+     "eyes": "round",
+     "eyeRules": 1
+    }
+   },
+   "text": "v4*layout_many-legged*legPairs_11*bodyLength_0.55*girth_0.9*posture_0*torso_segmented*neckLength_0*head_mandibles*headSize_1*snoutLength_0.3*horns_none*legs_arthropod*legLength_0.2*feet_spike*arms_none*armLength_0.6*hands_hand*tail_none*tailLength_0*armor_bands*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_ink*colorSeed_909*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0*eyes_round*iris_auto*eyeRules_1"
+  }
+ ],
+ "eyeCatalogue": {
+  "added": "2026-10-03",
+  "by": "EC1",
+  "recipeVersion": 4,
+  "groups": [
+   "eye-catalogue",
+   "eye-odd",
+   "eye-upgrade"
+  ],
+  "note": "Appended v4 specimens for the eye catalogue round (EC1). Groups eye-catalogue (one per new kind on a native face) and eye-odd (owner decision: odd combinations are built). These texts need recipe v4; the 41 earlier specimens are unchanged.",
+  "upgradeNote": "Appended 2026-10-03 (EC1 review round 3): group eye-upgrade pairs an old v3 link with an explicit off-face face-round kind (upgrade-v3-*) and the same link under eyeRules 1 (upgrade-before-*), so the old-link geometry change is reviewable at normal size."
+ }
+}
