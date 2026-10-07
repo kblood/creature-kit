@@ -1,5 +1,7 @@
 /**
- * Headless GLB export for the modular creature composer (fauna-composer-export-1; backlog task 10, creature-kit phase 3).
+ * Headless GLB export for the modular creature composer (fauna-composer-export-3; v1: backlog task 10, creature-kit
+ * phase 3; v2: LOD chain, quest-3 budget, seamless loops; v3: creature-kit strings, bone-reducing skeleton,
+ * docs/creature-export-v3.md).
  *
  * exportCreatureGlb(recipe) builds the creature exactly as the runtime does (createComposerCreature: normalise, derive
  * the individual, graph, skin, three's vertex normals) and writes a binary glTF 2.0 file directly. three's GLTFExporter
@@ -18,7 +20,7 @@
  * Axes: metres, +Y up, right-handed. By default the skeleton root turns the composer's +X heading onto +Z, glTF's
  * asset front; forward '+X' keeps the composer frame. The skinned mesh node is a scene root with no transform.
  *
- * Export v2 (opt-in; with none of these options the bytes are exactly v1's):
+ * Export v2 options (opt-in; with none of them the BIN chunk is exactly v1's):
  * - `lods` / `target`: an LOD chain from fauna-composer-lod.ts. Level 0 is the scene's skinned mesh; lower levels are
  *   extra skinned meshes on nodes outside the scene, linked by MSFT_lod on the level-0 node (with MSFT_screencoverage
  *   hints). Every level shares the one skin, material and clip set. A loader without MSFT_lod shows level 0 only.
@@ -44,9 +46,15 @@ import {COMPOSER_SPECIES_GENERATOR_VERSION} from './fauna-composer-species.ts';
 import {FAUNA_COAT_FIELD_VERSION} from './fauna-coat-fields.ts';
 import {COMPOSER_LOD_VERSION, buildComposerLodChain, type ComposerLodLevel} from './fauna-composer-lod.ts';
 
+/** Historical: written by plain exports up to export v2 (kept exported for compatibility; no longer written). */
 export const COMPOSER_EXPORT_VERSION = 'fauna-composer-export-1';
-/** Written instead of COMPOSER_EXPORT_VERSION when an LOD chain or a crossfaded loop changes the GLB. */
+/** Historical: written by profiled exports (an LOD chain or a crossfaded loop) in export v2 (kept for compatibility). */
 export const COMPOSER_EXPORT_V2_VERSION = 'fauna-composer-export-2';
+/** Written by every export since v3 (docs/creature-export-v3.md): creature-kit generator string, plain or profiled.
+ * A plain export's BIN chunk is byte-identical to export-1's, a profiled in-budget export's to export-2's. */
+export const COMPOSER_EXPORT_V3_VERSION = 'fauna-composer-export-3';
+/** The generator named in asset.generator (`<generator> <export version>`). */
+export const COMPOSER_EXPORT_GENERATOR = 'creature-kit';
 export type ComposerExportTarget = 'desktop-web' | 'quest-3';
 /** A hard export budget. Triangles apply to level 0 (what the scene draws up close); every level must also meet its
  * own target. Textures: the composer creature has none (vertex colour), so its texture bytes are 0. */
@@ -154,7 +162,7 @@ export interface ComposerExportLodReport {
   sourceVertex: Uint32Array;
 }
 export interface ComposerExportReport {
-  version: typeof COMPOSER_EXPORT_VERSION | typeof COMPOSER_EXPORT_V2_VERSION;
+  version: typeof COMPOSER_EXPORT_V3_VERSION;
   recipeText: string; speciesKey: string;
   versions: Record<string, string | number>;
   individual: {deltas: string[]; effectiveRecipeText: string};
@@ -182,7 +190,7 @@ const FORWARD_ROOT: Record<ComposerExportForward, [number, number, number, numbe
 /** The versions a GLB depends on, in a fixed order. */
 export function composerExportVersions(): Record<string, string | number> {
   return {
-    export: COMPOSER_EXPORT_VERSION, recipe: COMPOSER_RECIPE_VERSION, graph: COMPOSER_GRAPH_VERSION, skin: COMPOSER_SKIN_VERSION,
+    export: COMPOSER_EXPORT_V3_VERSION, recipe: COMPOSER_RECIPE_VERSION, graph: COMPOSER_GRAPH_VERSION, skin: COMPOSER_SKIN_VERSION,
     individual: COMPOSER_INDIVIDUAL_VERSION, face: COMPOSER_FACE_VERSION, faceGeometry: COMPOSER_FACE_GEOMETRY_VERSION,
     eye: COMPOSER_EYE_VERSION, eyeCatalogue: COMPOSER_EYE_CATALOGUE_VERSION, species: COMPOSER_SPECIES_GENERATOR_VERSION,
     coat: FAUNA_COAT_FIELD_VERSION, three: THREE.REVISION,
@@ -523,7 +531,7 @@ export function composerLodScreenCoverage(levels: number): number[] {
 interface ResolvedV2 {target: ComposerExportTarget; lods: (number | 'full')[] | null; budget: ComposerExportBudget; seamless: boolean; blend: number}
 /** The desktop budget is the composer's own (the core already refuses a creature over it). */
 const DESKTOP_BUDGET: Readonly<ComposerExportBudget> = Object.freeze({maxTriangles: COMPOSER_BUDGET.maxTriangles, maxBones: COMPOSER_BUDGET.maxBones, maxMaterials: 1, maxTextureBytes: 0, maxDrawCallsPerLevel: 1});
-/** Resolves the v2 options; null when none is given (the v1 path, byte-identical to fauna-composer-export-1). */
+/** Resolves the v2 options; null when none is given (the plain path: its BIN chunk is byte-identical to fauna-composer-export-1). */
 function resolveV2(options: ComposerExportOptions): ResolvedV2 | null {
   const lodsGiven = options.lods !== undefined && options.lods !== false;
   if (options.target === undefined && !lodsGiven && options.seamless !== true && options.budget === undefined && options.seamlessBlend === undefined) return null;
@@ -603,8 +611,8 @@ export function exportCreatureGlb(input: ComposerRecipe | string, options: Compo
     const rootName = options.name ?? 'composer-creature';
     const recipeText = encodeComposerRecipe(recipe);
     const effectiveRecipeText = encodeComposerRecipe(creature.individual.effectiveRecipe);
-    const versions = v2 ? {...composerExportVersions(), export: COMPOSER_EXPORT_V2_VERSION, lod: COMPOSER_LOD_VERSION} : composerExportVersions();
-    const exportVersion = v2 ? COMPOSER_EXPORT_V2_VERSION : COMPOSER_EXPORT_VERSION;
+    const versions = v2 ? {...composerExportVersions(), lod: COMPOSER_LOD_VERSION} : composerExportVersions();
+    const exportVersion = COMPOSER_EXPORT_V3_VERSION;
 
     // ---- meshes (level 0 first; v1 writes exactly one)
     const written = levels.map(level => writeLevelMesh(b, level, gloss));
@@ -679,7 +687,7 @@ export function exportCreatureGlb(input: ComposerRecipe | string, options: Compo
       extras: {composer: i === 0 && levels.length === 1 ? {parts: level.parts} : {parts: level.parts, lod: {level: i, target: level.target, triangles: level.index.length / 3}}},
     }));
     const glb = b.finish({
-      asset: {version: '2.0', generator: `universe-atlas ${exportVersion}`, extras: {composer: {recipeText, speciesKey: composerSpeciesKey(recipe), versions}}},
+      asset: {version: '2.0', generator: `${COMPOSER_EXPORT_GENERATOR} ${exportVersion}`, extras: {composer: {recipeText, speciesKey: composerSpeciesKey(recipe), versions}}},
       ...(levels.length > 1 ? {extensionsUsed: ['MSFT_lod']} : {}),
       scene: 0,
       scenes: [{name: rootName, nodes: [SKIN_NODE, ROOT_NODE]}],

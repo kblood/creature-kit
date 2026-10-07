@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-// Headless creature export (fauna-composer-export-1, backlog task 10; v2 options: docs/creature-export-v2.md): writes one
-// GLB per species plus a provenance sidecar and an asset brief, with no browser and no Atlas runtime.
+// Headless creature export (fauna-composer-export-3; v1: backlog task 10; v2 options: docs/creature-export-v2.md; v3:
+// docs/creature-export-v3.md): writes one GLB per species plus a provenance sidecar and an asset brief, with no browser
+// and no Atlas runtime.
 //
 //   node scripts/export-creature.mjs --out <dir> [selection...] [options]
 //
@@ -14,7 +15,7 @@
 //   --fps <n>                  sample rate (default 30)
 //   --gloss attribute|drop     keep the eye gloss as the _COMPOSER_GLOSS attribute (default) or drop it
 //   --forward +Z|+X            exported heading (default +Z, the glTF asset front)
-// v2 options (none given: the files are v1's, the GLB byte for byte):
+// v2 options (none given: a plain export, whose GLB BIN chunk is v1's byte for byte):
 //   --target desktop-web|quest-3   target profile; quest-3 = LOD chain 8000,3000,1000 and a HARD budget
 //   --lods full,8000,3000|none     LOD chain, level 0 first ('full' = the unreduced skin, first only); none = one mesh
 //   --seamless                     idle and display as crossfaded loops (last key = first key, bit for bit)
@@ -27,7 +28,7 @@
 //
 // Files per species, <key> = <label>-<8-hex hash of the recipe text>:
 //   <key>.glb            the creature (see src/fauna-composer-export.ts)
-//   <key>.creature.json  sidecar creature-export-sidecar-1: recipe, versions, generator source hash, clips, provenance
+//   <key>.creature.json  sidecar creature-export-sidecar-3: recipe, versions, generator source hash, clips, provenance
 //   <key>.brief.json     an IWSDK asset brief (schemas/asset-brief/v1) for `assetctl package --brief`
 // An existing file is never overwritten: identical bytes are accepted (a re-run is a no-op), different bytes fail.
 // Nothing written depends on the clock, so a second export of the same selection is byte-identical.
@@ -35,14 +36,20 @@ import {createHash} from 'node:crypto';
 import {existsSync, mkdirSync, readFileSync, writeFileSync} from 'node:fs';
 import {join, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {COMPOSER_EXPORT_TARGETS, COMPOSER_EXPORT_V2_VERSION, COMPOSER_EXPORT_VERSION, ComposerExportBudgetError, exportCreatureGlb} from '../src/fauna-composer-export.ts';
+import {COMPOSER_EXPORT_GENERATOR, COMPOSER_EXPORT_TARGETS, COMPOSER_EXPORT_V3_VERSION, ComposerExportBudgetError, exportCreatureGlb} from '../src/fauna-composer-export.ts';
 import {COMPOSER_PRESET_IDS, composerHash, composerPreset, decodeComposerRecipe, isComposerPresetId} from '../src/fauna-composer-recipe.ts';
 import {COMPOSER_ARCHETYPES, coherentComposerSpecies} from '../src/fauna-composer-species.ts';
 import {COMPOSER_BUDGET, COMPOSER_MOTIONS} from '../src/fauna-composer-rig.ts';
 
+/** Historical sidecar schema of a plain export up to export v2 (kept exported for compatibility; no longer written). */
 export const CREATURE_EXPORT_SIDECAR_SCHEMA = 'creature-export-sidecar-1';
-/** Sidecar schema of a v2 export: sidecar-1 plus target, lods, budget and status. */
+/** Historical sidecar schema of a profiled v2 export: sidecar-1 plus target, lods, budget and status (kept; not written). */
 export const CREATURE_EXPORT_SIDECAR_SCHEMA_V2 = 'creature-export-sidecar-2';
+/** Sidecar schema written since export v3, for every export: a plain export carries the sidecar-1 fields, a profiled
+ * export the sidecar-2 fields plus `skeleton`; the provenance carries the private licence (owner decision A13). */
+export const CREATURE_EXPORT_SIDECAR_SCHEMA_V3 = 'creature-export-sidecar-3';
+/** Owner decision A13 (2026-10-07): the licence is the same as the rest of the owner's projects, private, UNLICENSED. */
+export const CREATURE_EXPORT_LICENSE = Object.freeze({expression: 'UNLICENSED', attribution: null, restrictions: Object.freeze(['private, all rights reserved (owner decision A13, 2026-10-07)'])});
 export const CREATURE_EXPORT_BUDGET_EXIT = 3;
 const BRIEF_SCHEMA = 'https://iwsdk.local/schemas/asset-brief/v1';
 /** Sources whose bytes decide the exported GLB: the 12-module composer core and the exporter (repo-relative). */
@@ -155,15 +162,15 @@ export function resolveSelection(sel) {
 function provenance(report, key, source) {
   return {
     sourceType: 'generated',
-    generator: {provider: 'universe-atlas', model: 'fauna-composer', checkpoint: null, version: `${report.versions.graph} ${report.versions.skin} ${COMPOSER_EXPORT_VERSION}`, workflow: 'scripts/export-creature.mjs'},
+    generator: {provider: COMPOSER_EXPORT_GENERATOR, model: 'fauna-composer', checkpoint: null, version: `${report.versions.graph} ${report.versions.skin} ${COMPOSER_EXPORT_V3_VERSION}`, workflow: 'scripts/export-creature.mjs'},
     prompt: report.recipeText,
     // the species seed when one drew the recipe; otherwise the recipe text's hash (the recipe itself is the whole input)
     seed: source.kind === 'coherent-species' ? source.seed : `recipe-${hex8(composerHash(report.recipeText))}`,
     sourceUrl: null,
     sourceConsent: 'not-applicable',
     parents: [],
-    license: {expression: 'NOASSERTION', attribution: null, restrictions: []},
-    notes: `Procedural; no external inputs (no model checkpoint, texture, scan or third-party asset). The recipe text is the whole input. Licence open until the owner answers the creature-kit licence question. Asset ${key}.`,
+    license: {expression: CREATURE_EXPORT_LICENSE.expression, attribution: CREATURE_EXPORT_LICENSE.attribution, restrictions: [...CREATURE_EXPORT_LICENSE.restrictions]},
+    notes: `Procedural; no external inputs (no model checkpoint, texture, scan or third-party asset). The recipe text is the whole input. Private, all rights reserved (UNLICENSED, owner decision A13, 2026-10-07). Asset ${key}.`,
   };
 }
 
@@ -184,14 +191,15 @@ export function buildCreatureFiles(sel, options = {}, sourceHash) {
   if (options.seamless) exportOptions.seamless = true;
   if (options.seamlessBlend !== undefined) exportOptions.seamlessBlend = options.seamlessBlend;
   const {glb, report} = exportCreatureGlb(recipe, exportOptions);
-  const v2 = report.version === COMPOSER_EXPORT_V2_VERSION;
+  // profiled export (any v2 option): the report carries the target, the LOD rows and the budget
+  const v2 = report.target !== undefined;
   if (v2 && sourceHash === undefined) sourceHash = generatorSourceHash(REPO, CREATURE_EXPORT_GENERATOR_SOURCES_V2);
   if (sourceHash === undefined) sourceHash = generatorSourceHash();
   const key = `${slug(label)}-${hex8(composerHash(report.recipeText))}`;
   const prov = provenance(report, key, source);
   const lodRows = v2 && report.lods ? report.lods.map(({sourceVertex, ...rest}) => rest) : null;
   const sidecar = {
-    schema: v2 ? CREATURE_EXPORT_SIDECAR_SCHEMA_V2 : CREATURE_EXPORT_SIDECAR_SCHEMA,
+    schema: CREATURE_EXPORT_SIDECAR_SCHEMA_V3,
     asset: {id: key, file: `${key}.glb`, bytes: glb.byteLength, sha256: sha256(glb)},
     source,
     recipeText: report.recipeText, speciesKey: report.speciesKey,
@@ -212,14 +220,14 @@ export function buildCreatureFiles(sel, options = {}, sourceHash) {
     schema: 'https://iwsdk.local/schemas/asset-brief/v1',
     id: key.slice(0, 64),
     kind: 'creature',
-    purpose: `Procedural composer creature (${label}) exported headless from universe-atlas for use by other IWSDK games.`,
-    target: {engine: 'IWSDK', project: 'universe-atlas', devices: [v2 ? report.target : 'desktop-web'], metersPerUnit: 1, runtimeCoordinates: 'right-handed-y-up'},
+    purpose: `Procedural composer creature (${label}) exported headless from ${COMPOSER_EXPORT_GENERATOR} for use by other IWSDK games.`,
+    target: {engine: 'IWSDK', project: COMPOSER_EXPORT_GENERATOR, devices: [v2 ? report.target : 'desktop-web'], metersPerUnit: 1, runtimeCoordinates: 'right-handed-y-up'},
     artDirection: {summary: 'Stylised procedural animal: one skinned vertex-coloured mesh, composer skeleton, baked motion clips.', styleTags: ['procedural', 'vertex-colour', 'skinned']},
     deliverables: [
       {type: 'runtime', path: `${key}.glb`, format: 'glb', required: true},
       {type: 'animation', path: `${key}.glb`, format: 'glb-embedded-clips', required: true},
       ...(lodRows && lodRows.length > 1 ? [{type: 'lod', path: `${key}.glb`, format: 'glb-msft-lod', required: true}] : []),
-      {type: 'manifest', path: `${key}.creature.json`, format: v2 ? CREATURE_EXPORT_SIDECAR_SCHEMA_V2 : CREATURE_EXPORT_SIDECAR_SCHEMA, required: true},
+      {type: 'manifest', path: `${key}.creature.json`, format: CREATURE_EXPORT_SIDECAR_SCHEMA_V3, required: true},
     ],
     constraints: {geometry: v2
       ? {maxTriangles: report.budget.limits.maxTriangles, maxMaterials: report.budget.limits.maxMaterials, lodCount: lodRows.length - 1, collision: 'none'}
@@ -264,13 +272,12 @@ export function main(argv = process.argv.slice(2)) {
     }
   }
   if (failures.length) {
-    console.log(JSON.stringify({exporter: COMPOSER_EXPORT_V2_VERSION, error: 'composer-export-budget', out: dir, written: 0, failures}, null, 2));
+    console.log(JSON.stringify({exporter: COMPOSER_EXPORT_V3_VERSION, error: 'composer-export-budget', out: dir, written: 0, failures}, null, 2));
     process.exitCode = CREATURE_EXPORT_BUDGET_EXIT;
     return;
   }
   mkdirSync(dir, {recursive: true});
   const sourceHash = builds[0]?.sidecar.generator.sourceSha256 ?? generatorSourceHash();
-  const v2 = builds.some(b => b.sidecar.schema === CREATURE_EXPORT_SIDECAR_SCHEMA_V2);
   const seen = new Set(), rows = [];
   for (const built of builds) {
     if (seen.has(built.key)) { rows.push({key: built.key, status: 'duplicate selection skipped'}); continue; }
@@ -281,7 +288,7 @@ export function main(argv = process.argv.slice(2)) {
       ...(built.sidecar.lods ? {lods: built.sidecar.lods.map(l => l.triangles).join('/')} : {}),
       clips: built.sidecar.clips.map(c => `${c.motion} ${c.duration.toFixed(2)}s${c.method === 'crossfade' ? ' (crossfade loop)' : c.seamless ? '' : ' (seam)'}`).join(', '), status: status.join(' ')});
   }
-  console.log(JSON.stringify({exporter: v2 ? COMPOSER_EXPORT_V2_VERSION : COMPOSER_EXPORT_VERSION, out: dir, generatorSourceSha256: sourceHash, creatures: rows}, null, 2));
+  console.log(JSON.stringify({exporter: COMPOSER_EXPORT_V3_VERSION, out: dir, generatorSourceSha256: sourceHash, creatures: rows}, null, 2));
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

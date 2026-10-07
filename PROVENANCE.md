@@ -82,10 +82,16 @@ line endings. `last Atlas commit` is the most recent universe-atlas commit touch
 Every file under `src/`, `scripts/export-creature.mjs` and every fixture stays byte-identical to Atlas.
 `tests/atlas-parity.test.mjs` (with `ATLAS_DIR` set) re-checks the sources and the produced bytes.
 
-## Known Atlas-flavoured strings (kept on purpose)
+## Known Atlas-flavoured strings (renamed in export v3)
 
-`src/fauna-composer-export.ts` writes `asset.generator = "universe-atlas <export version>"`, and
-`scripts/export-creature.mjs` writes `provider: "universe-atlas"`, `project: "universe-atlas"` and a purpose line
-"exported headless from universe-atlas" into the sidecar and brief. They are part of the pinned GLB and sidecar bytes
-(V1_PINS, the export evidence), so renaming them is a versioned change for a later round, not part of a byte-identical
-extraction.
+Up to export v2, `src/fauna-composer-export.ts` wrote `asset.generator = "universe-atlas <export version>"`, and
+`scripts/export-creature.mjs` wrote `provider: "universe-atlas"`, `project: "universe-atlas"` and a purpose line
+"exported headless from universe-atlas" into the sidecar and brief; the brief template's id was
+`atlas-creature-export-quest-3`. They were part of the pinned GLB and sidecar bytes, so the byte-identical extraction
+kept them. Export v3 (`fauna-composer-export-3`, branch `kit/export-3`, `docs/creature-export-v3.md`) renames them in one
+versioned change, together with the private licence (owner decision A13): the generator, provider and project are
+`creature-kit`, the template id is `creature-kit-export-quest-3`, and the sidecars, briefs and template say
+`UNLICENSED`. Only the JSON chunk strings moved; every GLB BIN chunk that needs no skeleton reduction is byte-identical
+to the import (ledger in `docs/creature-export-v3.md`). From this change on, `src/fauna-composer-export.ts`,
+`scripts/export-creature.mjs`, `assets/briefs/creature-export-quest-3.json` and `tests/fauna-composer-export.test.mjs` differ from
+universe-atlas `ab6042c`.

@@ -22,14 +22,14 @@ import {join} from 'node:path';
 import ts from 'typescript';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
-import {COMPOSER_EXPORT_TARGETS, COMPOSER_EXPORT_V2_VERSION, COMPOSER_GLOSS_ATTRIBUTE, COMPOSER_EXPORT_VERSION, ComposerExportBudgetError, bakeComposerClip, bakeComposerLoopClip,
+import {COMPOSER_EXPORT_GENERATOR, COMPOSER_EXPORT_TARGETS, COMPOSER_EXPORT_V2_VERSION, COMPOSER_EXPORT_V3_VERSION, COMPOSER_GLOSS_ATTRIBUTE, COMPOSER_EXPORT_VERSION, ComposerExportBudgetError, bakeComposerClip, bakeComposerLoopClip,
   checkComposerExportBudget, composerClipWindow, exportCreatureGlb, readComposerGlb} from '../src/fauna-composer-export.ts';
 import {composerPreset, encodeComposerRecipe, randomComposerRecipe} from '../src/fauna-composer-recipe.ts';
 import {coherentComposerSpecies} from '../src/fauna-composer-species.ts';
 import {COMPOSER_BUDGET, buildComposerGraph, poseComposer} from '../src/fauna-composer-rig.ts';
 import {deriveComposerIndividual} from '../src/fauna-composer-individual.ts';
 import {createComposerCreature} from '../src/fauna-composer.ts';
-import {CREATURE_EXPORT_BUDGET_EXIT, CREATURE_EXPORT_GENERATOR_SOURCES_V2, CREATURE_EXPORT_SIDECAR_SCHEMA, CREATURE_EXPORT_SIDECAR_SCHEMA_V2, briefExportOptions, buildCreatureFiles,
+import {CREATURE_EXPORT_BUDGET_EXIT, CREATURE_EXPORT_GENERATOR_SOURCES_V2, CREATURE_EXPORT_LICENSE, CREATURE_EXPORT_SIDECAR_SCHEMA, CREATURE_EXPORT_SIDECAR_SCHEMA_V2, CREATURE_EXPORT_SIDECAR_SCHEMA_V3, briefExportOptions, buildCreatureFiles,
   generatorSourceHash, main as cliMain, parseArgs, parseLods, writeOnce} from '../scripts/export-creature.mjs';
 
 const SPECIMENS = {
@@ -54,7 +54,8 @@ test('export: GLB container and glTF structure match the composer skin and graph
     const {json, bin} = readComposerGlb(glb);
     const effective = deriveComposerIndividual(SPECIMENS[name]).recipe, graph = buildComposerGraph(effective);
     assert.equal(json.asset.version, '2.0');
-    assert.equal(json.asset.generator, `universe-atlas ${COMPOSER_EXPORT_VERSION}`);
+    assert.equal(json.asset.generator, `creature-kit ${COMPOSER_EXPORT_V3_VERSION}`);
+    assert.equal(json.asset.extras.composer.versions.export, COMPOSER_EXPORT_V3_VERSION);
     assert.equal(json.asset.extras.composer.recipeText, encodeComposerRecipe(SPECIMENS[name]));
     assert.equal(json.meshes.length, 1); assert.equal(json.meshes[0].primitives.length, 1); assert.equal(json.skins.length, 1);
     const prim = json.meshes[0].primitives[0];
@@ -237,16 +238,20 @@ test('export: the export path imports only the composer core, the LOD reducer an
 test('export CLI: sidecar and brief carry provenance; an existing file is never overwritten', () => {
   const built = buildCreatureFiles({kind: 'coherent-species', seed: 'export-test-1'});
   const sidecar = built.sidecar;
-  assert.equal(sidecar.schema, CREATURE_EXPORT_SIDECAR_SCHEMA);
+  assert.equal(sidecar.schema, CREATURE_EXPORT_SIDECAR_SCHEMA_V3);
+  assert.equal(sidecar.target, undefined, 'a plain export carries the sidecar-1 fields only');
   assert.match(sidecar.generator.sourceSha256, /^[0-9a-f]{64}$/);
   assert.equal(sidecar.recipeText, encodeComposerRecipe(SPECIMENS.coherent));
   assert.equal(sidecar.source.seed, 'export-test-1');
   assert.equal(sidecar.asset.sha256.length, 64);
-  // asset-provenance v1: generated assets need generator, prompt and seed; the licence stays NOASSERTION (owner question)
+  // asset-provenance v1: generated assets need generator, prompt and seed; the licence is private (owner decision A13)
   const p = sidecar.provenance;
   assert.equal(p.sourceType, 'generated');
   assert.ok(p.generator.provider && p.generator.model && p.prompt && p.seed);
-  assert.equal(p.license.expression, 'NOASSERTION');
+  assert.deepEqual(p.license, {expression: 'UNLICENSED', attribution: null, restrictions: ['private, all rights reserved (owner decision A13, 2026-10-07)']});
+  assert.deepEqual(p.license, {...CREATURE_EXPORT_LICENSE, restrictions: [...CREATURE_EXPORT_LICENSE.restrictions]});
+  assert.equal(p.generator.provider, 'creature-kit');
+  assert.equal(p.generator.version, `${sidecar.versions.graph} ${sidecar.versions.skin} ${COMPOSER_EXPORT_V3_VERSION}`);
   const brief = JSON.parse(new TextDecoder().decode(built.files.find(([n]) => n.endsWith('.brief.json'))[1]));
   assert.match(brief.id, /^[a-z0-9][a-z0-9-]{2,63}$/);
   assert.equal(brief.kind, 'creature');
@@ -283,11 +288,11 @@ test('export CLI: sidecar and brief carry provenance; an existing file is never 
 const V1_PINS = {
   core: 'a0a315563251220cedb09cb760b07a80de3441a0c863bf981c513249f6148f5c',
   glb: {
-    bird: 'bb87f35b228bab8a7ec375aad1ff3b7e91562e984df641d2cc067a43417a7a0f',
-    centipede: '709abe3ce33ccfaff18ce5b55e877a4016cbe492b2bd663127d559f3cb933786',
-    worm: '86fecc903ec8f19bda2c89db1012fff514a493b01b3ca38a03c543176f54be00',
-    'winged-ape-rhino': 'ae1784773193c049f6a4f9ff9749c76085a2d8b61eaf02d256c37ded648aedb7',
-    coherent: '01b43824c05d6733afe0bc769ea20bf2b5b3596be7f0b225293106e05d637965',
+    bird: 'a9007575ad408f800e1d57f0dc881a18e516af4738de2b2a569d5111633f9519',
+    centipede: 'b3981c9365265006441de6bacb1708bd5d8b7abcbb1792c9937cb6c77c317d1f',
+    worm: '1395baa897fbc8a82791fdd410df420343295f2986439e0b4b3bdc1f3e354fa5',
+    'winged-ape-rhino': 'c26e0d16388e289f3a4fc4afcde9397ebb13a8f8f6ccea4b7c259c6b25d13295',
+    coherent: 'a91e920cab8c560719e8c537591f2bdcf7a1e30504c5e5c9184e5ce36144c4fd',
   },
 };
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -299,7 +304,7 @@ test('export v2: with no v2 option the GLB is v1 byte for byte', t => {
     const v1 = exported(name);
     // flags spelled out as off give the same bytes as no options at all
     assert.equal(sha(exportCreatureGlb(SPECIMENS[name], {lods: false, seamless: false}).glb), sha(v1.glb), name);
-    assert.equal(v1.report.version, COMPOSER_EXPORT_VERSION);
+    assert.equal(v1.report.version, COMPOSER_EXPORT_V3_VERSION);
     assert.equal(v1.report.lods, undefined); assert.equal(v1.report.budget, undefined);
     assert.equal(readComposerGlb(v1.glb).json.extensionsUsed, undefined);
   }
@@ -331,9 +336,9 @@ test('export v2: bone sweep over 100 seeds (report only, the quest-3 limit is no
 test('export v2: quest-3 writes an MSFT_lod chain within budget and reports it', () => {
   const {glb, report} = questBird();
   const {json, bin} = readComposerGlb(glb);
-  assert.equal(report.version, COMPOSER_EXPORT_V2_VERSION);
-  assert.equal(json.asset.generator, `universe-atlas ${COMPOSER_EXPORT_V2_VERSION}`);
-  assert.equal(json.asset.extras.composer.versions.export, COMPOSER_EXPORT_V2_VERSION);
+  assert.equal(report.version, COMPOSER_EXPORT_V3_VERSION);
+  assert.equal(json.asset.generator, `${COMPOSER_EXPORT_GENERATOR} ${COMPOSER_EXPORT_V3_VERSION}`);
+  assert.equal(json.asset.extras.composer.versions.export, COMPOSER_EXPORT_V3_VERSION);
   assert.deepEqual(json.extensionsUsed, ['MSFT_lod']);
   assert.equal(json.extensionsRequired, undefined, 'MSFT_lod stays optional: a plain loader shows level 0');
   const targets = COMPOSER_EXPORT_TARGETS['quest-3'].lods;
@@ -457,7 +462,7 @@ test('export v2: seamless idle and display close bit for bit and equal poseCompo
   const v2 = exportCreatureGlb(recipe, {seamless: true, clips: ['idle', 'walk', 'display']});
   const v1 = exportCreatureGlb(recipe, {clips: ['idle', 'walk', 'display']});
   const d2 = readComposerGlb(v2.glb), d1 = readComposerGlb(v1.glb);
-  assert.equal(v2.report.version, COMPOSER_EXPORT_V2_VERSION);
+  assert.equal(v2.report.version, COMPOSER_EXPORT_V3_VERSION);
   const lines = [];
   for (const motion of ['idle', 'display']) {
     const spec = v2.report.clips.find(c => c.motion === motion), raw = v1.report.clips.find(c => c.motion === motion);
@@ -545,7 +550,7 @@ test('export v2 CLI: brief options, sidecar-2 with the LOD chain, budget failure
   const options = {briefJson: template, seamless: true, motions: ['idle', 'walk']};
   const built = buildCreatureFiles({kind: 'preset', preset: 'bird'}, options);
   const sidecar = built.sidecar;
-  assert.equal(sidecar.schema, CREATURE_EXPORT_SIDECAR_SCHEMA_V2);
+  assert.equal(sidecar.schema, CREATURE_EXPORT_SIDECAR_SCHEMA_V3);
   assert.deepEqual(sidecar.generator.sources, CREATURE_EXPORT_GENERATOR_SOURCES_V2);
   assert.ok(sidecar.generator.sources.includes('src/fauna-composer-lod.ts'));
   assert.equal(sidecar.generator.sourceSha256, generatorSourceHash(undefined, CREATURE_EXPORT_GENERATOR_SOURCES_V2));
@@ -554,12 +559,18 @@ test('export v2 CLI: brief options, sidecar-2 with the LOD chain, budget failure
   assert.deepEqual(sidecar.lods.map(l => l.target), [8000, 3000, 1000]);
   assert.ok(sidecar.lods.every(l => l.triangles <= l.target && !('sourceVertex' in l)));
   assert.equal(sidecar.budget.pass, true); assert.equal(sidecar.budget.limits.maxTriangles, 8000);
-  assert.equal(sidecar.provenance.license.expression, 'NOASSERTION');
+  assert.equal(sidecar.provenance.license.expression, 'UNLICENSED');
   const brief = JSON.parse(new TextDecoder().decode(built.files.find(([n]) => n.endsWith('.brief.json'))[1]));
   assert.deepEqual(brief.target.devices, ['quest-3']);
   assert.deepEqual(brief.constraints.geometry, {maxTriangles: 8000, maxMaterials: 1, lodCount: 2, collision: 'none'});
   assert.ok(brief.deliverables.some(d => d.type === 'lod' && d.format === 'glb-msft-lod'));
-  assert.equal(brief.provenance.license.expression, 'NOASSERTION');
+  assert.equal(brief.provenance.license.expression, 'UNLICENSED');
+  assert.equal(brief.target.project, 'creature-kit');
+  assert.match(brief.purpose, /exported headless from creature-kit/);
+  assert.deepEqual(brief.deliverables.find(d => d.type === 'manifest').format, CREATURE_EXPORT_SIDECAR_SCHEMA_V3);
+  // the historical constants stay exported, unchanged, for compatibility
+  assert.deepEqual([COMPOSER_EXPORT_VERSION, COMPOSER_EXPORT_V2_VERSION, CREATURE_EXPORT_SIDECAR_SCHEMA, CREATURE_EXPORT_SIDECAR_SCHEMA_V2],
+    ['fauna-composer-export-1', 'fauna-composer-export-2', 'creature-export-sidecar-1', 'creature-export-sidecar-2']);
   // a second build is byte-identical (GLB, sidecar, brief)
   const again = buildCreatureFiles({kind: 'preset', preset: 'bird'}, options);
   built.files.forEach(([name, bytes], i) => assert.equal(Buffer.compare(Buffer.from(bytes), Buffer.from(again.files[i][1])), 0, name));
