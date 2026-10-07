@@ -13,7 +13,8 @@ import {
   COAT_PATTERNS, COAT_PALETTE_IDS, PIGMENT_FAMILIES, COAT_ROLES, COAT_REGIONS, COAT_MARK_BITS, AUTO_PATTERN,
 } from '../src/fauna-coat-vocab.ts';
 import {composerHash, composerRandom} from '../src/fauna-composer-recipe.ts';
-import {sampleFaunaCoat} from '../src/fauna-appearance.ts';
+// creature-kit: the lineage-B half of the asymmetry test (sampleFaunaCoat from universe-atlas src/fauna-appearance.ts,
+// "the legacy planet coat is symmetric") stays in Atlas's copy of this test; the planet renderer is not part of the kit.
 
 const RESOLVED = COAT_PATTERNS.filter(p => p !== 'auto');
 const PIGMENTED = ['base', 'accent', 'belly', 'skin'];
@@ -174,20 +175,13 @@ test('stripes vary in width per band', () => {
   assert.ok(Math.max(...runs) / Math.min(...runs) >= 1.4, `stripe widths ${runs}`);
 });
 
-test('asymmetry: mirror pairs differ for spots, rosettes, reticulated, piebald; the legacy planet coat is symmetric', () => {
+test('asymmetry: mirror pairs differ for spots, rosettes, reticulated, piebald', () => {
   for (const pattern of ['spots', 'rosettes', 'reticulated', 'piebald']) {
     const g = defaultCoatGenome('tawny', 7, {pattern});
     let max = 0;
     for (const s of GRID) { const a = ev(g, s), b = ev(g, {...s, z: -s.z}); max = Math.max(max, Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2])); }
     assert.ok(max >= 0.05, `${pattern} mirror difference ${max}`);
   }
-  const legacy = {torsoLength: 1.2, torsoHeight: 0.4, torsoWidth: 0.3, appearance: {pattern: 'spots', markingSeed: 1234, palette: {base: '#a87c4f', marking: '#3a2414', belly: '#d9c09a'}}};
-  let max = 0;
-  for (const s of GRID) {
-    const a = sampleFaunaCoat(legacy, s.x * 1.2, s.y * 1.2 + 0.5, s.z * 1.2, 0.5), b = sampleFaunaCoat(legacy, s.x * 1.2, s.y * 1.2 + 0.5, -s.z * 1.2, 0.5);
-    max = Math.max(max, Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]));
-  }
-  assert.equal(max, 0);
 });
 
 test('countershading: belly luminance >= dorsal luminance x (1 + 0.25 countershade)', () => {

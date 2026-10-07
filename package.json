@@ -1,0 +1,55 @@
+{
+  "name": "creature-kit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Procedural fauna composer: recipe links -> species -> individual -> rig graph -> skinned vertex-coloured mesh, plus a headless GLB exporter with an LOD chain. Extracted from universe-atlas.",
+  "license": "NOASSERTION",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "exports": {
+    "./three": {
+      "types": "./dist/fauna-composer.d.ts",
+      "default": "./dist/fauna-composer.js"
+    },
+    "./gltf": {
+      "types": "./dist/fauna-composer-export.d.ts",
+      "default": "./dist/fauna-composer-export.js"
+    },
+    "./lod": {
+      "types": "./dist/fauna-composer-lod.d.ts",
+      "default": "./dist/fauna-composer-lod.js"
+    },
+    "./src/*": "./src/*",
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "default": "./dist/*.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "src",
+    "scripts/export-creature.mjs",
+    "assets/briefs",
+    "PROVENANCE.md",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json",
+    "test": "node --test --test-concurrency=8 tests/*.test.mjs",
+    "test:parity": "node --test tests/atlas-parity.test.mjs",
+    "identity": "node scripts/composer-identity.mjs",
+    "export": "node scripts/export-creature.mjs"
+  },
+  "peerDependencies": {
+    "three": "npm:super-three@0.181.0"
+  },
+  "devDependencies": {
+    "@types/three": "0.181.0",
+    "three": "npm:super-three@0.181.0",
+    "typescript": "5.9.3"
+  }
+}

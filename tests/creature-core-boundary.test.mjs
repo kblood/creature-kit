@@ -8,7 +8,8 @@
 // and commit tests/fixtures/creature-core-exports.json with the change that caused it.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync, writeFileSync} from 'node:fs';
+import {readdirSync, readFileSync, writeFileSync} from 'node:fs';
+import {posix} from 'node:path';
 import ts from 'typescript';
 
 export const CREATURE_CORE_MODULES = Object.freeze([
@@ -104,6 +105,27 @@ test('creature core: the 12 composer modules import only each other and three', 
     `Creature core boundary broken: these imports leave the 12-module composer core (allowed: each other via './<file>.ts', and 'three').\n`
     + `${leaks.join('\n')}\n`
     + `Move the dependency into the core, pass the value in from the caller, or (owner decision) extend CREATURE_CORE_MODULES.`);
+});
+
+// creature-kit: the package boundary is "src/** imports only src/** and three". src/ holds the 12 core modules plus the
+// GLB exporter and the LOD reducer (which the core must not import; tests/fauna-composer-export.test.mjs checks that).
+test('creature-kit: every src/** module imports only other src/** modules and three', () => {
+  const srcDir = new URL('../src/', import.meta.url);
+  const files = readdirSync(srcDir, {recursive: true}).map(String).map(f => f.replace(/\\/g, '/')).filter(f => /\.(ts|mts|js|mjs)$/.test(f)).sort();
+  assert.ok(files.length >= CREATURE_CORE_MODULES.length, 'src/ holds at least the core');
+  const all = new Set(files), leaks = [];
+  for (const file of files) {
+    const sf = ts.createSourceFile(file, readFileSync(new URL(file, srcDir), 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+    for (const spec of moduleSpecifiers(sf)) {
+      if (ALLOWED_EXTERNAL.has(spec)) continue;
+      if (spec.startsWith('./') || spec.startsWith('../')) {
+        const target = posix.normalize(posix.join(posix.dirname(file), spec));
+        if (!target.startsWith('../') && all.has(target)) continue;
+      }
+      leaks.push(`  src/${file} imports '${spec}'`);
+    }
+  }
+  assert.equal(leaks.length, 0, `creature-kit boundary broken (allowed: relative imports of files inside src/, and 'three'):\n${leaks.join('\n')}`);
 });
 
 test('creature core: the parsed runtime export names equal the modules\' actual runtime exports', async () => {
