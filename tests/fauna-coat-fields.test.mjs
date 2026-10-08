@@ -360,3 +360,151 @@ test('coatMinFeature and coatMeanColor', () => {
 });
 
 // Timing cap moved to perf/fauna-coat-fields.perf.test.mjs.
+
+// ------------------------------------------------------------------ lineage-B guard (coat-crisp step 0)
+// Atlas's planet renderer (lineage B) imports fauna-coat-fields.ts and fauna-coat-vocab.ts, so any change to an existing
+// export moves Atlas's life digests. tests/fixtures/coat-lineage-b-guard.json holds the output of EVERY export the two
+// modules had at creature-kit 3e0d6e8 on a fixed corpus; every value must stay Object.is-identical (NaN, -0 and the
+// infinities are tagged). New exports may be appended; the existing ones must not change. To capture (only ever at a
+// commit whose coat modules are byte-identical to 3e0d6e8): COAT_GUARD_WRITE=1 node --test tests/fauna-coat-fields.test.mjs
+import * as coatFieldsModule from '../src/fauna-coat-fields.ts';
+import * as coatVocabModule from '../src/fauna-coat-vocab.ts';
+import {writeFileSync} from 'node:fs';
+
+const GUARD_URL = new URL('./fixtures/coat-lineage-b-guard.json', import.meta.url);
+/** The export names each coat module had at 3e0d6e8: the guard covers exactly these (appended exports are not frozen). */
+const GUARD_EXPORTS_3E0D6E8 = {
+  fields: ['COAT_CANONICAL_SAMPLE_COUNT', 'COAT_CELLS_PER_BODY', 'COAT_GENOME_RANGES', 'COAT_MORPHS', 'COAT_MORPH_RATES', 'FAUNA_COAT_FIELD_VERSION',
+    'applyCoatDrift', 'coatCanonicalSamples', 'coatIndividualDrift', 'coatLuminance', 'coatMeanColor', 'coatMinFeature', 'coatPatternProbe', 'coatRandom',
+    'coatSpeciesColours', 'coatStringHash', 'defaultCoatGenome', 'evaluateCoat', 'fbm2', 'hash3u', 'hexToLinear', 'linearToSrgb', 'normalizeCoatGenome',
+    'srgbToLinear', 'valueNoise3', 'worley3'],
+  vocab: ['AUTO_PATTERN', 'COAT_MARKS_ALL', 'COAT_MARK_BITS', 'COAT_MARK_NAMES', 'COAT_PALETTE_HEX', 'COAT_PALETTE_IDS', 'COAT_PATTERNS', 'COAT_REGIONS',
+    'COAT_ROLES', 'LEGACY_PALETTE_IDS', 'PIGMENT_FAMILIES', 'isCoatPaletteId', 'isCoatPattern', 'isCoatRegion', 'resolveCoatPattern'],
+};
+/** JSON-safe, Object.is-exact encoding: finite numbers as JSON numbers (shortest round-trip), the rest tagged. */
+function guardEncode(v) {
+  if (typeof v === 'number') return Object.is(v, -0) ? {$n: '-0'} : Number.isNaN(v) ? {$n: 'NaN'} : v === Infinity ? {$n: 'Infinity'} : v === -Infinity ? {$n: '-Infinity'} : v;
+  if (v === undefined) return {$u: 1};
+  if (v === null || typeof v === 'string' || typeof v === 'boolean') return v;
+  if (ArrayBuffer.isView(v)) return {$typed: v.constructor.name, values: [...v].map(guardEncode)};
+  if (Array.isArray(v)) return v.map(guardEncode);
+  if (typeof v === 'object') return Object.fromEntries(Object.keys(v).map(k => [k, guardEncode(v[k])]));
+  throw new TypeError(`guard: cannot encode ${typeof v}`);
+}
+const capture = fn => { try { return {ok: fn()}; } catch (e) { return {threw: `${e.constructor.name}: ${e.message}`}; } };
+
+/** The fixed corpus and the outputs of every 3e0d6e8 export of both coat modules. */
+function lineageBGuardOutputs() {
+  const F = coatFieldsModule, V = coatVocabModule, out = {};
+  const ints = [0, 1, -1, 7, -13, 255, 65537, -2147483648, 2147483647, 123456789];
+  const seeds = [0, 1, 2, 0x9e3779b9, 4294967295, 31337];
+  const pts = [];
+  for (let i = 0; i < 24; i++) pts.push([Math.sin(i * 1.7) * 9.3 + i * 0.37, Math.cos(i * 2.3) * 7.1 - i * 0.21, Math.sin(i * 0.9 + 1) * 5.7, seeds[i % seeds.length]]);
+  pts.push([0, 0, 0, 0], [-0.5, 0.5, -0.5, 1], [1e-9, -1e-9, 3.999999, 2], [-3.5, 12.25, 100.125, 7]);
+  out.constants = {FAUNA_COAT_FIELD_VERSION: F.FAUNA_COAT_FIELD_VERSION, COAT_GENOME_RANGES: F.COAT_GENOME_RANGES, COAT_CELLS_PER_BODY: F.COAT_CELLS_PER_BODY,
+    COAT_MORPHS: F.COAT_MORPHS, COAT_MORPH_RATES: F.COAT_MORPH_RATES, COAT_CANONICAL_SAMPLE_COUNT: F.COAT_CANONICAL_SAMPLE_COUNT};
+  out.hash3u = [];
+  for (const x of ints) for (const s of seeds) out.hash3u.push(F.hash3u(x, -x + 3, x * 7, s));
+  out.valueNoise3 = pts.map(([x, y, z, s]) => F.valueNoise3(x, y, z, s));
+  out.fbm2 = pts.map(([x, y, z, s]) => F.fbm2(x, y, z, s));
+  out.worley3 = pts.map(([x, y, z, s]) => { const a = [0, 0, 0], b = new Float64Array(6); F.worley3(x, y, z, s, a); F.worley3(x * 0.5, y * 0.5, z * 0.5, s, b); return [a, b]; });
+  const strings = ['', 'a', 'coat-species-v1/savanna/400', 'coat-individual-v1/herd/7', 'Unicode Üï ✓', 'x'.repeat(300)];
+  out.coatStringHash = strings.map(t => F.coatStringHash(t));
+  out.coatRandom = strings.map(t => { const r = F.coatRandom(t); return Array.from({length: 12}, () => r()); });
+  const chans = [-0.5, 0, 0.001, 0.0031308, 0.04045, 0.2, 0.5, 0.999, 1, 1.5, NaN];
+  out.srgbToLinear = chans.map(c => F.srgbToLinear(c));
+  out.linearToSrgb = chans.map(c => F.linearToSrgb(c));
+  out.coatLuminance = [[0, 0, 0], [1, 1, 1], [0.2, 0.5, 0.9], [-1, 2, 0.5]].map(c => F.coatLuminance(c));
+  out.hexToLinear = ['#000000', '#ffffff', '#7a5a3c', 'c99a52', '#2f6fa8', '#123'].map(h => F.hexToLinear(h));
+  out.coatSpeciesColours = {};
+  for (const p of V.COAT_PALETTE_IDS) for (const cs of [0, 1, 400, 'herd-7', 999999]) out.coatSpeciesColours[`${p}/${cs}`] = F.coatSpeciesColours(p, cs);
+  out.coatSpeciesColoursBad = capture(() => F.coatSpeciesColours('nope', 1));
+  const driftKeys = [0, 1, 'herd/7', 'abcdef01/3', 99];
+  out.coatIndividualDrift = {};
+  for (const k of driftKeys) for (const v of [0, 0.25, 0.5, 1, 1.5, -1, NaN]) out.coatIndividualDrift[`${k}/${v}`] = F.coatIndividualDrift(k, v);
+  // a morph of every kind, found by scanning keys at v = 1 (deterministic)
+  const morphs = {};
+  for (let i = 0; Object.keys(morphs).length < 3 && i < 20000; i++) { const d = F.coatIndividualDrift(`morph-scan/${i}`, 1); if (d.morph !== 'none' && !morphs[d.morph]) morphs[d.morph] = [`morph-scan/${i}`, d]; }
+  out.morphScan = morphs;
+  out.defaultCoatGenome = {};
+  const genomes = [];
+  const overrideSets = [{}, {marks: 255, scale: 1.7, contrast: 1.3, countershade: 0.2, bellyLine: -0.2, markRole: 'belly', warp: 0.9, threshold: 0.2, juvenileSpots: 0.8, greying: 0.6},
+    {marks: 4 | 16 | 64, scale: 0.6, contrast: 0.7, threshold: -0.25, seed: 12345}];
+  const pals = ['savanna', 'plumage', 'fawn', 'sable'];
+  for (const pattern of V.COAT_PATTERNS) for (let o = 0; o < overrideSets.length; o++) {
+    const pal = pals[(V.COAT_PATTERNS.indexOf(pattern) + o) % pals.length], g = F.defaultCoatGenome(pal, 400 + o, {...overrideSets[o], pattern});
+    out.defaultCoatGenome[`${pattern}/${o}`] = g; genomes.push(g);
+  }
+  for (const p of V.COAT_PALETTE_IDS) out.defaultCoatGenome[`palette/${p}`] = F.defaultCoatGenome(p, 'guard');
+  out.defaultCoatGenomeBad = [capture(() => F.defaultCoatGenome('nope', 1)), capture(() => F.defaultCoatGenome('earth', 1, {pattern: 'zigzag'}))];
+  out.applyCoatDrift = [];
+  for (let i = 0; i < genomes.length; i += 3) for (const k of [...driftKeys, ...Object.values(morphs).map(m => m[0])]) out.applyCoatDrift.push(F.applyCoatDrift(genomes[i], F.coatIndividualDrift(k, 1)));
+  const canon = F.coatCanonicalSamples();
+  out.coatCanonicalSamples = canon;
+  const samples = [];
+  for (let i = 0; i < canon.length; i += 16) { const {weight, ...s} = canon[i]; void weight; samples.push(s); }
+  for (const region of V.COAT_REGIONS) for (const [fp, along] of [[0, 0.1], [0.004, 0.55], [0.03, 0.95]]) samples.push({x: 0.31 * Math.sin(along * 7) - 0.1, y: 0.12 * Math.cos(along * 5), z: 0.09 * Math.sin(along * 11 + 1), dorsal: Math.cos(along * 9), region, along, footprint: fp});
+  out.samples = samples;
+  out.evaluateCoat = genomes.map(g => samples.map(s => { const o = new Float64Array(3); F.evaluateCoat(g, s, o); return o; }));
+  out.evaluateCoatOffset = (() => { const o = [9, 9, 9, 9, 9]; F.evaluateCoat(genomes[4], samples[3], o, 2); return o; })();
+  out.coatPatternProbe = genomes.map(g => samples.map(s => { const o = new Float64Array(5); F.coatPatternProbe(g, s, o); return o; }));
+  out.coatMeanColor = genomes.map(g => F.coatMeanColor(g));
+  out.coatMinFeature = genomes.map(g => F.coatMinFeature(g));
+  out.normalizeCoatGenome = [genomes[3], {...genomes[5], scale: 9, contrast: -1, marks: 300.6, seed: -5, warp: NaN, markRole: 'x'},
+    {...genomes[7], colours: {...genomes[7].colours, base: [2, -1, 0.5]}}].map(g => capture(() => F.normalizeCoatGenome(g)));
+  out.normalizeCoatGenomeBad = [capture(() => F.normalizeCoatGenome({...genomes[1], pattern: 'auto'})), capture(() => F.normalizeCoatGenome({...genomes[1], colours: {...genomes[1].colours, eye: [1, 2]}}))];
+  // vocabulary: every constant and every function on a fixed input list
+  out.vocabConstants = {COAT_PATTERNS: V.COAT_PATTERNS, COAT_MARK_BITS: V.COAT_MARK_BITS, COAT_MARK_NAMES: V.COAT_MARK_NAMES, COAT_MARKS_ALL: V.COAT_MARKS_ALL,
+    LEGACY_PALETTE_IDS: V.LEGACY_PALETTE_IDS, PIGMENT_FAMILIES: V.PIGMENT_FAMILIES, COAT_PALETTE_IDS: V.COAT_PALETTE_IDS, COAT_ROLES: V.COAT_ROLES,
+    COAT_PALETTE_HEX: V.COAT_PALETTE_HEX, AUTO_PATTERN: V.AUTO_PATTERN, COAT_REGIONS: V.COAT_REGIONS};
+  const words = ['', 'auto', 'spots', 'savanna', 'torso', 'eye', 'Spots', 'nope', 7, null, undefined, 'tawny', 'tail-tip'];
+  out.vocabGuards = words.map(w => [V.isCoatPattern(w), V.isCoatPaletteId(w), V.isCoatRegion(w)]);
+  out.resolveCoatPattern = V.COAT_PATTERNS.flatMap(p => V.COAT_PALETTE_IDS.map(pal => V.resolveCoatPattern(p, pal)));
+  return out;
+}
+
+if (process.env.COAT_GUARD_WRITE === '1') {
+  const names = {fields: Object.keys(coatFieldsModule).sort(), vocab: Object.keys(coatVocabModule).sort()};
+  assert.deepEqual(names, GUARD_EXPORTS_3E0D6E8, 'capture only where the coat modules export exactly the 3e0d6e8 set');
+  const fixture = {schema: 'coat-lineage-b-guard-1', capturedAt: {kit: '3e0d6e8', coat: 'fauna-coat-1', date: '2026-10-07',
+    note: 'Outputs of every export of src/fauna-coat-fields.ts and src/fauna-coat-vocab.ts at creature-kit 3e0d6e8 on a fixed corpus (lineage B: the Atlas planet renderer imports these). Numbers are JSON numbers; -0, NaN and the infinities are {"$n": ...}, undefined is {"$u": 1}, typed arrays {"$typed", "values"}. Compared with Object.is by tests/fauna-coat-fields.test.mjs.'},
+  exports: GUARD_EXPORTS_3E0D6E8, outputs: guardEncode(lineageBGuardOutputs())};
+  writeFileSync(GUARD_URL, JSON.stringify(fixture) + '\n');
+}
+
+/** Walks the encoded outputs; throws on the first leaf that is not Object.is-identical. Returns the leaf count. */
+function guardCompare(actual, expected) {
+  let compared = 0;
+  const walk = (a, e, path) => {
+    if (e !== null && typeof e === 'object' && !Array.isArray(e) && '$n' in e) { assert.ok(a !== null && typeof a === 'object' && a.$n === e.$n, `${path}: ${JSON.stringify(a)} is not ${e.$n}`); compared++; return; }
+    if (typeof e === 'number') { assert.ok(Object.is(a, e), `${path}: ${a} is not Object.is ${e}`); compared++; return; }
+    if (e === null || typeof e !== 'object') { assert.equal(a, e, path); compared++; return; }
+    assert.equal(typeof a, 'object', `${path}: type`);
+    assert.equal(Array.isArray(a), Array.isArray(e), `${path}: array-ness`);
+    assert.deepEqual(Object.keys(a), Object.keys(e), `${path}: keys`);
+    for (const k of Object.keys(e)) walk(a[k], e[k], `${path}.${k}`);
+  };
+  walk(actual, expected, 'outputs');
+  return compared;
+}
+
+test('lineage-B guard: every 3e0d6e8 export of the coat modules still produces its pinned output (Object.is)', () => {
+  const fixture = JSON.parse(readFileSync(GUARD_URL, 'utf8'));
+  assert.equal(fixture.schema, 'coat-lineage-b-guard-1');
+  assert.deepEqual(fixture.exports, GUARD_EXPORTS_3E0D6E8);
+  // appending exports is allowed; removing or renaming one is not
+  for (const [key, mod] of [['fields', coatFieldsModule], ['vocab', coatVocabModule]]) for (const name of GUARD_EXPORTS_3E0D6E8[key]) assert.ok(name in mod, `export ${name} (${key}) is gone`);
+  const compared = guardCompare(guardEncode(lineageBGuardOutputs()), fixture.outputs);
+  assert.ok(compared > 20000, `the guard compared ${compared} leaf values`);
+});
+
+test('lineage-B guard negative control: a one-ulp change to one pinned evaluateCoat value fails it', () => {
+  const fixture = JSON.parse(readFileSync(GUARD_URL, 'utf8')), actual = guardEncode(lineageBGuardOutputs());
+  const cell = fixture.outputs.evaluateCoat[5][7].values, e = cell[1];
+  assert.equal(typeof e, 'number');
+  const bits = new Float64Array([e]), view = new BigInt64Array(bits.buffer);
+  view[0] += 1n;
+  cell[1] = bits[0];
+  assert.ok(!Object.is(cell[1], e));
+  assert.throws(() => guardCompare(actual, fixture.outputs), /evaluateCoat\.5\.7\.values\.1/);
+});

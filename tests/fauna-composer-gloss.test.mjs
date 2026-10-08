@@ -48,7 +48,10 @@ test('material wiring: one coloured material with the gloss patch and its own pr
   try {
     assert.ok(!Array.isArray(c.mesh.material));
     const coloured = c.mesh.material;
-    assert.equal(coloured.customProgramCacheKey(), COMPOSER_GLOSS_CACHE_KEY);
+    // skin-5 (coat crisp v1): the giraffe's reticulated coat is drawn per fragment, on top of the gloss patch
+    assert.equal(coloured.customProgramCacheKey(), `${COMPOSER_GLOSS_CACHE_KEY}+fauna-composer-coat-crisp-1/reticulated`);
+    const crispShader = {...standard(), uniforms: {}}; coloured.onBeforeCompile(crispShader, null);
+    assert.equal(count(crispShader.fragmentShader, 'vComposerGloss);'), 1);
     const gloss = c.mesh.geometry.getAttribute('composerGloss');
     assert.equal(gloss.itemSize, 1);
     assert.equal(gloss.array, c.skin.gloss, 'the attribute is the skin gloss buffer');

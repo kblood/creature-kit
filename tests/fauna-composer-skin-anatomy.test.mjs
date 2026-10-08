@@ -24,7 +24,7 @@ const partGeometry = (skin, pred) => {
 };
 
 test('skin version and the spec tessellation', () => {
-  assert.equal(COMPOSER_SKIN_VERSION, 'fauna-composer-skin-4', 'skin-4: eye round EC2 (fauna-composer-eye-2)');
+  assert.equal(COMPOSER_SKIN_VERSION, 'fauna-composer-skin-5', 'skin-5: coat crisp v1 (docs/fauna-coat-crisp-v1.md); skin-4 was eye round EC2 (fauna-composer-eye-2)');
   assert.equal(COMPOSER_SKIN_TESSELLATION.eyeRadial, 20, 'lidded eye rings (fauna-composer-eye-1)');
   assert.equal(COMPOSER_SKIN_TESSELLATION.torsoRadial, 28);
   assert.equal(COMPOSER_SKIN_TESSELLATION.legRadial, 16);

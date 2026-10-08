@@ -73,9 +73,20 @@ const vertex = (skin, v) => [skin.positions[v * 3], skin.positions[v * 3 + 1], s
 const colour = (skin, v) => [skin.colors[v * 3], skin.colors[v * 3 + 1], skin.colors[v * 3 + 2]];
 const ringIds = (eye, r, n = 20) => Array.from({length: n}, (_, i) => eye.rings[r] + i);
 /** The head part's own triangles (ears excluded) in head-local coordinates. */
+/** The surface buildEyes seats the eyes on: the head part (ears excluded) plus the torso's neck-to-head blend triangles
+ * (any vertex weighted to the head bone), where a rear eye rim lands. skin-5: once the blend no longer folds (coat crisp
+ * v1 step 4) the ostrich and shelled-giraffe-bird eyes seat about 2.3 er further back, on the blend. */
 function headTris(graph, skin) {
-  const {toLocal} = headFrame(graph), out = [];
-  for (const p of skin.parts) if (p.part === 'head' && !p.label.endsWith('ears')) for (let i = p.firstTriangle * 3; i < (p.firstTriangle + p.triangles) * 3; i++) out.push(...toLocal(...vertex(skin, skin.index[i])));
+  const {toLocal} = headFrame(graph), out = [], hb = graph.chains.head;
+  const headWeighted = v => [0, 1, 2, 3].some(k => skin.skinIndex[v * 4 + k] === hb && skin.skinWeight[v * 4 + k] > 0);
+  for (const p of skin.parts) {
+    if (p.part === 'torso' ? false : p.part !== 'head' || p.label.endsWith('ears')) continue;
+    for (let i = p.firstTriangle * 3; i < (p.firstTriangle + p.triangles) * 3; i += 3) {
+      const v = [0, 1, 2].map(k => skin.index[i + k]);
+      if (p.part === 'torso' && !v.some(headWeighted)) continue;
+      for (const w of v) out.push(...toLocal(...vertex(skin, w)));
+    }
+  }
   return out;
 }
 const eyesPart = skin => skin.parts.filter(p => p.part === 'eyes');

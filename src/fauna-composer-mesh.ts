@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {composerHash, composerRandom, type ComposerRecipe} from './fauna-composer-recipe.ts';
 import {COAT_REGIONS, type CoatRegion} from './fauna-coat-vocab.ts';
-import {COAT_CELLS_PER_BODY, applyCoatDrift, coatIndividualDrift, defaultCoatGenome, evaluateCoat, hash3u, valueNoise3, type CoatGenome} from './fauna-coat-fields.ts';
+import {COAT_CELLS_PER_BODY, applyCoatDrift, coatIndividualDrift, coatSeedMix, defaultCoatGenome, evaluateCoat, evaluateCoatWithMask, hash3u, valueNoise3, type CoatGenome} from './fauna-coat-fields.ts';
 import {composerIndividualTraits, type ComposerIndividualTraits} from './fauna-composer-individual.ts';
 import {COMPOSER_IRIS_RGB, FACE_EYE_PROFILE, composerEyeProfileId, composerEyeRulesOf, composerHeadgearBuild, composerSkullOf, resolveComposerEyes, type ComposerSkull} from './fauna-composer-face.ts';
 import {EYE_PATCH, EYE_ROLE, OCELLUS, type LiddedEyeType, buildCompoundEye, buildEyePatch, buildEyespot, buildEyespotBead, buildFacetedEye, buildOcellus, buildStalk, catalogueEyeSpec, type CatalogueEyeSpec, eyeBarAxis, eyeGaze, nearestExit, normalize3, outermostExit, raycastFirstHit, raycastLine, type EyePatch, type RayHit, type Vec3 as EyeVec3} from './fauna-composer-eye.ts';
@@ -19,7 +19,41 @@ import {composerFeatherFanSpan, composerWingChord, composerWingThickness, type C
  * true 3D position. Output is plain arrays so it can be inspected in tests. */
 /** skin-4 (eye round EC2): the eye catalogue geometry (fauna-composer-eye-2) under the current eye rules, and the blunt
  * mouth disc shaded as a mouth; the earlier eye rules (eyeRules 1) still build skin-3 byte for byte. */
-export const COMPOSER_SKIN_VERSION = 'fauna-composer-skin-4';
+/** skin-5 (coat crisp v1, docs/fauna-coat-crisp-v1.md): crisp-coat layer colours per vertex for the per-fragment coat. */
+export const COMPOSER_SKIN_VERSION = 'fauna-composer-skin-5';
+/** The per-fragment ("crisp") coat: the shader that evaluates the pattern per fragment (fauna-composer.ts) and the
+ * layer colours the skin carries for it. */
+export const COMPOSER_COAT_CRISP_VERSION = 'fauna-composer-coat-crisp-1';
+/** Patterns the crisp coat draws per fragment (index + 1 = the shader's pattern code). Stripes, bands and brindle are
+ * crisp off the limbs only (their limb rings follow the limb axis, which the shader does not know). Others (plain,
+ * saddle, dorsal-stripe, piebald, roan) keep the vertex colours. */
+export const COMPOSER_COAT_CRISP_PATTERNS = Object.freeze(['spots', 'rosettes', 'reticulated', 'dapple', 'stripes', 'bands', 'brindle'] as const);
+export type ComposerCoatCrispPattern = typeof COMPOSER_COAT_CRISP_PATTERNS[number];
+/** What the crisp-coat shader needs besides the per-vertex layers: the frozen pattern's parameters at the REQUESTED
+ * (unclamped) scale and the coat frame that maps a bind-space position to the pattern-space sample. */
+export interface ComposerCoatCrisp {
+  version: typeof COMPOSER_COAT_CRISP_VERSION;
+  pattern: ComposerCoatCrispPattern;
+  /** 1-based pattern code of the shader (COMPOSER_COAT_CRISP_PATTERNS index + 1). */
+  code: number;
+  /** The coat genome at the REQUESTED scale (coatScale.requested, never the clamped one): the CPU twin of the shader
+   * evaluates coatPatternProbe with it. */
+  genome: CoatGenome;
+  /** seedMix(genome.seed) as an unsigned 32-bit integer. */
+  seed: number;
+  /** COAT_CELLS_PER_BODY[pattern] x the requested scale. */
+  cellsPerBody: number;
+  threshold: number; warp: number; bellyLine: number;
+  /** sample.x = ((p.x, p.y) - origin) . forward / scale, sample.y = ((p.y - origin.y) forward.x - (p.x - origin.x) forward.y) / scale, sample.z = p.z / scale. */
+  frame: {origin: [number, number]; forward: [number, number]; scale: number};
+}
+/** Per-vertex crisp-coat layers (linear RGB, 3 per vertex): c0 = the coat at pattern mask 0, c1 = at mask 1 (patch
+ * shade 0), c2 = at mask 1 (patch shade 1). The shaded colour is c0 + m (c1 - c0) + m p (c2 - c1) for the fragment's
+ * mask m and patch shade p (the coat is affine in both). A vertex that did not sample the coat itself carries its
+ * vertex colour in all three, so the mask cannot change it. `sample` (4 per vertex) is the pattern-space point
+ * (x, y, z in body lengths, the coat frame) and the coat dorsal value the vertex was coloured with; vertices without
+ * their own sample get their position in the coat frame and dorsal 0. */
+export interface ComposerCoatLayers {c0: Float32Array; c1: Float32Array; c2: Float32Array; sample: Float32Array}
 export type ComposerSkinPart = 'torso' | 'neck' | 'tail' | 'head' | 'eyes' | 'mouth' | 'horn' | 'trunk' | 'leg' | 'foot' | 'arm' | 'hand' | 'wing' | 'armor' | 'tail-tip';
 
 /** Radial segments and rings per bone of the lofted tubes (feet and toes keep their own tessellation). */
@@ -56,6 +90,14 @@ export interface ComposerSkinDebug {
     torsoEdgeEstimate: number;
   };
   traitsNeutral: boolean;
+  /** Crisp coat (skin-5): own = 1 where the layers were sampled at the vertex itself; sample = the exact (double)
+   * coat sample of those vertices, 6 per vertex (x, y, z, dorsal, along, footprint), NaN elsewhere. Null without the
+   * crisp coat. */
+  coatVertex: {own: Uint8Array; sample: Float64Array} | null;
+  /** skin-5: 1 per triangle of a cap or disc that closes a part inside another part (left out of welded seam normals). */
+  hiddenTriangles: Uint8Array;
+  /** skin-5: the neck-to-head blend rings still crossed after fanOutBends and were turned monotonically instead. */
+  blendUnfolded: boolean;
   /** The eyes as built (fauna-composer-eye-1): one entry per eye, head-local geometry and the skin vertex range. */
   eyes: ComposerSkinEyeDebug[];
   /** The palette's eye colour and the built iris colour (null: compound eyes or eyespots), for colour audits. */
@@ -75,7 +117,11 @@ export interface ComposerSkinEyeDebug {
 }
 export interface ComposerSkin {
   version: typeof COMPOSER_SKIN_VERSION;
-  positions: Float32Array; normals?: undefined; colors: Float32Array; skinIndex: Uint16Array; skinWeight: Float32Array; index: Uint32Array;
+  positions: Float32Array; colors: Float32Array; skinIndex: Uint16Array; skinWeight: Float32Array; index: Uint32Array;
+  /** skin-5: the shading normals (three's area-weighted vertex normals, except that every welded seam group - vertices
+   * with bitwise-equal positions and equal skin indices and weights, outside the eyes - shares one normal built from
+   * its visible faces). createComposerCreature and the export ship these. */
+  normals: Float32Array;
   /** Per-vertex gloss in [0, 1] (0 everywhere but the eyes): the material lowers roughness toward 0.06 with it. */
   gloss: Float32Array;
   /** Eyes that found no skull surface along their gaze and kept the old fixed offset (expected 0). */
@@ -88,6 +134,9 @@ export interface ComposerSkin {
   /** Pattern scale asked for vs drawn: the pattern clamp keeps a mean pattern cell at least four torso
    * edges across, so above `effective` a finer scale looks the same on this body (the Lab says so). */
   coatScale: {pattern: string; requested: number; effective: number};
+  /** skin-5: the crisp coat (null: the pattern is not drawn per fragment) and its per-vertex layers. */
+  coatCrisp: ComposerCoatCrisp | null;
+  coatLayers: ComposerCoatLayers | null;
   debug?: ComposerSkinDebug;
 }
 export interface ComposerSkinOptions {
@@ -105,13 +154,107 @@ const smooth = (lo: number, hi: number, v: number) => { const t = clamp((v - lo)
 const gauss = (x: number, m: number, sigma: number) => Math.exp(-0.5 * ((x - m) / sigma) ** 2);
 const mixC = (a: RGB, b: RGB, t: number): RGB => [mix(a[0], b[0], t), mix(a[1], b[1], t), mix(a[2], b[2], t)];
 const scaleC = (a: RGB, k: number): RGB => [a[0] * k, a[1] * k, a[2] * k];
+/** CIE L* (0..100) of a relative luminance, and back. */
+const lstarOf = (y: number) => y > 216 / 24389 ? 116 * Math.cbrt(y) - 16 : y * 24389 / 27;
+const lumOfLstar = (l: number) => l > 8 ? ((l + 16) / 116) ** 3 : l * 27 / 24389;
+/** Male coat colour at dichromatism weight w (0 = unchanged, bitwise). Birds take the palette accent (breeding
+ * plumage). Other coats get a darker back: the luminance factor lowers the palette base by DICHRO.lstar perceptual
+ * lightness units at w = 1 whatever the base lightness (a savanna coat turns a deeper tan); a dark coat that cannot
+ * drop that far (floor: DICHRO.floor of its L*) takes a wash of the palette accent for the shortfall (a dark animal
+ * with a coloured male flush). A pure luminance scale and a mix toward an in-gamut colour, so the result stays in
+ * gamut; every factor depends on the palette, never on `c`, so the map is affine in `c` and the crisp coat layers
+ * stay exact. */
+const dichromatic = (c: RGB, w: number, plumage: boolean, accent: RGB, base: RGB): RGB => {
+  if (!(w > 0)) return c;
+  if (plumage) return mixC(c, accent, DICHRO.plumageMix * w);
+  const yb = Math.max(1e-6, 0.2126 * base[0] + 0.7152 * base[1] + 0.0722 * base[2]), lb = lstarOf(yb);
+  const floor = DICHRO.floor * lb, short = Math.max(0, 1 - (lb - floor) / DICHRO.lstar);
+  const out = scaleC(c, lumOfLstar(Math.max(floor, lb - DICHRO.lstar * w)) / yb);
+  return short > 0 ? mixC(out, accent, DICHRO.shortAccent * short * w) : out;
+};
+const DICHRO = {plumageMix: 0.55, lstar: 16, floor: 0.4, shortAccent: 0.3};
 const TAU = Math.PI * 2;
 const REGION = Object.fromEntries(COAT_REGIONS.map((name, i) => [name, i])) as Record<CoatRegion, number>;
 const vec = (v: THREE.Vector3): Vec3 => [v.x, v.y, v.z];
 
+/** 1 for every vertex used by an eyes part (eye shells meet at deliberate creases and are never welded). */
+function eyeVertices(parts: ComposerSkin['parts'], index: Uint32Array, nv: number): Uint8Array {
+  const out = new Uint8Array(nv);
+  for (const p of parts) if (p.part === 'eyes') for (let i = p.firstTriangle * 3; i < (p.firstTriangle + p.triangles) * 3; i++) out[index[i]!] = 1;
+  return out;
+}
+/**
+ * skin-5 shading normals (docs/fauna-coat-crisp-v1.md, metric c). three's computeVertexNormals (area-weighted face
+ * normals) everywhere, except welded seam groups: vertices with bitwise-equal Float32 positions and equal skin indices
+ * and weights, outside the eyes. Each part used to get its own normals there, so the coincident seam vertices shaded
+ * differently (the dotted light line at the neck-to-head and trunk seams, EC4). A group's members now share one
+ * normal: the sum of the members' unit VISIBLE normals (each member's area-weighted visible faces; faces of hidden
+ * caps and discs, which close a part inside another, are left out), so each side of the seam counts once. A group
+ * with no visible face uses all its faces, and a degenerate sum keeps its lowest member's own normal - always one
+ * bitwise value per group.
+ */
+export function composerSeamNormals(positions: Float32Array, index: Uint32Array, skinIndex: Uint16Array, skinWeight: Float32Array, hidden: Uint8Array, excluded: Uint8Array): Float32Array {
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geometry.setIndex(new THREE.BufferAttribute(index, 1));
+  geometry.computeVertexNormals();
+  const normals = (geometry.getAttribute('normal') as THREE.BufferAttribute).array as Float32Array;
+  geometry.dispose();
+  const nv = positions.length / 3, pb = new Uint32Array(positions.buffer, positions.byteOffset, nv * 3), wb = new Uint32Array(skinWeight.buffer, skinWeight.byteOffset, nv * 4);
+  const groups = new Map<string, number[]>();
+  for (let v = 0; v < nv; v++) {
+    if (excluded[v]) continue;
+    const key = `${pb[3 * v]},${pb[3 * v + 1]},${pb[3 * v + 2]},${skinIndex[4 * v]},${skinIndex[4 * v + 1]},${skinIndex[4 * v + 2]},${skinIndex[4 * v + 3]},${wb[4 * v]},${wb[4 * v + 1]},${wb[4 * v + 2]},${wb[4 * v + 3]}`;
+    const g = groups.get(key); if (g) g.push(v); else groups.set(key, [v]);
+  }
+  const welded = new Int32Array(nv).fill(-1), list: number[][] = [];
+  for (const g of groups.values()) if (g.length > 1) { for (const v of g) welded[v] = list.length; list.push(g); }
+  if (!list.length) return normals;
+  // per member: the area-weighted sum of its own visible faces (and of all its faces, the fallback)
+  const vis = new Float64Array(nv * 3), all = new Float64Array(nv * 3);
+  for (let t = 0; t < index.length / 3; t++) {
+    const a = index[3 * t]!, b = index[3 * t + 1]!, c = index[3 * t + 2]!;
+    if (welded[a]! < 0 && welded[b]! < 0 && welded[c]! < 0) continue;
+    // three's face normal: (C - B) x (A - B), from the Float32 positions
+    const ux = positions[3 * c]! - positions[3 * b]!, uy = positions[3 * c + 1]! - positions[3 * b + 1]!, uz = positions[3 * c + 2]! - positions[3 * b + 2]!;
+    const vx = positions[3 * a]! - positions[3 * b]!, vy = positions[3 * a + 1]! - positions[3 * b + 1]!, vz = positions[3 * a + 2]! - positions[3 * b + 2]!;
+    const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+    for (const v of [a, b, c]) {
+      if (welded[v]! < 0) continue;
+      all[3 * v] += nx; all[3 * v + 1] += ny; all[3 * v + 2] += nz;
+      if (!hidden[t]) { vis[3 * v] += nx; vis[3 * v + 1] += ny; vis[3 * v + 2] += nz; }
+    }
+  }
+  // the group normal: every member side with visible faces counts once (the sum of the members' unit visible
+  // normals, so a big-faced side does not pull the normal off the other side; two sides give their bisector)
+  const unitSum = (src: Float64Array, members: number[]) => {
+    let x = 0, y = 0, z = 0;
+    for (const v of members) { const l = Math.hypot(src[3 * v]!, src[3 * v + 1]!, src[3 * v + 2]!); if (l > 1e-30) { x += src[3 * v]! / l; y += src[3 * v + 1]! / l; z += src[3 * v + 2]! / l; } }
+    return [x, y, z, Math.hypot(x, y, z)] as const;
+  };
+  for (const members of list) {
+    let [x, y, z, l] = unitSum(vis, members);
+    if (!(l > 1e-12)) [x, y, z, l] = unitSum(all, members);
+    if (!(l > 1e-12)) { const m = members[0]!; x = normals[3 * m]!; y = normals[3 * m + 1]!; z = normals[3 * m + 2]!; l = 1; }
+    const nx = Math.fround(x / l), ny = Math.fround(y / l), nz = Math.fround(z / l);
+    for (const v of members) { normals[3 * v] = nx; normals[3 * v + 1] = ny; normals[3 * v + 2] = nz; }
+  }
+  return normals;
+}
+
 class Skin {
   // growable typed buffers; positions stay double precision until the final Float32 copy
   p = new Float64Array(3 * 4096); c = new Float32Array(3 * 4096); si = new Uint16Array(4 * 4096); sw = new Float32Array(4 * 4096); rg = new Uint8Array(4096); gl = new Float32Array(4096); ix = new Uint32Array(3 * 8192);
+  /** skin-5: 1 per triangle emitted while `hide` is set (a cap or disc that closes a part inside another part); such
+   * faces never shade a welded seam (composerSeamNormals). */
+  hid = new Uint8Array(8192); hide = false;
+  /** Crisp-coat layers (skin-5, docs/fauna-coat-crisp-v1.md), written only while `coat` is set: l0 = colour at mask 0,
+   * l1 = at mask 1 (patch 0), l2 = at mask 1 (patch 1); `own` = 1 where they were sampled at the vertex itself (0:
+   * copied from a ring, or the vertex colour); cq = that sample (x, y, z, dorsal, along, footprint; NaN when not own). */
+  l0 = new Float32Array(3 * 4096); l1 = new Float32Array(3 * 4096); l2 = new Float32Array(3 * 4096); own = new Uint8Array(4096); cq = new Float64Array(6 * 4096);
+  coat: CoatLayerHook | undefined;
+  /** The raw colour of the last vertex emitted by `vc`. */
+  lastColour: RGB = [0, 0, 0];
   /** Vertex and index counts. */
   nv = 0; ni = 0;
   /** Coat region written for vertices that do not name their own. */
@@ -127,6 +270,7 @@ class Skin {
   private grow() {
     const cap = this.rg.length * 2, g = <A extends Float64Array | Float32Array | Uint16Array | Uint8Array>(src: A, n: number): A => { const out = new (src.constructor as new (n: number) => A)(n); out.set(src); return out; };
     this.p = g(this.p, cap * 3); this.c = g(this.c, cap * 3); this.si = g(this.si, cap * 4); this.sw = g(this.sw, cap * 4); this.rg = g(this.rg, cap); this.gl = g(this.gl, cap);
+    if (this.coat) { this.l0 = g(this.l0, cap * 3); this.l1 = g(this.l1, cap * 3); this.l2 = g(this.l2, cap * 3); this.own = g(this.own, cap); this.cq = g(this.cq, cap * 6); }
   }
   v(pos: THREE.Vector3, col: RGB, w: W, region = this.region): number {
     let prep = w === this.lastW ? this.lastPrep : this.prepared.get(w);
@@ -148,7 +292,38 @@ class Skin {
     this.c[i * 3] = clamp(col[0], 0, 1); this.c[i * 3 + 1] = clamp(col[1], 0, 1); this.c[i * 3 + 2] = clamp(col[2], 0, 1);
     this.rg[i] = region;
     this.gl[i] = 0;
+    if (this.coat) {
+      // every vertex carries layers; a vertex without its own coat sample shades exactly with its vertex colour
+      for (let k = 0; k < 3; k++) { const c = this.c[i * 3 + k]!; this.l0[i * 3 + k] = c; this.l1[i * 3 + k] = c; this.l2[i * 3 + k] = c; }
+      this.own[i] = 0; this.cq.fill(NaN, i * 6, i * 6 + 6);
+    }
     return i;
+  }
+  /** A vertex whose colour comes from `colour` (a ring's colour field): with the crisp coat on, a colour that sampled
+   * the coat exactly once, at this very vertex, for a crisp pattern and region, is evaluated again with the pattern
+   * mask forced to 0 and to 1 (patch 0 and 1) to give the vertex's exact layer colours. The vertex colour itself is the
+   * first, ordinary evaluation (unchanged). */
+  vc(pos: THREE.Vector3, colour: () => RGB, w: W, region = this.region): number {
+    const h = this.coat;
+    if (!h) { const col = colour(); this.lastColour = col; return this.v(pos, col, w, region); }
+    h.mode = 0; h.calls = 0; h.ok = false;
+    const col = colour();
+    this.lastColour = col;
+    const i = this.v(pos, col, w, region);
+    if (h.calls === 1 && h.ok && h.sampledAt(pos)) {
+      const q = h.sample;
+      this.cq[i * 6] = q.x; this.cq[i * 6 + 1] = q.y; this.cq[i * 6 + 2] = q.z; this.cq[i * 6 + 3] = q.dorsal; this.cq[i * 6 + 4] = q.along; this.cq[i * 6 + 5] = q.footprint;
+      h.mode = 1; const a = colour(); h.mode = 2; const b = colour(); h.mode = 3; const c = colour(); h.mode = 0;
+      // unclamped: the shader clamps the blended colour, so the blend stays exact where a layer overshoots 0..1
+      for (let k = 0; k < 3; k++) { this.l0[i * 3 + k] = a[k]!; this.l1[i * 3 + k] = b[k]!; this.l2[i * 3 + k] = c[k]!; }
+      this.own[i] = 1;
+    }
+    return i;
+  }
+  /** Copies the layers of vertex `from` to vertex `to` (cap rings that reuse their boundary ring's colours). */
+  copyLayers(from: number, to: number) {
+    if (!this.coat) return;
+    for (let k = 0; k < 3; k++) { this.l0[to * 3 + k] = this.l0[from * 3 + k]!; this.l1[to * 3 + k] = this.l1[from * 3 + k]!; this.l2[to * 3 + k] = this.l2[from * 3 + k]!; }
   }
   /** Emits a pre-built patch (model-space xyz per vertex, a colour and gloss per vertex, triangle indices local to the
    * patch) with one weight list; returns the first vertex. */
@@ -159,7 +334,8 @@ class Skin {
     return first;
   }
   t(a: number, b: number, c: number) {
-    if (this.ni + 3 > this.ix.length) { const out = new Uint32Array(this.ix.length * 2); out.set(this.ix); this.ix = out; }
+    if (this.ni + 3 > this.ix.length) { const out = new Uint32Array(this.ix.length * 2); out.set(this.ix); this.ix = out; const h = new Uint8Array(this.ix.length / 3); h.set(this.hid); this.hid = h; }
+    this.hid[this.ni / 3] = this.hide ? 1 : 0;
     this.ix[this.ni++] = a; this.ix[this.ni++] = b; this.ix[this.ni++] = c;
   }
   pos(i: number) { return V(this.p[i * 3], this.p[i * 3 + 1], this.p[i * 3 + 2]); }
@@ -241,48 +417,57 @@ function loftEdgeLengths(rings: Ring[], segments: number, include: (i: number) =
   }
   return out;
 }
-function loft(s: Skin, rings: Ring[], segments: number, capStart = 0.6, capEnd = 0.6) {
+/** `hidden`: 1 = the start cap, 2 = the end cap, 3 = both close the loft inside another part (their faces are marked
+ * hidden, so they do not shade the welded seam ring). */
+function loft(s: Skin, rings: Ring[], segments: number, capStart = 0.6, capEnd = 0.6, hidden = 0) {
   if (rings.length < 2) return;
   const ids: number[][] = [];
   const basis = ringBasis;
   const p = V();
   /** Emits one ring; with `colours` the vertices reuse those colours (cap rings copy their boundary ring, whose
    * colour they match to within the cap's tiny extent), otherwise each vertex samples the ring's colour field. */
-  const ringIds = (r: Ring, scale = 1, shift = 0, colours?: RGB[], record?: RGB[]) => {
+  const ringIds = (r: Ring, scale = 1, shift = 0, colours?: RGB[], record?: RGB[], from?: number[]) => {
     const b = basis(r), out: number[] = [];
     for (let k = 0; k < segments; k++) {
       const a = TAU * k / segments;
       ringPoint(r, b, a, p, scale, shift);
-      const col = colours ? colours[k]! : r.color(a, p);
-      record?.push(col);
-      out.push(s.v(p, col, r.w, r.region));
+      if (colours) { const i = s.v(p, colours[k]!, r.w, r.region); if (from) s.copyLayers(from[k]!, i); out.push(i); continue; }
+      out.push(s.vc(p, () => r.color(a, p), r.w, r.region));
+      record?.push(s.lastColour);
     }
     return out;
   };
-  const capRings = (r: Ring, dir: number, len: number, colours: RGB[]) => {
+  const capRings = (r: Ring, dir: number, len: number, colours: RGB[], from: number[]) => {
     const list: number[][] = [], steps = 3, radius = Math.max(r.rx, r.ry) * len;
-    for (let k = 1; k <= steps; k++) { const phi = (k / (steps + 1)) * Math.PI / 2; list.push(ringIds(r, Math.cos(phi), dir * Math.sin(phi) * radius, colours)); }
+    for (let k = 1; k <= steps; k++) { const phi = (k / (steps + 1)) * Math.PI / 2; list.push(ringIds(r, Math.cos(phi), dir * Math.sin(phi) * radius, colours, undefined, from)); }
     const {t} = basis(r), apexPos = r.c.clone().addScaledVector(t, dir * radius);
     const apex = s.v(apexPos, colours[Math.floor(segments * 3 / 4)]!, r.w, r.region);
+    s.copyLayers(from[Math.floor(segments * 3 / 4)]!, apex);
     return {list, apex};
   };
   const firstColours: RGB[] = [], lastColours: RGB[] = [];
   const startCap: number[][] = [];
   let startApex = -1;
   const main: number[][] = rings.map((r, i) => ringIds(r, 1, 0, undefined, i === 0 ? firstColours : i === rings.length - 1 ? lastColours : undefined));
-  if (capStart > 0) { const cap = capRings(rings[0]!, -1, capStart, firstColours); startCap.push(...cap.list.reverse()); startApex = cap.apex; }
+  if (capStart > 0) { const cap = capRings(rings[0]!, -1, capStart, firstColours, main[0]!); startCap.push(...cap.list.reverse()); startApex = cap.apex; }
   ids.push(...startCap, ...main);
-  if (startApex >= 0) fan(s, startApex, ids[0]!, true);
-  if (capEnd > 0) { const cap = capRings(rings[rings.length - 1]!, 1, capEnd, lastColours); ids.push(...cap.list); fan(s, cap.apex, ids[ids.length - 1]!, false); }
-  for (let i = 0; i + 1 < ids.length; i++) for (let k = 0; k < segments; k++) {
-    const a = ids[i]![k]!, b = ids[i]![(k + 1) % segments]!, c = ids[i + 1]![k]!, d = ids[i + 1]![(k + 1) % segments]!;
-    s.t(a, b, c); s.t(b, d, c);
+  const hide0 = s.hide;
+  if (startApex >= 0) { s.hide = hide0 || (hidden & 1) !== 0; fan(s, startApex, ids[0]!, true); s.hide = hide0; }
+  if (capEnd > 0) { const cap = capRings(rings[rings.length - 1]!, 1, capEnd, lastColours, main[main.length - 1]!); ids.push(...cap.list); s.hide = hide0 || (hidden & 2) !== 0; fan(s, cap.apex, ids[ids.length - 1]!, false); s.hide = hide0; }
+  const endFrom = startCap.length + main.length - 1;
+  for (let i = 0; i + 1 < ids.length; i++) {
+    s.hide = hide0 || (i < startCap.length && (hidden & 1) !== 0) || (i >= endFrom && (hidden & 2) !== 0);
+    for (let k = 0; k < segments; k++) {
+      const a = ids[i]![k]!, b = ids[i]![(k + 1) % segments]!, c = ids[i + 1]![k]!, d = ids[i + 1]![(k + 1) % segments]!;
+      s.t(a, b, c); s.t(b, d, c);
+    }
   }
+  s.hide = hide0;
 }
 /** A band between two rings with different vertex counts (bind space; both rings emitted with their own colours and
  * weights), triangulated by walking both rings in angle order. Faces outward from the rings' centres. */
 function zipRings(s: Skin, a: Ring, na: number, b: Ring, nb: number) {
-  const emit = (r: Ring, n: number) => { const bs = ringBasis(r), p = V(), ids: number[] = []; for (let k = 0; k < n; k++) { const ang = TAU * k / n; ringPoint(r, bs, ang, p); ids.push(s.v(p, r.color(ang, p), r.w, r.region)); } return ids; };
+  const emit = (r: Ring, n: number) => { const bs = ringBasis(r), p = V(), ids: number[] = []; for (let k = 0; k < n; k++) { const ang = TAU * k / n; ringPoint(r, bs, ang, p); ids.push(s.vc(p, () => r.color(ang, p), r.w, r.region)); } return ids; };
   const A = emit(a, na), B = emit(b, nb), mid = a.c.clone().add(b.c).multiplyScalar(0.5);
   const out = (i: number, j: number, k: number) => s.pos(i).add(s.pos(j)).add(s.pos(k)).multiplyScalar(1 / 3).sub(mid);
   let i = 0, j = 0;
@@ -299,9 +484,11 @@ function capFlat(s: Skin, r: Ring, segments: number, dir: 1 | -1, inset = 1) {
   const b = ringBasis(r), p = V(), ids: number[] = [], mid = V(), rim: THREE.Vector3[] = [];
   for (let k = 0; k < segments; k++) { const a = TAU * k / segments; ringPoint(r, b, a, p); rim.push(p.clone()); mid.add(p); }
   mid.multiplyScalar(1 / segments);
-  for (let k = 0; k < segments; k++) { const a = TAU * k / segments, q = inset === 1 ? rim[k]! : mid.clone().lerp(rim[k]!, inset); ids.push(s.v(q, r.color(a, q), r.w, r.region)); }
-  const centre = s.v(mid, r.color(-Math.PI / 2, mid), r.w, r.region), out = b.t.clone().multiplyScalar(dir);
+  for (let k = 0; k < segments; k++) { const a = TAU * k / segments, q = inset === 1 ? rim[k]! : mid.clone().lerp(rim[k]!, inset); ids.push(s.vc(q, () => r.color(a, q), r.w, r.region)); }
+  const centre = s.vc(mid, () => r.color(-Math.PI / 2, mid), r.w, r.region), out = b.t.clone().multiplyScalar(dir);
+  const hide0 = s.hide; if (inset < 1) s.hide = true;
   for (let k = 0; k < segments; k++) s.to(centre, ids[k]!, ids[(k + 1) % segments]!, out);
+  s.hide = hide0;
 }
 function fan(s: Skin, apex: number, ring: number[], start: boolean) {
   for (let k = 0; k < ring.length; k++) { const a = ring[k]!, b = ring[(k + 1) % ring.length]!; if (start) s.t(b, a, apex); else s.t(a, b, apex); }
@@ -363,6 +550,49 @@ function centripetal(p0: THREE.Vector3, p1: THREE.Vector3, p2: THREE.Vector3, p3
 /** Largest centreline turn allowed between consecutive rings before a midpoint ring is inserted. */
 const MAX_RING_TURN = 12 * Math.PI / 180;
 /**
+ * skin-5: re-places the stations past arc length `fromArc` (the station there and the chain end stay) at equal steps of
+ * max(arc / mean spacing + turn / TRUNK_RESPACE_TURN, |log radius change| / TRUNK_RESPACE_TAPER) along the
+ * centreline, keeping their number: rings move from straight runs into bends, so the largest ring-to-ring turn drops without adding
+ * triangles, while a tapering run keeps enough rings for small radius steps.
+ */
+function respaceStations<S extends {k: number; f: number; kind: ComposerSkinRing['kind']}>(plan: S[], evalSeg: (k: number, f: number) => {c: THREE.Vector3; t: THREE.Vector3}, radiusAt: (k: number, f: number) => number, segCount: number, fromArc: number): S[] {
+  const tau = (st: {k: number; f: number}) => st.k + st.f, N = 32 * segCount;
+  const at = (x: number) => { const k = Math.min(segCount - 1, Math.floor(x)); return evalSeg(k, x - k); };
+  const rAt = (x: number) => { const k = Math.min(segCount - 1, Math.floor(x)); return Math.max(1e-6, radiusAt(k, x - k)); };
+  const xs: number[] = [], arc: number[] = [], turn: number[] = [], taper: number[] = [];
+  let prev = at(0), prevR = rAt(0);
+  for (let j = 0; j <= N; j++) {
+    const x = segCount * j / N, cur = at(x), r = rAt(x);
+    xs.push(x); arc.push(j ? arc[j - 1]! + cur.c.distanceTo(prev.c) : 0); turn.push(j ? turn[j - 1]! + cur.t.angleTo(prev.t) : 0);
+    taper.push(j ? taper[j - 1]! + Math.abs(Math.log(r / prevR)) : 0);
+    prev = cur; prevR = r;
+  }
+  const arcAt = (x: number) => { const j = Math.min(N - 1, Math.floor(x / segCount * N)), f = x / segCount * N - j; return mix(arc[j]!, arc[j + 1]!, f); };
+  const i0 = plan.findIndex(st => arcAt(tau(st)) >= fromArc);
+  if (i0 < 0 || plan.length - 1 - i0 < 2) return plan;
+  const x0 = tau(plan[i0]!), x1 = segCount, n = plan.length - 1 - i0, mean = (arcAt(x1) - arcAt(x0)) / n;
+  // bend measure per sample, then the taper floor: one ring step (mu step S) never spans more than TRUNK_RESPACE_TAPER
+  // of log radius change; S depends on the floor, so a few fixed-point passes settle it
+  const j0 = Math.max(0, xs.findIndex(x => x >= x0)), bend: number[] = [0], tp: number[] = [0];
+  for (let j = 1; j <= N; j++) { bend.push(j > j0 ? (arc[j]! - arc[j - 1]!) / Math.max(1e-9, mean) + (turn[j]! - turn[j - 1]!) / TRUNK_RESPACE_TURN : 0); tp.push(j > j0 ? (taper[j]! - taper[j - 1]!) / TRUNK_RESPACE_TAPER : 0); }
+  let S = bend.reduce((a, b) => a + b, 0) / n, d = bend;
+  for (let pass = 0; pass < 6; pass++) { d = bend.map((b, j) => Math.max(b, S * tp[j]!)); S = d.reduce((a, b) => a + b, 0) / n; }
+  const mu = [0];
+  for (let j = 1; j <= N; j++) mu.push(mu[j - 1]! + d[j]!);
+  const muAt = (x: number) => { const j = Math.min(N - 1, Math.floor(x / segCount * N)), f = x / segCount * N - j; return mix(mu[j]!, mu[j + 1]!, f); };
+  const m0 = muAt(x0), m1 = muAt(x1), out = plan.slice(0, i0 + 1);
+  let j = 0;
+  for (let i = 1; i < n; i++) {
+    const target = m0 + (m1 - m0) * i / n;
+    while (j < N - 1 && mu[j + 1]! < target) j++;
+    const x = Math.max(x0, xs[j]! + (xs[j + 1]! - xs[j]!) * (target - mu[j]!) / Math.max(1e-12, mu[j + 1]! - mu[j]!));
+    const k = Math.min(segCount - 1, Math.floor(x)), f = x - k;
+    out.push({...plan[i0]!, k, f, kind: 'bone'});
+  }
+  out.push(plan[plan.length - 1]!);
+  return out;
+}
+/**
  * Adaptive ring placement: wherever two consecutive stations (segment k, fraction f) differ in tangent by more
  * than MAX_RING_TURN, a station is inserted halfway in chain parameter (k + f), up to three levels deep. Only
  * sharply bent joints gain rings, so a straight chain keeps its spec'd tessellation.
@@ -403,6 +633,19 @@ type At = (b: ComposerBone, x: number, y?: number, z?: number) => THREE.Vector3;
 type Axis = (b: ComposerBone, x: number, y: number, z: number) => THREE.Vector3;
 type Palette = Record<'base' | 'accent' | 'belly' | 'keratin' | 'skin' | 'eye' | 'horn' | 'plate', RGB>;
 type CoatAt = (p: THREE.Vector3, dorsal: number, region: CoatRegion, along: number, footprint?: number) => RGB;
+/** Crisp-coat layer hook (skin-5): Skin.vc sets `mode`, coatAt evaluates accordingly and reports its sample. */
+interface CoatLayerHook {
+  /** 0: ordinary evaluation (recorded); 1: mask 0; 2: mask 1, patch 0; 3: mask 1, patch 1. */
+  mode: number;
+  /** coatAt calls in the current mode-0 evaluation; ok = the last one was a crisp pattern in a crisp region. */
+  calls: number; ok: boolean;
+  /** The coat sample of the last mode-0 evaluation (coatAt's scratch sample). */
+  readonly sample: {x: number; y: number; z: number; dorsal: number; along: number; footprint: number};
+  /** Did the recorded sample come from exactly this position? */
+  sampledAt(p: THREE.Vector3): boolean;
+}
+const CRISP_OFF_LIMBS: ReadonlySet<string> = new Set(['stripes', 'bands', 'brindle']);
+const LIMB_REGIONS: ReadonlySet<CoatRegion> = new Set(['limb-upper', 'limb-lower', 'foot'] as CoatRegion[]);
 /** Dorsal component of an elliptical ring's outward normal at angle a (bone-local, -1 belly .. 1 back). */
 const ringDorsal = (a: number, rx: number, ry: number, ryBelow = ry) => { const sa = Math.sin(a), ca = Math.cos(a), h = sa < 0 ? ryBelow : ry, n = Math.hypot(ca * h, sa * rx); return n > 1e-12 ? sa * rx / n : sa; };
 const ringLateral = (a: number, rx: number, ry: number, ryBelow = ry) => { const sa = Math.sin(a), ca = Math.cos(a), h = sa < 0 ? ryBelow : ry, n = Math.hypot(ca * h, sa * rx); return n > 1e-12 ? ca * h / n : ca; };
@@ -429,7 +672,7 @@ export function buildComposerSkin(graph: ComposerGraph, options: ComposerSkinOpt
   const L = d.bodyLength, scale = Math.max(L, 0.2);
   const one = (bone: number): W => [[bone, 1]];
   const debugRings: ComposerSkinRing[] | undefined = options.debug ? [] : undefined;
-  let splineFallbacks = 0;
+  let splineFallbacks = 0, blendUnfolded = false;
   const T = COMPOSER_SKIN_TESSELLATION;
 
   // ---- individual stream: fixed draw order, mesh-local, never colorSeed
@@ -452,6 +695,9 @@ export function buildComposerSkin(graph: ComposerGraph, options: ComposerSkinOpt
   const skinMul = (1 + jv * (u9[10]! - 0.5) * 0.3) ** 2.2, eyeMul = (1 + jv * (u9[11]! - 0.5) * 0.2) ** 2.2;
   const pal = {...genome.colours, skin: scaleC(genome.colours.skin, skinMul), keratin: scaleC(genome.colours.keratin, skinMul), eye: scaleC(genome.colours.eye, eyeMul)} as Palette;
   const male = traits.sex === 'male' && r.dimorphism > 0;
+  // sexual dichromatism (skin-5, docs/fauna-coat-crisp-v1.md metric b): an adult male's back and flanks take a richer
+  // coat, from existing fields only (sex, dimorphism, maturity, palette); females and sexless animals are untouched
+  const dichro = male ? r.dimorphism * smooth(0.55, 0.95, traits.maturity) : 0;
   const SOIL: RGB = [0.155, 0.117, 0.08];
 
   // coat frame: origin at the torso centre, x along the torso (in the sagittal plane), z lateral
@@ -465,11 +711,23 @@ export function buildComposerSkin(graph: ComposerGraph, options: ComposerSkinOpt
   const sample = {x: 0, y: 0, z: 0, dorsal: 0, region: 'torso' as CoatRegion, along: 0, footprint: 0};
   const groundRef = Math.max(d.legReach, d.frontLegReach, 1e-3);
   const plainGenome = genome.pattern === 'bands' ? {...genome, pattern: 'plain' as const} : null;
+  // crisp coat (skin-5): the pattern is drawn per fragment at the requested scale; the skin carries layer colours
+  const crispPattern = (COMPOSER_COAT_CRISP_PATTERNS as readonly string[]).includes(genome.pattern) ? genome.pattern as ComposerCoatCrispPattern : null;
+  const hook: CoatLayerHook = {mode: 0, calls: 0, ok: false, sample, sampledAt: q => {
+    const dx = q.x - origin.x, dy = q.y - origin.y;
+    return sample.x === (dx * fwd.x + dy * fwd.y) / scale && sample.y === (dy * fwd.x - dx * fwd.y) / scale && sample.z === q.z / scale;
+  }};
+  if (crispPattern) s.coat = hook;
   const coatAt: CoatAt = (p, dorsal, region, along, fp = 0) => {
     const dx = p.x - origin.x, dy = p.y - origin.y;
     sample.x = (dx * fwd.x + dy * fwd.y) / scale; sample.y = (dy * fwd.x - dx * fwd.y) / scale; sample.z = p.z / scale;
     sample.dorsal = clamp(dorsal, -1, 1); sample.region = region; sample.along = clamp(along, 0, 1); sample.footprint = fp;
-    evaluateCoat(genome, sample, coatOut, 0);
+    const mode = hook.mode;
+    if (mode === 0) {
+      evaluateCoat(genome, sample, coatOut, 0);
+      hook.calls++;
+      hook.ok = region !== 'eye' && region !== 'horn' && region !== 'armor' && !(CRISP_OFF_LIMBS.has(genome.pattern) && LIMB_REGIONS.has(region));
+    } else evaluateCoatWithMask(genome, sample, coatOut, 0, mode === 1 ? 0 : 1, mode === 3 ? 1 : 0);
     let c: RGB = [coatOut[0]!, coatOut[1]!, coatOut[2]!];
     // body bands continued as rings down every leg read as a striped sock (toy-like); reptile limbs carry the
     // banding faintly, as scale-row shading, so it fades to 40% strength there
@@ -484,6 +742,7 @@ export function buildComposerSkin(graph: ComposerGraph, options: ComposerSkinOpt
     if (mottleAmp > 0) k *= 1 + mottleAmp * 2 * (valueNoise3(sample.x * 4.5, sample.y * 4.5, sample.z * 4.5, mottleSeed) - 0.5);
     if (male) k *= 1 - 0.06 * r.dimorphism * smooth(-0.2, 0.7, dorsal);
     if (k !== 1) c = scaleC(c, Math.pow(k, 2.2));
+    if (dichro > 0) c = dichromatic(c, dichro * smooth(-0.85, 0.15, dorsal), r.palette === 'plumage', pal.accent, pal.base);
     if (r.palette === 'plumage' && region === 'neck') c = mixC(c, pal.accent, 0.25);
     // dried mud and dust on the lower legs, varying per individual
     if (soil > 0 && (region === 'limb-lower' || region === 'foot' || region === 'limb-upper') && r.layout !== 'limbless') c = mixC(c, SOIL, soil * smooth(soilHeight * groundRef, 0.02 * groundRef, p.y));
@@ -501,6 +760,8 @@ export function buildComposerSkin(graph: ComposerGraph, options: ComposerSkinOpt
     extra?: THREE.Vector3[];
     /** First ring of the first segment (limb root); earlier rings are dropped. */
     rootF?: number;
+    /** skin-5: respace the stations past this arc length by arc + turn (TRUNK_RESPACE_TURN), keeping their count. */
+    respaceFrom?: number;
     dress: (ring: Ring, meta: Meta) => void;
     /** Runs after the underside clamp. */
     after?: (ring: Ring, meta: Meta) => void;
@@ -571,6 +832,7 @@ export function buildComposerSkin(graph: ComposerGraph, options: ComposerSkinOpt
       for (const f of fr) plan.push({k, f, kind: k === 0 && f === o.rootF ? 'root' : extras.has(f) ? 'joint' : 'bone'});
     });
     plan = refineStations(plan, st => evalSeg(st.k, st.f).t, segs.length);
+    if (o.respaceFrom !== undefined) plan = respaceStations(plan, evalSeg, (k, f) => { const sc = sampleSec(k, f); return 0.5 * (sc.w + sc.h); }, segs.length, o.respaceFrom);
     const rings: Ring[] = [], metas: Meta[] = [];
     segs.forEach(({bone}, k) => {
       const prev = segs[k - 1]?.bone, next = segs[k + 1]?.bone;
@@ -719,6 +981,17 @@ export function buildComposerSkin(graph: ComposerGraph, options: ComposerSkinOpt
   // orientations are smoothed over a window that grows with the radius until no pair crosses; centres stay on the
   // spline. The last ring is the head's first station and keeps the head frame; the tail tip is free.
   fanOutBends(axialRings, true);
+  // skin-5: the neck-to-head blend rings sit close together (the head station is a short reach away), so where the
+  // smoothed frames still cross there (a fold at the top of the seam, whose faces point into the neck) the blend rings
+  // turn monotonically from the neck's last frame to the head axis instead, eased over the blend's arc length
+  const firstBlend = axialChain.rings.length - 1;
+  if (axialRings.slice(firstBlend, -1).some((r, i) => ringsCross(r, axialRings[firstBlend + i + 1]!))) {
+    blendUnfolded = true;
+    const from = axialRings[firstBlend]!.t.clone().normalize(), to = axialRings[axialRings.length - 1]!.t.clone().normalize(), arc = [0];
+    for (let i = firstBlend + 1; i < axialRings.length; i++) arc.push(arc[arc.length - 1]! + axialRings[i]!.c.distanceTo(axialRings[i - 1]!.c));
+    const total = arc[arc.length - 1]! || 1, q = new THREE.Quaternion().setFromUnitVectors(from, to), id = new THREE.Quaternion();
+    for (let i = firstBlend + 1; i < axialRings.length - 1; i++) axialRings[i]!.t = from.clone().applyQuaternion(id.clone().slerp(q, smooth(0, 1, arc[i - firstBlend]! / total)));
+  }
   setFootprints(axialRings, axialMetas, axialRadial);
   // ---- pattern scale clamp: keep a mean pattern cell at least four torso edges across
   // the exact triangle edges the loft will emit between torso-region rings (same superellipse, lobes and squash)
@@ -730,7 +1003,8 @@ export function buildComposerSkin(graph: ComposerGraph, options: ComposerSkinOpt
     const maxScale = scale / (4 * 1.08 * cells * torsoEdge);
     if (genome.scale > maxScale) genome = {...genome, scale: maxScale};
   }
-  loft(s, axialRings, axialRadial, tail.length ? 0.25 : 0.85, 0.25);
+  // the end cap closes the neck inside the head (whose first station is the neck's last ring)
+  loft(s, axialRings, axialRadial, tail.length ? 0.25 : 0.85, 0.25, 2);
   report('axial', axialRings, axialMetas);
   s.end();
 
@@ -746,7 +1020,8 @@ export function buildComposerSkin(graph: ComposerGraph, options: ComposerSkinOpt
     s.begin('trunk', 'trunk');
     s.region = REGION.muzzle;
     const segs = trunk.map(i => ({bone: bones[i]!, reversed: false}));
-    const tr = buildChain(segs, {ringsFor: () => 4, startWeights: [[head, 0.7], [trunk[0]!, 0.3]], dress: (ring, meta) => {
+    const reach0 = trunkJoin ? TRUNK_JOIN_BLEND * Math.max(trunkJoin.rx, trunkJoin.ry) : 0;
+    const tr = buildChain(segs, {ringsFor: () => 4, respaceFrom: reach0, startWeights: [[head, 0.7], [trunk[0]!, 0.3]], dress: (ring, meta) => {
       meta.region = 'muzzle'; meta.along = 1; ring.region = REGION.muzzle;
       // fine skin wrinkles (skin EC4; 4 broad accent bands before, which Luna read as 'segment-like bands')
       const bandK = TRUNK_WRINKLE[0] * Math.pow(Math.sin(Math.PI * TRUNK_WRINKLE[1] * meta.f), 6);
@@ -757,17 +1032,39 @@ export function buildComposerSkin(graph: ComposerGraph, options: ComposerSkinOpt
     if (trunkJoin) {
       rings = [trunkJoin, ...tr.rings.slice(1)];
       const reach = TRUNK_JOIN_BLEND * Math.max(trunkJoin.rx, trunkJoin.ry);
-      let arc = 0;
-      for (let i = 1; i < rings.length; i++) {
-        arc += rings[i]!.c.distanceTo(rings[i - 1]!.c);
-        const k = 1 - smooth(0, reach, arc), rg = rings[i]!;
-        if (k <= 0) break;
-        // skin EC4: the centre line too leaves the muzzle along its axis (the trunk's first bone already turns down)
-        rg.c = rg.c.clone().lerp(trunkJoin.c.clone().addScaledVector(trunkJoin.t.clone().normalize(), arc), k * k);
-        rg.t = rg.t.clone().normalize().lerp(trunkJoin.t.clone().normalize(), k).normalize();
-        rg.u = rg.u.clone().lerp(trunkJoin.u, k).normalize();
-        const below = rg.ryBelow ?? rg.ry;
-        rg.rx = mix(rg.rx, trunkJoin.rx, k); rg.ry = mix(rg.ry, trunkJoin.ry, k); rg.ryBelow = mix(below, trunkJoin.ryBelow ?? trunkJoin.ry, k);
+      // skin-5 (coat crisp v1, metric d2): the centre line leaves the muzzle along its axis and meets the trunk spline at
+      // the first ring past `reach` on a cubic Hermite curve (tangent-continuous at both ends), and the rings inside
+      // the reach sit at equal arc steps along it, so the turn spreads evenly over the join (EC4's lerp toward the
+      // muzzle line bent most at the second ring, 10 .. 13 deg)
+      let m = 1, arc = 0;
+      while (m < rings.length - 2 && (arc += rings[m]!.c.distanceTo(rings[m - 1]!.c)) < reach) m++;
+      if (arc < reach) {
+        // a trunk shorter than the reach (trunkLength 0.2): EC4's blend toward the muzzle line, unchanged
+        arc = 0;
+        for (let i = 1; i < rings.length; i++) {
+          arc += rings[i]!.c.distanceTo(rings[i - 1]!.c);
+          const k = 1 - smooth(0, reach, arc), rg = rings[i]!;
+          if (k <= 0) break;
+          rg.c = rg.c.clone().lerp(trunkJoin.c.clone().addScaledVector(trunkJoin.t.clone().normalize(), arc), k * k);
+          rg.t = rg.t.clone().normalize().lerp(trunkJoin.t.clone().normalize(), k).normalize();
+          rg.u = rg.u.clone().lerp(trunkJoin.u, k).normalize();
+          const below = rg.ryBelow ?? rg.ry;
+          rg.rx = mix(rg.rx, trunkJoin.rx, k); rg.ry = mix(rg.ry, trunkJoin.ry, k); rg.ryBelow = mix(below, trunkJoin.ryBelow ?? trunkJoin.ry, k);
+        }
+      } else if (m > 1) {
+        const P0 = trunkJoin.c, T0 = trunkJoin.t.clone().normalize(), P1 = rings[m]!.c, T1 = rings[m]!.t.clone().normalize(), L = P0.distanceTo(P1);
+        const herm = (u: number, out: THREE.Vector3) => { const u2 = u * u, u3 = u2 * u; return out.copy(P0).multiplyScalar(2 * u3 - 3 * u2 + 1).addScaledVector(T0, TRUNK_JOIN_LEAD * L * (u3 - 2 * u2 + u)).addScaledVector(P1, -2 * u3 + 3 * u2).addScaledVector(T1, L * (u3 - u2)); };
+        const N = 64, len = [0], q = V(), prev = herm(0, V());
+        for (let j = 1; j <= N; j++) { herm(j / N, q); len.push(len[j - 1]! + q.distanceTo(prev)); prev.copy(q); }
+        const uAt = (frac: number) => { const target = frac * len[N]!; let j = 1; while (j < N && len[j]! < target) j++; return (j - 1 + (target - len[j - 1]!) / Math.max(1e-12, len[j]! - len[j - 1]!)) / N; };
+        for (let i = 1; i < m; i++) {
+          const frac = i / m, u = uAt(frac), rg = rings[i]!, k = 1 - smooth(0, 1, frac);
+          rg.c = herm(u, V());
+          rg.t = herm(Math.min(1, u + 1e-3), V()).sub(herm(Math.max(0, u - 1e-3), V())).normalize();
+          rg.u = rg.u.clone().lerp(trunkJoin.u, k).normalize();
+          const below = rg.ryBelow ?? rg.ry;
+          rg.rx = mix(rg.rx, trunkJoin.rx, k); rg.ry = mix(rg.ry, trunkJoin.ry, k); rg.ryBelow = mix(below, trunkJoin.ryBelow ?? trunkJoin.ry, k);
+        }
       }
       // the join ring carries the head's radial count, which the trunk keeps for its first TRUNK_ZIP_LENGTH join radii;
       // one zipper band then steps it down to the trunk's TRUNK_RADIAL segments, away from the junction (a zipper's
@@ -1020,11 +1317,32 @@ export function buildComposerSkin(graph: ComposerGraph, options: ComposerSkinOpt
   s.end();
 
   const positions = new Float32Array(s.p.subarray(0, s.nv * 3)), colors = s.c.slice(0, s.nv * 3), skinIndex = s.si.slice(0, s.nv * 4), skinWeight = s.sw.slice(0, s.nv * 4), index = s.ix.slice(0, s.ni), regions = s.rg.slice(0, s.nv), gloss = s.gl.slice(0, s.nv);
-  const out: ComposerSkin = {version: COMPOSER_SKIN_VERSION, positions, colors, skinIndex, skinWeight, index, regions, gloss, eyeFallbacks: eyeCtx.fallbacks, parts: s.parts, vertexCount: positions.length / 3, triangleCount: index.length / 3, coatScale: {pattern: genome.pattern, requested: requestedScale, effective: genome.scale}};
+  // the shader's pattern runs at the REQUESTED scale (the vertex colours above use the clamped `genome.scale`)
+  const crispGenome: CoatGenome = {...genome, scale: requestedScale};
+  const coatCrisp: ComposerCoatCrisp | null = crispPattern ? {
+    version: COMPOSER_COAT_CRISP_VERSION, pattern: crispPattern, code: COMPOSER_COAT_CRISP_PATTERNS.indexOf(crispPattern) + 1, genome: crispGenome,
+    seed: coatSeedMix(crispGenome.seed) >>> 0, cellsPerBody: COAT_CELLS_PER_BODY[crispPattern] * crispGenome.scale,
+    threshold: crispGenome.threshold, warp: crispGenome.warp, bellyLine: crispGenome.bellyLine,
+    frame: {origin: [origin.x, origin.y], forward: [fwd.x, fwd.y], scale},
+  } : null;
+  let coatLayers: ComposerCoatLayers | null = null;
+  if (crispPattern) {
+    const sampleOut = new Float32Array(s.nv * 4);
+    for (let i = 0; i < s.nv; i++) {
+      if (s.own[i]) { for (let k = 0; k < 4; k++) sampleOut[i * 4 + k] = s.cq[i * 6 + k]!; continue; }
+      const dx = s.p[i * 3]! - origin.x, dy = s.p[i * 3 + 1]! - origin.y;
+      sampleOut[i * 4] = (dx * fwd.x + dy * fwd.y) / scale; sampleOut[i * 4 + 1] = (dy * fwd.x - dx * fwd.y) / scale; sampleOut[i * 4 + 2] = s.p[i * 3 + 2]! / scale; sampleOut[i * 4 + 3] = 0;
+    }
+    coatLayers = {c0: s.l0.slice(0, s.nv * 3), c1: s.l1.slice(0, s.nv * 3), c2: s.l2.slice(0, s.nv * 3), sample: sampleOut};
+  }
+  const normals = composerSeamNormals(positions, index, skinIndex, skinWeight, s.hid.subarray(0, s.ni / 3), eyeVertices(s.parts, index, s.nv));
+  const out: ComposerSkin = {version: COMPOSER_SKIN_VERSION, positions, normals, colors, skinIndex, skinWeight, index, regions, gloss, eyeFallbacks: eyeCtx.fallbacks, parts: s.parts, vertexCount: positions.length / 3, triangleCount: index.length / 3, coatScale: {pattern: genome.pattern, requested: requestedScale, effective: genome.scale}, coatCrisp, coatLayers};
   if (options.debug) out.debug = {
     rings: debugRings!, splineFallbacks,
     coat: {pattern: genome.pattern, requestedScale, effectiveScale: genome.scale, cellsPerBody: cells, meanCellDiameter: cells > 0 ? scale / (cells * genome.scale) : Infinity, torsoEdgeEstimate: torsoEdge},
     traitsNeutral: traits.neutral,
+    coatVertex: crispPattern ? {own: s.own.slice(0, s.nv), sample: s.cq.slice(0, s.nv * 6)} : null,
+    hiddenTriangles: s.hid.slice(0, s.ni / 3), blendUnfolded,
     eyes: eyeCtx.eyes, eyeColours: {eye: eyeCtx.colours.eye, iris: eyeCtx.colours.iris, lidFactor: eyeCtx.colours.lidFactor, compound: eyeCtx.colours.compound ?? null},
   };
   return out;
@@ -1106,7 +1424,7 @@ function buildHead(s: Skin, graph: ComposerGraph, hb: ComposerBone, pal: Palette
       if (i === n) ring.w = joinW;
       rings.push(ring);
     }
-    loft(s, rings, seg, 0.2, trunk0 !== undefined ? 0 : 0.45);
+    loft(s, rings, seg, 0.2, trunk0 !== undefined ? 0 : 0.45, 1);
     // the open end is closed by a flat disc hidden inside the joined muzzle and trunk (each part stays a closed surface)
     if (trunk0 !== undefined) { trunkJoin = rings[rings.length - 1]!; capFlat(s, trunkJoin, seg, 1, HIDDEN_DISC_INSET); }
     tipX = tip.x; tipY = tip.y; tipH = tip.h;
@@ -1136,7 +1454,7 @@ function buildHead(s: Skin, graph: ComposerGraph, hb: ComposerBone, pal: Palette
       rings.push(station(x, sw, sh, mix(-0.08, jaws ? -0.12 : -0.24, f) * cH, mouth));
     }
     const capFrom = s.ni / 3;
-    loft(s, rings, seg, 0.2, jaws ? 0.55 : 0.45);
+    loft(s, rings, seg, 0.2, jaws ? 0.55 : 0.45, 1);
     tipY = (jaws ? -0.12 : -0.24) * cH; tipH = (jaws ? 0.36 : 0.52) * cH;
     s.region = REGION.muzzle;
     // nostrils seated on the rounded muzzle cap: each stands NOSTRIL_PROUD x H proud of the cap surface found along
@@ -1167,7 +1485,7 @@ function buildHead(s: Skin, graph: ComposerGraph, hb: ComposerBone, pal: Palette
       }
     }
   } else if (skull === 'beak') {
-    loft(s, [first(), station(0.4 * H, 0.62 * cW, 0.66 * cH, 0.02 * cH)], seg, 0.2, 0.3);
+    loft(s, [first(), station(0.4 * H, 0.62 * cW, 0.66 * cH, 0.02 * cH)], seg, 0.2, 0.3, 1);
     const len = Math.max(sn, 0.15 * H), n = 6, upper: Ring[] = [], lower: Ring[] = [];
     for (let i = 0; i <= n; i++) {
       const f = i / n, x = 0.36 * H + len * f, hook = len < 0.35 * H ? smooth(0.6, 1, f) * 0.18 : 0;
@@ -1180,7 +1498,7 @@ function buildHead(s: Skin, graph: ComposerGraph, hb: ComposerBone, pal: Palette
     tipX = 0.36 * H + len; tipY = -0.05 * cH; tipH = 0.1 * cH;
   } else if (skull === 'flat-face') {
     const skinBelow = (base: (a: number, p: THREE.Vector3) => RGB) => (a: number, p: THREE.Vector3) => Math.sin(a) < 0.2 ? pal.skin : base(a, p);
-    loft(s, [first(), station(0.4 * H, 0.86 * cW, 0.86 * cH, -0.02 * cH, skinBelow(hc.col(0.4 * H, 0.86 * cW, 0.86 * cH))), station(0.48 * H, 0.55 * cW, 0.5 * cH, -0.1 * cH, () => pal.skin)], seg, 0.2, 0.45);
+    loft(s, [first(), station(0.4 * H, 0.86 * cW, 0.86 * cH, -0.02 * cH, skinBelow(hc.col(0.4 * H, 0.86 * cW, 0.86 * cH))), station(0.48 * H, 0.55 * cW, 0.5 * cH, -0.1 * cH, () => pal.skin)], seg, 0.2, 0.45, 1);
     const len = Math.max(0.05 * H, sn * 0.6);
     // lower face: bare skin with a darker mouth line across its lower front (the cap rings carry it over the front)
     const lowerFace = (a: number): RGB => Math.abs(Math.sin(a) + 0.38) < 0.07 ? scaleC(pal.keratin, 0.5) : pal.skin;
@@ -1201,7 +1519,7 @@ function buildHead(s: Skin, graph: ComposerGraph, hb: ComposerBone, pal: Palette
   } else if (skull === 'blunt') {
     const xt = 0.6 * H + sn * 0.3, base = hc.col(xt, 0.75 * cW, 0.75 * cH);
     const capFrom = s.ni / 3;
-    loft(s, [first(), station(xt, 0.75 * cW, 0.75 * cH, 0, (a, p) => mixC(base(a, p), pal.skin, 0.5))], seg, 0.2, 0.75);
+    loft(s, [first(), station(xt, 0.75 * cW, 0.75 * cH, 0, (a, p) => mixC(base(a, p), pal.skin, 0.5))], seg, 0.2, 0.75, 1);
     // the frontal mouth disc (bare skin, not an eye), seated on the cap's front: it used to float 0.72 cW ahead of the
     // cap station, beyond the rounded cap end; now its centre sits 0.01 H inside the cap surface found along the axis
     // the disc is a thin shell draped over the cap: every vertex is cast from inside the cap along the head axis and
@@ -1256,7 +1574,7 @@ function buildHead(s: Skin, graph: ComposerGraph, hb: ComposerBone, pal: Palette
     tipX = 0.6 * H + sn * 0.3 + 0.7 * cW; tipY = 0; tipH = 0.5 * cH;
   } else {
     // mandibles: arthropod head capsule with antennae and pincer mouthparts
-    loft(s, [first(), station(0.3 * H, cW, cH, 0), station(0.75 * H, 0.8 * cW, 0.75 * cH, -0.1 * cH)], seg, 0.2, 0.5);
+    loft(s, [first(), station(0.3 * H, cW, cH, 0), station(0.75 * H, 0.8 * cW, 0.75 * cH, -0.1 * cH)], seg, 0.2, 0.5, 1);
     const len = Math.max(0.25 * H, sn * 1.1);
     for (const side of [-1, 1]) {
       const pts = [0, 0.35, 0.7, 1].map(f => at(hb, 0.72 * H + len * f, -0.25 * cH, side * mix(0.55, 0.05, f * f) * cW));
@@ -1333,6 +1651,15 @@ function buildHead(s: Skin, graph: ComposerGraph, hb: ComposerBone, pal: Palette
 }
 /** The trunk's section and orientation ease from the muzzle's last station over this many station radii. */
 export const TRUNK_JOIN_BLEND = 1.2;
+/** skin-5: the join curve's start tangent length (x its chord): above 1 the curve holds the muzzle axis a little longer,
+ * so its turn peaks mid-join instead of at the muzzle (max ring turn 8.3 -> 7.4 deg on the trunked centipede). */
+export const TRUNK_JOIN_LEAD = 1.3;
+/** skin-5: past the join reach, trunk rings are spread by arc length plus turn (one TRUNK_RESPACE_TURN of turn
+ * counts like a mean ring spacing of length), so a curled trunk end gets rings from its straight run, same count. */
+export const TRUNK_RESPACE_TURN = 2 * Math.PI / 180;
+/** skin-5: in that respacing a section radius change by this log ratio counts at least like one mean spacing, so the
+ * rings leaving a straight but tapering run keep consecutive radius steps small. */
+export const TRUNK_RESPACE_TAPER = Math.log(1.08);
 /** The trunk keeps the muzzle's radial count for this many join radii before it zips down to 12 segments. */
 export const TRUNK_ZIP_LENGTH = 0.5;
 /** Trunk radial segments (skin EC4; 12 before: Luna saw "visible flat facets on the trunk"). */
@@ -1373,8 +1700,10 @@ function proboscisEar(s: Skin, root: THREE.Vector3, back: THREE.Vector3, up: THR
  * above the ground. GPT Luna 6 on the face-round tip: "The tip looks blunt and capped. A nostril or lip detail is too
  * small to make out." A pale pink lip (lipMix 0.4) then read as "a small, plain-looking cap" (luna/after-trunk.txt): the lip is
  * now the plain coat, the end swells gently (a steep flare caught the light as a pale ring), the end face is darkened by
- * `faceDark` and the nostrils are larger. */
-export const TRUNK_TIP = Object.freeze({bulb: [[0.16, 1.05], [0.32, 1.1], [0.44, 1.06]] as readonly (readonly number[])[], flare: 1.1, faceAt: 0.54, face: 0.86, nostril: 0.25, nostrilTall: 1.35, nostrilZ: 0.4, nostrilY: 0.02,
+ * `faceDark` and the nostrils are larger. skin-5 (coat crisp v1, metric d3): the end rolls in over two rings past the
+ * widest (1.04 and 0.9 r) to a flat face of 0.62 r (was 0.86 r behind a 1.06 r ring, a flat-cap ratio of 0.78 that read
+ * as a cap); the nostrils sit closer together (0.3 r, half width 0.22 r) to stay on the smaller face. */
+export const TRUNK_TIP = Object.freeze({bulb: [[0.16, 1.05], [0.3, 1.1], [0.42, 1.04], [0.51, 0.9]] as readonly (readonly number[])[], flare: 1.1, faceAt: 0.56, face: 0.62, nostril: 0.22, nostrilTall: 1.35, nostrilZ: 0.3, nostrilY: 0.02,
   finger: [0.38, 0.8, 0.36, 0.26, 0.3] as readonly number[], lipTone: [0.66, 0.52, 0.48] as readonly number[], lipMix: 0, faceDark: 0.35});
 function buildTrunkTip(s: Skin, last: Ring, tip: ComposerBone, pal: Palette, at: At, axis: Axis, coat: (p: THREE.Vector3, dorsal: number) => RGB) {
   const K = TRUNK_TIP, r = Math.max(last.rx, last.ry), tx = axis(tip, 1, 0, 0), ty = axis(tip, 0, 1, 0), tz = axis(tip, 0, 0, 1), w: W = [[tip.index, 1]];
