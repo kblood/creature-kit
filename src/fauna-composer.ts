@@ -280,7 +280,8 @@ export function createComposerCreature(input: ComposerRecipe): ComposerCreature 
     geometry.setAttribute('coatSample', new THREE.BufferAttribute(skin.coatLayers.sample, 4));
   }
   geometry.setIndex(new THREE.BufferAttribute(skin.index, 1));
-  geometry.computeVertexNormals();
+  // skin-5: the skin's shading normals (three's vertex normals with welded seams sharing one normal)
+  geometry.setAttribute('normal', new THREE.BufferAttribute(skin.normals, 3));
   geometry.userData.composer = {graph: graph.version, skin: skin.version, coatCrisp: skin.coatCrisp?.version ?? null};
   const coloured = skin.coatCrisp && skin.coatLayers ? createComposerCrispCoatMaterial(skin.coatCrisp) : createComposerColouredMaterial();
   const neutralMaterial = new THREE.MeshStandardMaterial({color: '#a9aba6', roughness: 0.9, metalness: 0});

@@ -10,9 +10,9 @@ import {
   evaluateCoat, evaluateCoatWithMask,
 } from '../src/fauna-coat-fields.ts';
 import {COAT_MARK_BITS, COAT_PATTERNS, COAT_REGIONS} from '../src/fauna-coat-vocab.ts';
-import {composerPreset, normalizeComposerRecipe} from '../src/fauna-composer-recipe.ts';
+import {COMPOSER_PRESET_IDS, composerPreset, decodeComposerRecipe, normalizeComposerRecipe} from '../src/fauna-composer-recipe.ts';
 import {buildComposerGraph} from '../src/fauna-composer-rig.ts';
-import {COMPOSER_COAT_CRISP_PATTERNS, COMPOSER_COAT_CRISP_VERSION, buildComposerSkin} from '../src/fauna-composer-mesh.ts';
+import {COMPOSER_COAT_CRISP_PATTERNS, COMPOSER_COAT_CRISP_VERSION, TRUNK_TIP, buildComposerSkin} from '../src/fauna-composer-mesh.ts';
 import {deriveComposerIndividual} from '../src/fauna-composer-individual.ts';
 import {
   COMPOSER_COAT_CRISP_GLSL, COMPOSER_GLOSS_CACHE_KEY, createComposerCreature, patchComposerCoatCrispShader, patchComposerGlossShader,
@@ -278,7 +278,10 @@ const colourDigest = skin => createHash('sha256').update(Buffer.from(skin.colors
  * 1e-6 (pre-registered metric b). */
 const DICHROMATISM_DE_PINS = {dinosaur: 9.01249016036704, turtle: 7.824128637621952, giraffe: 8.176930110350218, bird: 35.18368016177891, ostrich: 11.108633687985092, rhinoceros: 9.019165940473389, ape: 9.784564835309515, worm: 5.959898681917788, centipede: 6.271398108322732, 'shelled-giraffe-bird': 8.428803391822855, 'trunked-centipede': 6.9229743932803895, 'winged-ape-rhino': 7.5542351883197};
 /** `<resolved sex>:<colour digest>` of female, sexless (type specimen) and dimorphism-0 male builds as at 819be67
- * (step 2, before dichromatism): metric (b) requires that they do not change. */
+ * (step 2, before dichromatism): metric (b) requires that they do not change. Step 4 moved vertices (the neck-to-head
+ * blend fold fix: giraffe, ostrich, ape, shelled-giraffe-bird; the trunk: trunked-centipede), so those 20 pins were
+ * re-captured from the step-4 build and checked byte-equal to the same build with the dichromatism term removed
+ * (docs/fauna-coat-crisp-v1.md, step 4 ledger); the other 28 are unchanged since 819be67. */
 const UNCHANGED_COLOUR_PINS = {
   'dinosaur/female-1': 'female:b2d32bb65d6543cb',
   'dinosaur/female-0.5': 'female:b2d32bb65d6543cb',
@@ -288,26 +291,26 @@ const UNCHANGED_COLOUR_PINS = {
   'turtle/female-0.5': 'female:73768b9fdebdc622',
   'turtle/none': 'none:73768b9fdebdc622',
   'turtle/male-0': 'male:73768b9fdebdc622',
-  'giraffe/female-1': 'female:4c475ff4f63f4581',
-  'giraffe/female-0.5': 'female:3593f7465e4fa7ba',
-  'giraffe/none': 'none:94ebfe01f884a182',
-  'giraffe/male-0': 'male:94ebfe01f884a182',
+  'giraffe/female-1': 'female:0a2d66732ebef180',
+  'giraffe/female-0.5': 'female:17897264bdbb6715',
+  'giraffe/none': 'none:49f55d0163213cd1',
+  'giraffe/male-0': 'male:49f55d0163213cd1',
   'bird/female-1': 'female:923509841fb37105',
   'bird/female-0.5': 'female:923509841fb37105',
   'bird/none': 'none:923509841fb37105',
   'bird/male-0': 'male:923509841fb37105',
-  'ostrich/female-1': 'female:f60416d30e536778',
-  'ostrich/female-0.5': 'female:f60416d30e536778',
-  'ostrich/none': 'none:f60416d30e536778',
-  'ostrich/male-0': 'male:f60416d30e536778',
+  'ostrich/female-1': 'female:28124ff34972dd02',
+  'ostrich/female-0.5': 'female:28124ff34972dd02',
+  'ostrich/none': 'none:28124ff34972dd02',
+  'ostrich/male-0': 'male:28124ff34972dd02',
   'rhinoceros/female-1': 'female:bbc0a4d77f5c9fce',
   'rhinoceros/female-0.5': 'female:a327f8147c6fb573',
   'rhinoceros/none': 'none:fb23351b96d10b39',
   'rhinoceros/male-0': 'male:fb23351b96d10b39',
-  'ape/female-1': 'female:91f9f64c0ed4ccf3',
-  'ape/female-0.5': 'female:91f9f64c0ed4ccf3',
-  'ape/none': 'none:91f9f64c0ed4ccf3',
-  'ape/male-0': 'male:91f9f64c0ed4ccf3',
+  'ape/female-1': 'female:f7cbbab79d014305',
+  'ape/female-0.5': 'female:f7cbbab79d014305',
+  'ape/none': 'none:f7cbbab79d014305',
+  'ape/male-0': 'male:f7cbbab79d014305',
   'worm/female-1': 'female:b192a7e4ae2f0b11',
   'worm/female-0.5': 'female:b192a7e4ae2f0b11',
   'worm/none': 'none:b192a7e4ae2f0b11',
@@ -316,14 +319,14 @@ const UNCHANGED_COLOUR_PINS = {
   'centipede/female-0.5': 'female:ba058bdae8bb65fd',
   'centipede/none': 'none:ba058bdae8bb65fd',
   'centipede/male-0': 'male:ba058bdae8bb65fd',
-  'shelled-giraffe-bird/female-1': 'female:c0d118cfb3cf59b9',
-  'shelled-giraffe-bird/female-0.5': 'female:c0d118cfb3cf59b9',
-  'shelled-giraffe-bird/none': 'none:c0d118cfb3cf59b9',
-  'shelled-giraffe-bird/male-0': 'male:c0d118cfb3cf59b9',
-  'trunked-centipede/female-1': 'female:27e370cf20970ee1',
-  'trunked-centipede/female-0.5': 'female:27e370cf20970ee1',
-  'trunked-centipede/none': 'none:27e370cf20970ee1',
-  'trunked-centipede/male-0': 'male:27e370cf20970ee1',
+  'shelled-giraffe-bird/female-1': 'female:886d6140940b487b',
+  'shelled-giraffe-bird/female-0.5': 'female:886d6140940b487b',
+  'shelled-giraffe-bird/none': 'none:886d6140940b487b',
+  'shelled-giraffe-bird/male-0': 'male:886d6140940b487b',
+  'trunked-centipede/female-1': 'female:7f51c8e62852ee07',
+  'trunked-centipede/female-0.5': 'female:7f51c8e62852ee07',
+  'trunked-centipede/none': 'none:7f51c8e62852ee07',
+  'trunked-centipede/male-0': 'male:7f51c8e62852ee07',
   'winged-ape-rhino/female-1': 'female:88fd26785bcf282f',
   'winged-ape-rhino/female-0.5': 'female:88fd26785bcf282f',
   'winged-ape-rhino/none': 'none:88fd26785bcf282f',
@@ -359,4 +362,190 @@ test('metric (b): female, sexless and dimorphism-0 male colours are byte-identic
   // negative case: a dimorphism-1 male differs from its pinned female, so the digest check can fail
   const male = sexSkin('giraffe', 'male', 1);
   assert.notEqual(`female:${colourDigest(male.skin)}`, UNCHANGED_COLOUR_PINS['giraffe/female-1']);
+});
+
+// ------------------------------------------------------------------ metric (c): welded seam normals
+const SPECIMENS = JSON.parse(readFileSync(new URL('./fauna-face-specimens.json', import.meta.url), 'utf8')).specimens;
+const specimenRecipe = name => name.startsWith('preset-') ? composerPreset(name.slice(7)) : decodeComposerRecipe(SPECIMENS.find(s => s.name === name).text).recipe;
+const debugSkin = recipe => buildComposerSkin(buildComposerGraph(deriveComposerIndividual(normalizeComposerRecipe(recipe).recipe).recipe), {debug: true});
+/** three's computeVertexNormals on the skin's positions and index (the shipped normals before skin-5). */
+const threeNormals = skin => {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(skin.positions, 3)); g.setIndex(new THREE.BufferAttribute(skin.index, 1));
+  g.computeVertexNormals();
+  return g.getAttribute('normal').array;
+};
+/** Welded groups (bitwise Float32 positions, equal skin indices and weights, outside the eyes part) and, per group,
+ * the largest normal angle, plus per member the dot of the normal with its own visible (non-hidden) incident faces. */
+const seamReport = (skin, normals) => {
+  const P = skin.positions, I = skin.index, nv = skin.vertexCount, nt = I.length / 3, hidden = skin.debug.hiddenTriangles;
+  const eye = new Uint8Array(nv), vis = new Float64Array(nv * 3);
+  for (const p of skin.parts) if (p.part === 'eyes') for (let i = p.firstTriangle * 3; i < (p.firstTriangle + p.triangles) * 3; i++) eye[I[i]] = 1;
+  for (let t = 0; t < nt; t++) {
+    if (hidden[t]) continue;
+    const [a, b, c] = [I[3 * t], I[3 * t + 1], I[3 * t + 2]];
+    const u = [0, 1, 2].map(i => P[3 * c + i] - P[3 * b + i]), w = [0, 1, 2].map(i => P[3 * a + i] - P[3 * b + i]);
+    const n = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]];
+    for (const v of [a, b, c]) for (let i = 0; i < 3; i++) vis[3 * v + i] += n[i];
+  }
+  const pb = new Uint32Array(P.buffer, P.byteOffset, nv * 3), wb = new Uint32Array(skin.skinWeight.buffer, skin.skinWeight.byteOffset, nv * 4);
+  const groups = new Map();
+  for (let v = 0; v < nv; v++) {
+    if (eye[v]) continue;
+    const key = [...pb.subarray(3 * v, 3 * v + 3), ...skin.skinIndex.subarray(4 * v, 4 * v + 4), ...wb.subarray(4 * v, 4 * v + 4)].join(',');
+    const g = groups.get(key); if (g) g.push(v); else groups.set(key, [v]);
+  }
+  let count = 0, maxAngle = 0, minDot = Infinity, bitwise = true;
+  for (const g of groups.values()) {
+    if (g.length < 2) continue;
+    count++;
+    for (const v of g) for (const w of g) if (w > v) {
+      const same = [0, 1, 2].every(i => normals[3 * v + i] === normals[3 * w + i]);
+      if (!same) bitwise = false;
+      const d = normals[3 * v] * normals[3 * w] + normals[3 * v + 1] * normals[3 * w + 1] + normals[3 * v + 2] * normals[3 * w + 2];
+      maxAngle = Math.max(maxAngle, same ? 0 : Math.acos(Math.max(-1, Math.min(1, d))) * 180 / Math.PI);
+    }
+    for (const v of g) {
+      const l = Math.hypot(vis[3 * v], vis[3 * v + 1], vis[3 * v + 2]);
+      if (l > 0) minDot = Math.min(minDot, (vis[3 * v] * normals[3 * v] + vis[3 * v + 1] * normals[3 * v + 1] + vis[3 * v + 2] * normals[3 * v + 2]) / l);
+    }
+  }
+  return {count, maxAngle, minDot, bitwise};
+};
+
+test('metric (c): every welded seam group shares one bitwise normal that faces out of its visible faces (all presets, all face specimens)', () => {
+  const report = {};
+  let worstDot = Infinity;
+  for (const name of [...COMPOSER_PRESET_IDS.map(id => `preset-${id}`), ...SPECIMENS.map(s => s.name)]) {
+    const skin = debugSkin(specimenRecipe(name)), r = seamReport(skin, skin.normals);
+    assert.ok(r.bitwise && r.maxAngle === 0, `${name}: welded normals differ by ${r.maxAngle} deg`);
+    assert.ok(r.count === 0 || r.minDot > 0.5, `${name}: a welded normal is ${r.minDot} off its visible faces`);
+    worstDot = Math.min(worstDot, r.minDot);
+    report[name] = r.count;
+  }
+  if (process.env.COAT_CRISP_REPORT) console.log('seam groups', JSON.stringify({worstDot, groups: report}));
+});
+
+test('metric (c) negative case: three\'s computeVertexNormals (the shipped normals before skin-5) splits the seams by > 10 deg', () => {
+  const out = {};
+  for (const name of ['preset-giraffe', 'preset-trunked-centipede', 'custom-rhinoceros-trunk']) {
+    const skin = debugSkin(specimenRecipe(name)), r = seamReport(skin, threeNormals(skin));
+    out[name] = r.maxAngle;
+    assert.ok(r.maxAngle > 10, `${name}: ${r.maxAngle} deg`);
+  }
+  if (process.env.COAT_CRISP_REPORT) console.log('seam negative', JSON.stringify(out));
+});
+
+test('metric (c) flags: hidden end caps lie inside another closed shell; head start caps reported (all presets, all face specimens)', () => {
+  // independent of the construction flags: a hidden face's centroid, nudged 0.005 x its two edge lengths along its
+  // outward normal, must lie inside another connected shell (ray parity per shell, eyes excluded). The axial end cap
+  // (inside the head) and the trunk's inset discs must pass everywhere. The head's start cap (hidden=1, closing the head
+  // loft at its welded first ring) pokes out of the throat of a sharply bent neck: reported, not gated (doc step 4).
+  const D = [0.5773, 0.6123, 0.5401], report = {};
+  for (const name of [...COMPOSER_PRESET_IDS.map(id => `preset-${id}`), ...SPECIMENS.map(s => s.name)]) {
+    const skin = debugSkin(specimenRecipe(name)), P = skin.positions, I = skin.index, hidden = skin.debug.hiddenTriangles, nt = I.length / 3;
+    const vtx = v => [P[3 * v], P[3 * v + 1], P[3 * v + 2]];
+    const parent = Int32Array.from({length: skin.vertexCount}, (_, i) => i), find = x => { while (parent[x] !== x) x = parent[x] = parent[parent[x]]; return x; };
+    for (let t = 0; t < nt; t++) { const r = find(I[3 * t]); parent[find(I[3 * t + 1])] = r; parent[find(I[3 * t + 2])] = r; }
+    const partOf = new Int32Array(nt);
+    skin.parts.forEach((p, k) => { for (let t = p.firstTriangle; t < p.firstTriangle + p.triangles; t++) partOf[t] = k; });
+    const shells = new Map();
+    for (let t = 0; t < nt; t++) if (skin.parts[partOf[t]].part !== 'eyes') { const r = find(I[3 * t]); if (shells.has(r)) shells.get(r).push(t); else shells.set(r, [t]); }
+    const inside = (q, tris) => {
+      let hits = 0;
+      for (const t of tris) {
+        const [a, b, c] = [I[3 * t], I[3 * t + 1], I[3 * t + 2]].map(vtx), e1 = b.map((x, i) => x - a[i]), e2 = c.map((x, i) => x - a[i]);
+        const h = [D[1] * e2[2] - D[2] * e2[1], D[2] * e2[0] - D[0] * e2[2], D[0] * e2[1] - D[1] * e2[0]], det = e1[0] * h[0] + e1[1] * h[1] + e1[2] * h[2];
+        if (Math.abs(det) < 1e-18) continue;
+        const f = 1 / det, s = q.map((x, i) => x - a[i]), u = f * (s[0] * h[0] + s[1] * h[1] + s[2] * h[2]);
+        if (u < 0 || u > 1) continue;
+        const qq = [s[1] * e1[2] - s[2] * e1[1], s[2] * e1[0] - s[0] * e1[2], s[0] * e1[1] - s[1] * e1[0]], v = f * (D[0] * qq[0] + D[1] * qq[1] + D[2] * qq[2]);
+        if (v < 0 || u + v > 1) continue;
+        if (f * (e2[0] * qq[0] + e2[1] * qq[1] + e2[2] * qq[2]) > 0) hits++;
+      }
+      return hits % 2 === 1;
+    };
+    let n = 0, headOut = 0;
+    for (let t = 0; t < nt; t++) {
+      if (!hidden[t]) continue;
+      n++;
+      const [a, b, c] = [I[3 * t], I[3 * t + 1], I[3 * t + 2]].map(vtx), e1 = b.map((x, i) => x - a[i]), e2 = c.map((x, i) => x - a[i]);
+      const nrm = [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]], l = Math.hypot(...nrm);
+      const q = [0, 1, 2].map(i => (a[i] + b[i] + c[i]) / 3 + nrm[i] / l * 0.005 * (Math.hypot(...e1) + Math.hypot(...e2)));
+      const own = find(I[3 * t]), part = skin.parts[partOf[t]].part;
+      if ([...shells].some(([r, tris]) => r !== own && inside(q, tris))) continue;
+      assert.equal(part, 'head', `${name}: a hidden ${part} face (triangle ${t}) lies outside every other shell`);
+      headOut++;
+    }
+    assert.ok(n > 0, `${name}: hidden faces`);
+    if (headOut) report[name] = headOut;
+  }
+  if (process.env.COAT_CRISP_REPORT) console.log('head start caps outside the neck', JSON.stringify(report));
+});
+
+// ------------------------------------------------------------------ metric (d): trunk centreline and tip
+const TRUNK_SPECIMENS = ['preset-trunked-centipede', 'custom-giraffe-trunk', 'custom-rhinoceros-trunk', 'plausible-pachyderm-1'];
+const TRUNK_LEGACY_HEAD_GROUP = {'preset-trunked-centipede': 3072, 'custom-giraffe-trunk': 3120, 'custom-rhinoceros-trunk': 3120, 'plausible-pachyderm-1': 3120};
+
+test('metric (d2): the largest centreline turn between consecutive trunk rings is <= 8 deg (baseline 10.0 .. 13.2)', () => {
+  const out = {};
+  for (const name of TRUNK_SPECIMENS) {
+    const skin = debugSkin(specimenRecipe(name)), R = skin.debug.rings.filter(r => r.chain === 'trunk');
+    assert.ok(R.length > 10, `${name}: ${R.length} trunk rings`);
+    let max = 0;
+    for (let i = 1; i + 1 < R.length; i++) {
+      const u = R[i].centre.map((x, k) => x - R[i - 1].centre[k]), v = R[i + 1].centre.map((x, k) => x - R[i].centre[k]);
+      max = Math.max(max, Math.acos(Math.max(-1, Math.min(1, (u[0] * v[0] + u[1] * v[1] + u[2] * v[2]) / Math.hypot(...u) / Math.hypot(...v)))) * 180 / Math.PI);
+    }
+    out[name] = max;
+    assert.ok(max <= 8, `${name}: centreline turn ${max} deg`);
+  }
+  if (process.env.COAT_CRISP_REPORT) console.log('trunk turn', JSON.stringify(out));
+});
+
+test('metric (d3): the trunk tip rolls in to a small end face (flat-cap ratio <= 0.6, >= 2 narrower rings) and is closed; budget kept', () => {
+  const out = {};
+  for (const name of TRUNK_SPECIMENS) {
+    const recipe = normalizeComposerRecipe(specimenRecipe(name)).recipe, graph = buildComposerGraph(deriveComposerIndividual(recipe).recipe);
+    const skin = buildComposerSkin(graph, {debug: true}), P = skin.positions, I = skin.index;
+    const tb = graph.bones[graph.chains.trunk[graph.chains.trunk.length - 1]], q = new THREE.Quaternion(...tb.restQuaternion);
+    const tx = new THREE.Vector3(1, 0, 0).applyQuaternion(q), c0 = new THREE.Vector3(...tb.restPosition).addScaledVector(tx, tb.length);
+    const R = skin.debug.rings.filter(r => r.chain === 'trunk'), last = R[R.length - 1], r = Math.max(last.rx, last.ry);
+    const trunk = skin.parts.filter(p => p.part === 'trunk');
+    // radius of the tip surface at each lip station: median distance from the tip axis of the vertices on that plane
+    const radiusAt = x => {
+      const d = [];
+      for (const p of trunk) for (let i = p.firstTriangle * 3; i < (p.firstTriangle + p.triangles) * 3; i++) {
+        const v = new THREE.Vector3(P[3 * I[i]], P[3 * I[i] + 1], P[3 * I[i] + 2]).sub(c0), along = v.dot(tx);
+        if (Math.abs(along - x * r) <= 1e-5 * r) d.push(v.addScaledVector(tx, -along).length());
+      }
+      d.sort((a, b) => a - b);
+      return d.length ? d[d.length >> 1] : NaN;
+    };
+    const stations = [0, ...TRUNK_TIP.bulb.map(([x]) => x)], radii = stations.map(radiusAt), face = radiusAt(TRUNK_TIP.faceAt);
+    const widest = Math.max(...radii), iw = radii.indexOf(widest), narrower = radii.slice(iw + 1).filter(x => x < widest).length;
+    const ratio = face / widest;
+    assert.ok(radii.every(Number.isFinite) && Number.isFinite(face), `${name}: tip stations ${radii} / ${face}`);
+    assert.ok(ratio <= 0.6, `${name}: flat-cap ratio ${ratio}`);
+    assert.ok(narrower >= 2 && radii.slice(iw + 1).every((x, i, a) => x < (i ? a[i - 1] : widest)), `${name}: roll-in ${radii.map(x => (x / r).toFixed(3))}`);
+    // closed: welding the trunk part by bitwise position, every boundary edge lies in the plane of the join ring (the
+    // trunk's open start and its hidden disc, inside the muzzle); the tip end leaves no boundary
+    const pb = new Uint32Array(P.buffer, P.byteOffset, P.length), key = v => `${pb[3 * v]},${pb[3 * v + 1]},${pb[3 * v + 2]}`, edges = new Map();
+    for (const p of trunk) for (let t = p.firstTriangle; t < p.firstTriangle + p.triangles; t++) for (let k = 0; k < 3; k++) {
+      const a = key(I[3 * t + k]), b = key(I[3 * t + (k + 1) % 3]), e = a < b ? `${a}|${b}` : `${b}|${a}`;
+      edges.set(e, (edges.get(e) ?? 0) + 1);
+    }
+    const j0 = new THREE.Vector3(...R[0].centre), jt = new THREE.Vector3(...R[0].tangent).normalize();
+    let open = 0, stray = 0;
+    for (const [e, n] of edges) {
+      if (n !== 1) continue;
+      open++;
+      for (const k of e.split('|')) { const f = new Float32Array(new Uint32Array(k.split(',').map(Number)).buffer); if (Math.abs(new THREE.Vector3(f[0], f[1], f[2]).sub(j0).dot(jt)) > 1e-4 * r) stray++; }
+    }
+    assert.ok(open > 0 && stray === 0, `${name}: ${stray} boundary edge ends off the join plane (${open} boundary edges)`);
+    const HG = new Set(['head', 'eyes', 'mouth', 'horn', 'trunk']), group = skin.parts.filter(p => HG.has(p.part)).reduce((a, p) => a + p.triangles, 0);
+    assert.ok(group <= TRUNK_LEGACY_HEAD_GROUP[name] + 800, `${name}: proboscis head group ${group}`);
+    out[name] = {ratio, radii: radii.map(x => x / r), face: face / r, narrower, headGroup: group, triangles: skin.triangleCount};
+  }
+  if (process.env.COAT_CRISP_REPORT) console.log('trunk tip', JSON.stringify(out));
 });

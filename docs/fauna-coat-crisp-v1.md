@@ -198,7 +198,96 @@ PASS (every 3e0d6e8 export of both coat modules, Object.is) and its one-ulp nega
   | winged-ape-rhino | earth | 7.554235 | 4.177 | 0 (bitwise) |
 
   PASS: plumage 35.18 >= 12; the other 11 >= 5 (minimum 5.96, worm); every dimorphism-0.5 value >= 0.4 x its
-  dimorphism-1 value (lowest ratio 0.54, giraffe); dimorphism 0 exactly 0 with bitwise-equal colour arrays. Female,
+  dimorphism-1 value (lowest ratio 0.53, shelled-giraffe-bird 4.4906 / 8.4288; erratum, step 4: first written as 0.54, giraffe); dimorphism 0 exactly 0 with bitwise-equal colour arrays. Female,
   sexless (type specimen) and dimorphism-0 male colour arrays of all 12 presets are byte-identical to 819be67 (48
   digests pinned); negative control: the dimorphism-1 male giraffe differs from its pinned female.
 - **Before** (section 1): 0.40 .. 1.63 at dimorphism 1, under the just-noticeable difference.
+
+### Step 4: seam normals and the trunk (skin-5)
+
+- **Seam normals** (`composerSeamNormals`, used by `createComposerCreature` instead of three's
+  `computeVertexNormals`). Start from three's per-vertex normals, then for every welded group (bitwise Float32
+  position, equal skin indices and bitwise weights, outside the eyes part) write ONE normal to all members:
+  the normalised sum of each member's own unit normal over its visible incident faces, so each side of the seam counts
+  once (the bisector of the two surfaces). A first draft summed area-weighted face normals over the whole group; a
+  large flat cap on one side then dominated and the shared normal left the other side's visible faces (min dot 0.49,
+  ape). Faces that close a part inside another one are marked hidden while they are built (`Skin.hide`, kept per
+  triangle in `debug.hiddenTriangles`): the axial loft's end cap (inside the head), the six head lofts' start caps
+  (inside the neck) and the inset trunk discs; they do not vote. Fallbacks: all faces, then the lowest member's own
+  normal. Written with `Math.fround`, so the members are bitwise equal.
+- **Neck-to-head blend fold.** On long or steep necks the blend rings still crossed after `fanOutBends` (a fold at the
+  top of the seam whose faces point into the neck; it made the giraffe and cat seams fail the dot check, min dot 0.035
+  without the fix). Where they still cross, the blend rings now turn monotonically from the neck's last frame to the
+  head axis (slerp, eased over the blend's arc length); centres and radii are unchanged.
+  - Side effect: the eyes seat on the head part plus the head-weighted blend triangles (`buildEyes`, unchanged), and the
+    unfolded blend is a valid surface, so the ostrich and shelled-giraffe-bird eyes seat 2.25 / 2.32 eye radii further
+    back (cat-cephalopod-ape 0.16; the other 92 eye builds of presets x maturity 0.3/1 and the specimens do not move).
+    CPU side view before / after (ostrich, scratch review image, not committed): `C:/Users/Caldor/AppData/Local/Temp/claude/C--LLM-IWSDK/84c3735d-46ff-4f28-8f76-5598fd94ed7b/scratchpad/coat/ostrich-cmp.png` (left: fold, right: fixed). The eyes test's
+    seating surface (`headTris` in tests/fauna-composer-eyes.test.mjs) now matches buildEyes' (head part plus
+    head-weighted blend triangles); with the head part alone, "skull surface along the gaze" found no exit for the
+    moved ostrich eye. Its thresholds are unchanged.
+- **Hidden-flag check (not pre-registered).** Independently of the flags, every hidden face's centroid, nudged along
+  its outward normal by 0.005 x its two edge lengths, must lie inside another connected shell (ray parity per shell).
+  The axial end caps and trunk discs pass on all 83 specimens. The head start caps (a 0.2-radius dome reaching back
+  into the neck, unchanged from skin-4) poke out of the throat of a sharply bent neck: 25 of 83 specimens, 333 faces,
+  deepest 0.119 seam radii (wild-composer-5-blunt-paired); 20 specimens before the fold fix. They are interior cap
+  bands (radial 0.56-0.84), not the seam band, so no shipped seam normal depends on them; the test reports them and
+  does not gate them. A flatter cap (0.02) cut this to 9 specimens but moved the eye seat of the juvenile turtle off
+  the skull (buildEyes seats on the head part, cap included), so it was reverted. Follow-up: a cap clipped to the neck.
+- **Trunk centreline (d2).** Two changes, same ring count:
+  - the join: the centre line leaves the muzzle along its axis on a cubic Hermite curve that meets the trunk spline at
+    the first ring past the EC4 reach, start tangent 1.3 x chord (`TRUNK_JOIN_LEAD`), rings at equal arc steps
+    (EC4's lerp bent most at the second ring, 10 .. 13 deg). A trunk shorter than the reach (trunkLength 0.2) keeps
+    EC4's blend: on it the curve turned every ring plane and folded the band (head-geometry test, 178.8 deg);
+  - past the reach, `respaceStations` moves the trunk stations along max(arc / mean spacing + turn / 2 deg,
+    S x |log radius step| / log 1.08), so rings leave straight runs for the curl while a tapering run keeps radius
+    steps under 8 % per ring (arc + turn alone gave a 10.3 % step on custom-rhinoceros-trunk@snout0, over the
+    head-geometry test's 10 %).
+- **Trunk tip (d3).** `TRUNK_TIP`: the bulb rolls in over two rings past the widest (1.04 r and 0.90 r) to a flat end
+  face of 0.62 r at 0.56 r (was 0.86 r behind a 1.06 r ring); nostrils 0.3 r apart, half width 0.22 r, so they stay on
+  the smaller face. Triangle count of the tip unchanged except one ring (+32 per trunk).
+- **Gate (pre-registered metrics c, d), tests/fauna-composer-coat-crisp.test.mjs:**
+
+  | metric | result | threshold | |
+  |---|---|---|---|
+  | (c) largest in-group normal angle, 83 specimens | 0 (bitwise) | exactly 0 | PASS |
+  | (c) min dot, welded normal vs its visible faces (area-weighted) | 0.794 | > 0.5 | PASS |
+  | (c) negative: three's normals, giraffe / trunked-centipede / rhinoceros-trunk | 25.8 / 180 / 180 deg | > 10 | PASS |
+  | (d2) max centreline turn: trunked-centipede / giraffe-trunk / rhinoceros-trunk / pachyderm-1 | 7.35 / 5.46 / 6.62 / 7.55 deg | <= 8 (baseline 10.0 .. 13.2) | PASS |
+  | (d3) flat-cap ratio, all four | 0.564 (0.62 / 1.10) | <= 0.6 (baseline 0.78) | PASS |
+  | (d3) roll-in rings narrower than the widest, all four | 2 (1.04, 0.90 r) | >= 2 | PASS |
+  | (d3) closed tip: trunk boundary edges off the join plane | 0 | 0 | PASS |
+  | budget: proboscis head group (legacy + 800) | 3560 / 3752 / 3784 / 3856 (limits 3872 / 3920 / 3920 / 3920) | <= | PASS |
+  | budget: triangles | 28452 / 16756 / 19280 / 13268; COMPOSER_BUDGET and 70k / 80k tests pass | | PASS |
+
+- **Regression gate.** tsc 0. Suite: 211 tests, 205 pass, 2 skip (atlas parity, no ATLAS_DIR), 4 fail. mesh-stability (5 tests), lineage-B guard and its negative control,
+  budgets, head geometry, eyes, occlusion pins: PASS. Remaining failures are the four step-6 re-pins: the skin-4 and
+  eye-catalogue fixtures' `capturedAt` version (skin-4 -> skin-5, since step 2) and the geometry digests of the
+  legacy links (skin-3 links under the earlier eye rules, and the skin-4 links), which the fold fix and the trunk move.
+- **composer-identity:** digest 63d88faf... -> 70932ea6...; `v1Pins` 5 / 5 change (the GLBs carry the new seam normals; export test V1_PINS),
+  `skin4Links` 12 / 28, `eyeCatalogue` 11 / 30, `cli` 2 / 2. Recorded for the step-6 ledger.
+- **Ledger, metric (b) colour pins** (`UNCHANGED_COLOUR_PINS`, 20 of 48 re-keyed; the other 28 unchanged since
+  819be67). Each new value was checked byte-equal to the same step-4 build with the dichromatism term removed:
+
+  | build | old (819be67) | new (step 4) |
+  |---|---|---|
+| giraffe/female-1 | 4c475ff4f63f4581 | 0a2d66732ebef180 |
+| giraffe/female-0.5 | 3593f7465e4fa7ba | 17897264bdbb6715 |
+| giraffe/none | 94ebfe01f884a182 | 49f55d0163213cd1 |
+| giraffe/male-0 | 94ebfe01f884a182 | 49f55d0163213cd1 |
+| ostrich/female-1 | f60416d30e536778 | 28124ff34972dd02 |
+| ostrich/female-0.5 | f60416d30e536778 | 28124ff34972dd02 |
+| ostrich/none | f60416d30e536778 | 28124ff34972dd02 |
+| ostrich/male-0 | f60416d30e536778 | 28124ff34972dd02 |
+| ape/female-1 | 91f9f64c0ed4ccf3 | f7cbbab79d014305 |
+| ape/female-0.5 | 91f9f64c0ed4ccf3 | f7cbbab79d014305 |
+| ape/none | 91f9f64c0ed4ccf3 | f7cbbab79d014305 |
+| ape/male-0 | 91f9f64c0ed4ccf3 | f7cbbab79d014305 |
+| shelled-giraffe-bird/female-1 | c0d118cfb3cf59b9 | 886d6140940b487b |
+| shelled-giraffe-bird/female-0.5 | c0d118cfb3cf59b9 | 886d6140940b487b |
+| shelled-giraffe-bird/none | c0d118cfb3cf59b9 | 886d6140940b487b |
+| shelled-giraffe-bird/male-0 | c0d118cfb3cf59b9 | 886d6140940b487b |
+| trunked-centipede/female-1 | 27e370cf20970ee1 | 7f51c8e62852ee07 |
+| trunked-centipede/female-0.5 | 27e370cf20970ee1 | 7f51c8e62852ee07 |
+| trunked-centipede/none | 27e370cf20970ee1 | 7f51c8e62852ee07 |
+| trunked-centipede/male-0 | 27e370cf20970ee1 | 7f51c8e62852ee07 |

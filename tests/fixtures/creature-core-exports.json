@@ -285,11 +285,15 @@
         "PROBOSCIS_EAR",
         "SPIDER_EYES",
         "TRUNK_JOIN_BLEND",
+        "TRUNK_JOIN_LEAD",
         "TRUNK_RADIAL",
+        "TRUNK_RESPACE_TAPER",
+        "TRUNK_RESPACE_TURN",
         "TRUNK_TIP",
         "TRUNK_WRINKLE",
         "TRUNK_ZIP_LENGTH",
         "buildComposerSkin",
+        "composerSeamNormals",
         "composerSpeciesBodyLength"
       ],
       "types": [
