@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {composerHash, composerRandom, type ComposerRecipe} from './fauna-composer-recipe.ts';
 import {COAT_REGIONS, type CoatRegion} from './fauna-coat-vocab.ts';
-import {COAT_CELLS_PER_BODY, applyCoatDrift, coatIndividualDrift, defaultCoatGenome, evaluateCoat, hash3u, valueNoise3, type CoatGenome} from './fauna-coat-fields.ts';
+import {COAT_CELLS_PER_BODY, applyCoatDrift, coatIndividualDrift, coatSeedMix, defaultCoatGenome, evaluateCoat, evaluateCoatWithMask, hash3u, valueNoise3, type CoatGenome} from './fauna-coat-fields.ts';
 import {composerIndividualTraits, type ComposerIndividualTraits} from './fauna-composer-individual.ts';
 import {COMPOSER_IRIS_RGB, FACE_EYE_PROFILE, composerEyeProfileId, composerEyeRulesOf, composerHeadgearBuild, composerSkullOf, resolveComposerEyes, type ComposerSkull} from './fauna-composer-face.ts';
 import {EYE_PATCH, EYE_ROLE, OCELLUS, type LiddedEyeType, buildCompoundEye, buildEyePatch, buildEyespot, buildEyespotBead, buildFacetedEye, buildOcellus, buildStalk, catalogueEyeSpec, type CatalogueEyeSpec, eyeBarAxis, eyeGaze, nearestExit, normalize3, outermostExit, raycastFirstHit, raycastLine, type EyePatch, type RayHit, type Vec3 as EyeVec3} from './fauna-composer-eye.ts';
@@ -19,7 +19,41 @@ import {composerFeatherFanSpan, composerWingChord, composerWingThickness, type C
  * true 3D position. Output is plain arrays so it can be inspected in tests. */
 /** skin-4 (eye round EC2): the eye catalogue geometry (fauna-composer-eye-2) under the current eye rules, and the blunt
  * mouth disc shaded as a mouth; the earlier eye rules (eyeRules 1) still build skin-3 byte for byte. */
-export const COMPOSER_SKIN_VERSION = 'fauna-composer-skin-4';
+/** skin-5 (coat crisp v1, docs/fauna-coat-crisp-v1.md): crisp-coat layer colours per vertex for the per-fragment coat. */
+export const COMPOSER_SKIN_VERSION = 'fauna-composer-skin-5';
+/** The per-fragment ("crisp") coat: the shader that evaluates the pattern per fragment (fauna-composer.ts) and the
+ * layer colours the skin carries for it. */
+export const COMPOSER_COAT_CRISP_VERSION = 'fauna-composer-coat-crisp-1';
+/** Patterns the crisp coat draws per fragment (index + 1 = the shader's pattern code). Stripes, bands and brindle are
+ * crisp off the limbs only (their limb rings follow the limb axis, which the shader does not know). Others (plain,
+ * saddle, dorsal-stripe, piebald, roan) keep the vertex colours. */
+export const COMPOSER_COAT_CRISP_PATTERNS = Object.freeze(['spots', 'rosettes', 'reticulated', 'dapple', 'stripes', 'bands', 'brindle'] as const);
+export type ComposerCoatCrispPattern = typeof COMPOSER_COAT_CRISP_PATTERNS[number];
+/** What the crisp-coat shader needs besides the per-vertex layers: the frozen pattern's parameters at the REQUESTED
+ * (unclamped) scale and the coat frame that maps a bind-space position to the pattern-space sample. */
+export interface ComposerCoatCrisp {
+  version: typeof COMPOSER_COAT_CRISP_VERSION;
+  pattern: ComposerCoatCrispPattern;
+  /** 1-based pattern code of the shader (COMPOSER_COAT_CRISP_PATTERNS index + 1). */
+  code: number;
+  /** The coat genome at the REQUESTED scale (coatScale.requested, never the clamped one): the CPU twin of the shader
+   * evaluates coatPatternProbe with it. */
+  genome: CoatGenome;
+  /** seedMix(genome.seed) as an unsigned 32-bit integer. */
+  seed: number;
+  /** COAT_CELLS_PER_BODY[pattern] x the requested scale. */
+  cellsPerBody: number;
+  threshold: number; warp: number; bellyLine: number;
+  /** sample.x = ((p.x, p.y) - origin) . forward / scale, sample.y = ((p.y - origin.y) forward.x - (p.x - origin.x) forward.y) / scale, sample.z = p.z / scale. */
+  frame: {origin: [number, number]; forward: [number, number]; scale: number};
+}
+/** Per-vertex crisp-coat layers (linear RGB, 3 per vertex): c0 = the coat at pattern mask 0, c1 = at mask 1 (patch
+ * shade 0), c2 = at mask 1 (patch shade 1). The shaded colour is c0 + m (c1 - c0) + m p (c2 - c1) for the fragment's
+ * mask m and patch shade p (the coat is affine in both). A vertex that did not sample the coat itself carries its
+ * vertex colour in all three, so the mask cannot change it. `sample` (4 per vertex) is the pattern-space point
+ * (x, y, z in body lengths, the coat frame) and the coat dorsal value the vertex was coloured with; vertices without
+ * their own sample get their position in the coat frame and dorsal 0. */
+export interface ComposerCoatLayers {c0: Float32Array; c1: Float32Array; c2: Float32Array; sample: Float32Array}
 export type ComposerSkinPart = 'torso' | 'neck' | 'tail' | 'head' | 'eyes' | 'mouth' | 'horn' | 'trunk' | 'leg' | 'foot' | 'arm' | 'hand' | 'wing' | 'armor' | 'tail-tip';
 
 /** Radial segments and rings per bone of the lofted tubes (feet and toes keep their own tessellation). */
@@ -56,6 +90,10 @@ export interface ComposerSkinDebug {
     torsoEdgeEstimate: number;
   };
   traitsNeutral: boolean;
+  /** Crisp coat (skin-5): own = 1 where the layers were sampled at the vertex itself; sample = the exact (double)
+   * coat sample of those vertices, 6 per vertex (x, y, z, dorsal, along, footprint), NaN elsewhere. Null without the
+   * crisp coat. */
+  coatVertex: {own: Uint8Array; sample: Float64Array} | null;
   /** The eyes as built (fauna-composer-eye-1): one entry per eye, head-local geometry and the skin vertex range. */
   eyes: ComposerSkinEyeDebug[];
   /** The palette's eye colour and the built iris colour (null: compound eyes or eyespots), for colour audits. */
@@ -88,6 +126,9 @@ export interface ComposerSkin {
   /** Pattern scale asked for vs drawn: the pattern clamp keeps a mean pattern cell at least four torso
    * edges across, so above `effective` a finer scale looks the same on this body (the Lab says so). */
   coatScale: {pattern: string; requested: number; effective: number};
+  /** skin-5: the crisp coat (null: the pattern is not drawn per fragment) and its per-vertex layers. */
+  coatCrisp: ComposerCoatCrisp | null;
+  coatLayers: ComposerCoatLayers | null;
   debug?: ComposerSkinDebug;
 }
 export interface ComposerSkinOptions {
@@ -112,6 +153,13 @@ const vec = (v: THREE.Vector3): Vec3 => [v.x, v.y, v.z];
 class Skin {
   // growable typed buffers; positions stay double precision until the final Float32 copy
   p = new Float64Array(3 * 4096); c = new Float32Array(3 * 4096); si = new Uint16Array(4 * 4096); sw = new Float32Array(4 * 4096); rg = new Uint8Array(4096); gl = new Float32Array(4096); ix = new Uint32Array(3 * 8192);
+  /** Crisp-coat layers (skin-5, docs/fauna-coat-crisp-v1.md), written only while `coat` is set: l0 = colour at mask 0,
+   * l1 = at mask 1 (patch 0), l2 = at mask 1 (patch 1); `own` = 1 where they were sampled at the vertex itself (0:
+   * copied from a ring, or the vertex colour); cq = that sample (x, y, z, dorsal, along, footprint; NaN when not own). */
+  l0 = new Float32Array(3 * 4096); l1 = new Float32Array(3 * 4096); l2 = new Float32Array(3 * 4096); own = new Uint8Array(4096); cq = new Float64Array(6 * 4096);
+  coat: CoatLayerHook | undefined;
+  /** The raw colour of the last vertex emitted by `vc`. */
+  lastColour: RGB = [0, 0, 0];
   /** Vertex and index counts. */
   nv = 0; ni = 0;
   /** Coat region written for vertices that do not name their own. */
@@ -127,6 +175,7 @@ class Skin {
   private grow() {
     const cap = this.rg.length * 2, g = <A extends Float64Array | Float32Array | Uint16Array | Uint8Array>(src: A, n: number): A => { const out = new (src.constructor as new (n: number) => A)(n); out.set(src); return out; };
     this.p = g(this.p, cap * 3); this.c = g(this.c, cap * 3); this.si = g(this.si, cap * 4); this.sw = g(this.sw, cap * 4); this.rg = g(this.rg, cap); this.gl = g(this.gl, cap);
+    if (this.coat) { this.l0 = g(this.l0, cap * 3); this.l1 = g(this.l1, cap * 3); this.l2 = g(this.l2, cap * 3); this.own = g(this.own, cap); this.cq = g(this.cq, cap * 6); }
   }
   v(pos: THREE.Vector3, col: RGB, w: W, region = this.region): number {
     let prep = w === this.lastW ? this.lastPrep : this.prepared.get(w);
@@ -148,7 +197,38 @@ class Skin {
     this.c[i * 3] = clamp(col[0], 0, 1); this.c[i * 3 + 1] = clamp(col[1], 0, 1); this.c[i * 3 + 2] = clamp(col[2], 0, 1);
     this.rg[i] = region;
     this.gl[i] = 0;
+    if (this.coat) {
+      // every vertex carries layers; a vertex without its own coat sample shades exactly with its vertex colour
+      for (let k = 0; k < 3; k++) { const c = this.c[i * 3 + k]!; this.l0[i * 3 + k] = c; this.l1[i * 3 + k] = c; this.l2[i * 3 + k] = c; }
+      this.own[i] = 0; this.cq.fill(NaN, i * 6, i * 6 + 6);
+    }
     return i;
+  }
+  /** A vertex whose colour comes from `colour` (a ring's colour field): with the crisp coat on, a colour that sampled
+   * the coat exactly once, at this very vertex, for a crisp pattern and region, is evaluated again with the pattern
+   * mask forced to 0 and to 1 (patch 0 and 1) to give the vertex's exact layer colours. The vertex colour itself is the
+   * first, ordinary evaluation (unchanged). */
+  vc(pos: THREE.Vector3, colour: () => RGB, w: W, region = this.region): number {
+    const h = this.coat;
+    if (!h) { const col = colour(); this.lastColour = col; return this.v(pos, col, w, region); }
+    h.mode = 0; h.calls = 0; h.ok = false;
+    const col = colour();
+    this.lastColour = col;
+    const i = this.v(pos, col, w, region);
+    if (h.calls === 1 && h.ok && h.sampledAt(pos)) {
+      const q = h.sample;
+      this.cq[i * 6] = q.x; this.cq[i * 6 + 1] = q.y; this.cq[i * 6 + 2] = q.z; this.cq[i * 6 + 3] = q.dorsal; this.cq[i * 6 + 4] = q.along; this.cq[i * 6 + 5] = q.footprint;
+      h.mode = 1; const a = colour(); h.mode = 2; const b = colour(); h.mode = 3; const c = colour(); h.mode = 0;
+      // unclamped: the shader clamps the blended colour, so the blend stays exact where a layer overshoots 0..1
+      for (let k = 0; k < 3; k++) { this.l0[i * 3 + k] = a[k]!; this.l1[i * 3 + k] = b[k]!; this.l2[i * 3 + k] = c[k]!; }
+      this.own[i] = 1;
+    }
+    return i;
+  }
+  /** Copies the layers of vertex `from` to vertex `to` (cap rings that reuse their boundary ring's colours). */
+  copyLayers(from: number, to: number) {
+    if (!this.coat) return;
+    for (let k = 0; k < 3; k++) { this.l0[to * 3 + k] = this.l0[from * 3 + k]!; this.l1[to * 3 + k] = this.l1[from * 3 + k]!; this.l2[to * 3 + k] = this.l2[from * 3 + k]!; }
   }
   /** Emits a pre-built patch (model-space xyz per vertex, a colour and gloss per vertex, triangle indices local to the
    * patch) with one weight list; returns the first vertex. */
@@ -248,32 +328,33 @@ function loft(s: Skin, rings: Ring[], segments: number, capStart = 0.6, capEnd =
   const p = V();
   /** Emits one ring; with `colours` the vertices reuse those colours (cap rings copy their boundary ring, whose
    * colour they match to within the cap's tiny extent), otherwise each vertex samples the ring's colour field. */
-  const ringIds = (r: Ring, scale = 1, shift = 0, colours?: RGB[], record?: RGB[]) => {
+  const ringIds = (r: Ring, scale = 1, shift = 0, colours?: RGB[], record?: RGB[], from?: number[]) => {
     const b = basis(r), out: number[] = [];
     for (let k = 0; k < segments; k++) {
       const a = TAU * k / segments;
       ringPoint(r, b, a, p, scale, shift);
-      const col = colours ? colours[k]! : r.color(a, p);
-      record?.push(col);
-      out.push(s.v(p, col, r.w, r.region));
+      if (colours) { const i = s.v(p, colours[k]!, r.w, r.region); if (from) s.copyLayers(from[k]!, i); out.push(i); continue; }
+      out.push(s.vc(p, () => r.color(a, p), r.w, r.region));
+      record?.push(s.lastColour);
     }
     return out;
   };
-  const capRings = (r: Ring, dir: number, len: number, colours: RGB[]) => {
+  const capRings = (r: Ring, dir: number, len: number, colours: RGB[], from: number[]) => {
     const list: number[][] = [], steps = 3, radius = Math.max(r.rx, r.ry) * len;
-    for (let k = 1; k <= steps; k++) { const phi = (k / (steps + 1)) * Math.PI / 2; list.push(ringIds(r, Math.cos(phi), dir * Math.sin(phi) * radius, colours)); }
+    for (let k = 1; k <= steps; k++) { const phi = (k / (steps + 1)) * Math.PI / 2; list.push(ringIds(r, Math.cos(phi), dir * Math.sin(phi) * radius, colours, undefined, from)); }
     const {t} = basis(r), apexPos = r.c.clone().addScaledVector(t, dir * radius);
     const apex = s.v(apexPos, colours[Math.floor(segments * 3 / 4)]!, r.w, r.region);
+    s.copyLayers(from[Math.floor(segments * 3 / 4)]!, apex);
     return {list, apex};
   };
   const firstColours: RGB[] = [], lastColours: RGB[] = [];
   const startCap: number[][] = [];
   let startApex = -1;
   const main: number[][] = rings.map((r, i) => ringIds(r, 1, 0, undefined, i === 0 ? firstColours : i === rings.length - 1 ? lastColours : undefined));
-  if (capStart > 0) { const cap = capRings(rings[0]!, -1, capStart, firstColours); startCap.push(...cap.list.reverse()); startApex = cap.apex; }
+  if (capStart > 0) { const cap = capRings(rings[0]!, -1, capStart, firstColours, main[0]!); startCap.push(...cap.list.reverse()); startApex = cap.apex; }
   ids.push(...startCap, ...main);
   if (startApex >= 0) fan(s, startApex, ids[0]!, true);
-  if (capEnd > 0) { const cap = capRings(rings[rings.length - 1]!, 1, capEnd, lastColours); ids.push(...cap.list); fan(s, cap.apex, ids[ids.length - 1]!, false); }
+  if (capEnd > 0) { const cap = capRings(rings[rings.length - 1]!, 1, capEnd, lastColours, main[main.length - 1]!); ids.push(...cap.list); fan(s, cap.apex, ids[ids.length - 1]!, false); }
   for (let i = 0; i + 1 < ids.length; i++) for (let k = 0; k < segments; k++) {
     const a = ids[i]![k]!, b = ids[i]![(k + 1) % segments]!, c = ids[i + 1]![k]!, d = ids[i + 1]![(k + 1) % segments]!;
     s.t(a, b, c); s.t(b, d, c);
@@ -282,7 +363,7 @@ function loft(s: Skin, rings: Ring[], segments: number, capStart = 0.6, capEnd =
 /** A band between two rings with different vertex counts (bind space; both rings emitted with their own colours and
  * weights), triangulated by walking both rings in angle order. Faces outward from the rings' centres. */
 function zipRings(s: Skin, a: Ring, na: number, b: Ring, nb: number) {
-  const emit = (r: Ring, n: number) => { const bs = ringBasis(r), p = V(), ids: number[] = []; for (let k = 0; k < n; k++) { const ang = TAU * k / n; ringPoint(r, bs, ang, p); ids.push(s.v(p, r.color(ang, p), r.w, r.region)); } return ids; };
+  const emit = (r: Ring, n: number) => { const bs = ringBasis(r), p = V(), ids: number[] = []; for (let k = 0; k < n; k++) { const ang = TAU * k / n; ringPoint(r, bs, ang, p); ids.push(s.vc(p, () => r.color(ang, p), r.w, r.region)); } return ids; };
   const A = emit(a, na), B = emit(b, nb), mid = a.c.clone().add(b.c).multiplyScalar(0.5);
   const out = (i: number, j: number, k: number) => s.pos(i).add(s.pos(j)).add(s.pos(k)).multiplyScalar(1 / 3).sub(mid);
   let i = 0, j = 0;
@@ -299,8 +380,8 @@ function capFlat(s: Skin, r: Ring, segments: number, dir: 1 | -1, inset = 1) {
   const b = ringBasis(r), p = V(), ids: number[] = [], mid = V(), rim: THREE.Vector3[] = [];
   for (let k = 0; k < segments; k++) { const a = TAU * k / segments; ringPoint(r, b, a, p); rim.push(p.clone()); mid.add(p); }
   mid.multiplyScalar(1 / segments);
-  for (let k = 0; k < segments; k++) { const a = TAU * k / segments, q = inset === 1 ? rim[k]! : mid.clone().lerp(rim[k]!, inset); ids.push(s.v(q, r.color(a, q), r.w, r.region)); }
-  const centre = s.v(mid, r.color(-Math.PI / 2, mid), r.w, r.region), out = b.t.clone().multiplyScalar(dir);
+  for (let k = 0; k < segments; k++) { const a = TAU * k / segments, q = inset === 1 ? rim[k]! : mid.clone().lerp(rim[k]!, inset); ids.push(s.vc(q, () => r.color(a, q), r.w, r.region)); }
+  const centre = s.vc(mid, () => r.color(-Math.PI / 2, mid), r.w, r.region), out = b.t.clone().multiplyScalar(dir);
   for (let k = 0; k < segments; k++) s.to(centre, ids[k]!, ids[(k + 1) % segments]!, out);
 }
 function fan(s: Skin, apex: number, ring: number[], start: boolean) {
@@ -403,6 +484,19 @@ type At = (b: ComposerBone, x: number, y?: number, z?: number) => THREE.Vector3;
 type Axis = (b: ComposerBone, x: number, y: number, z: number) => THREE.Vector3;
 type Palette = Record<'base' | 'accent' | 'belly' | 'keratin' | 'skin' | 'eye' | 'horn' | 'plate', RGB>;
 type CoatAt = (p: THREE.Vector3, dorsal: number, region: CoatRegion, along: number, footprint?: number) => RGB;
+/** Crisp-coat layer hook (skin-5): Skin.vc sets `mode`, coatAt evaluates accordingly and reports its sample. */
+interface CoatLayerHook {
+  /** 0: ordinary evaluation (recorded); 1: mask 0; 2: mask 1, patch 0; 3: mask 1, patch 1. */
+  mode: number;
+  /** coatAt calls in the current mode-0 evaluation; ok = the last one was a crisp pattern in a crisp region. */
+  calls: number; ok: boolean;
+  /** The coat sample of the last mode-0 evaluation (coatAt's scratch sample). */
+  readonly sample: {x: number; y: number; z: number; dorsal: number; along: number; footprint: number};
+  /** Did the recorded sample come from exactly this position? */
+  sampledAt(p: THREE.Vector3): boolean;
+}
+const CRISP_OFF_LIMBS: ReadonlySet<string> = new Set(['stripes', 'bands', 'brindle']);
+const LIMB_REGIONS: ReadonlySet<CoatRegion> = new Set(['limb-upper', 'limb-lower', 'foot'] as CoatRegion[]);
 /** Dorsal component of an elliptical ring's outward normal at angle a (bone-local, -1 belly .. 1 back). */
 const ringDorsal = (a: number, rx: number, ry: number, ryBelow = ry) => { const sa = Math.sin(a), ca = Math.cos(a), h = sa < 0 ? ryBelow : ry, n = Math.hypot(ca * h, sa * rx); return n > 1e-12 ? sa * rx / n : sa; };
 const ringLateral = (a: number, rx: number, ry: number, ryBelow = ry) => { const sa = Math.sin(a), ca = Math.cos(a), h = sa < 0 ? ryBelow : ry, n = Math.hypot(ca * h, sa * rx); return n > 1e-12 ? ca * h / n : ca; };
@@ -465,11 +559,23 @@ export function buildComposerSkin(graph: ComposerGraph, options: ComposerSkinOpt
   const sample = {x: 0, y: 0, z: 0, dorsal: 0, region: 'torso' as CoatRegion, along: 0, footprint: 0};
   const groundRef = Math.max(d.legReach, d.frontLegReach, 1e-3);
   const plainGenome = genome.pattern === 'bands' ? {...genome, pattern: 'plain' as const} : null;
+  // crisp coat (skin-5): the pattern is drawn per fragment at the requested scale; the skin carries layer colours
+  const crispPattern = (COMPOSER_COAT_CRISP_PATTERNS as readonly string[]).includes(genome.pattern) ? genome.pattern as ComposerCoatCrispPattern : null;
+  const hook: CoatLayerHook = {mode: 0, calls: 0, ok: false, sample, sampledAt: q => {
+    const dx = q.x - origin.x, dy = q.y - origin.y;
+    return sample.x === (dx * fwd.x + dy * fwd.y) / scale && sample.y === (dy * fwd.x - dx * fwd.y) / scale && sample.z === q.z / scale;
+  }};
+  if (crispPattern) s.coat = hook;
   const coatAt: CoatAt = (p, dorsal, region, along, fp = 0) => {
     const dx = p.x - origin.x, dy = p.y - origin.y;
     sample.x = (dx * fwd.x + dy * fwd.y) / scale; sample.y = (dy * fwd.x - dx * fwd.y) / scale; sample.z = p.z / scale;
     sample.dorsal = clamp(dorsal, -1, 1); sample.region = region; sample.along = clamp(along, 0, 1); sample.footprint = fp;
-    evaluateCoat(genome, sample, coatOut, 0);
+    const mode = hook.mode;
+    if (mode === 0) {
+      evaluateCoat(genome, sample, coatOut, 0);
+      hook.calls++;
+      hook.ok = region !== 'eye' && region !== 'horn' && region !== 'armor' && !(CRISP_OFF_LIMBS.has(genome.pattern) && LIMB_REGIONS.has(region));
+    } else evaluateCoatWithMask(genome, sample, coatOut, 0, mode === 1 ? 0 : 1, mode === 3 ? 1 : 0);
     let c: RGB = [coatOut[0]!, coatOut[1]!, coatOut[2]!];
     // body bands continued as rings down every leg read as a striped sock (toy-like); reptile limbs carry the
     // banding faintly, as scale-row shading, so it fades to 40% strength there
@@ -1020,11 +1126,30 @@ export function buildComposerSkin(graph: ComposerGraph, options: ComposerSkinOpt
   s.end();
 
   const positions = new Float32Array(s.p.subarray(0, s.nv * 3)), colors = s.c.slice(0, s.nv * 3), skinIndex = s.si.slice(0, s.nv * 4), skinWeight = s.sw.slice(0, s.nv * 4), index = s.ix.slice(0, s.ni), regions = s.rg.slice(0, s.nv), gloss = s.gl.slice(0, s.nv);
-  const out: ComposerSkin = {version: COMPOSER_SKIN_VERSION, positions, colors, skinIndex, skinWeight, index, regions, gloss, eyeFallbacks: eyeCtx.fallbacks, parts: s.parts, vertexCount: positions.length / 3, triangleCount: index.length / 3, coatScale: {pattern: genome.pattern, requested: requestedScale, effective: genome.scale}};
+  // the shader's pattern runs at the REQUESTED scale (the vertex colours above use the clamped `genome.scale`)
+  const crispGenome: CoatGenome = {...genome, scale: requestedScale};
+  const coatCrisp: ComposerCoatCrisp | null = crispPattern ? {
+    version: COMPOSER_COAT_CRISP_VERSION, pattern: crispPattern, code: COMPOSER_COAT_CRISP_PATTERNS.indexOf(crispPattern) + 1, genome: crispGenome,
+    seed: coatSeedMix(crispGenome.seed) >>> 0, cellsPerBody: COAT_CELLS_PER_BODY[crispPattern] * crispGenome.scale,
+    threshold: crispGenome.threshold, warp: crispGenome.warp, bellyLine: crispGenome.bellyLine,
+    frame: {origin: [origin.x, origin.y], forward: [fwd.x, fwd.y], scale},
+  } : null;
+  let coatLayers: ComposerCoatLayers | null = null;
+  if (crispPattern) {
+    const sampleOut = new Float32Array(s.nv * 4);
+    for (let i = 0; i < s.nv; i++) {
+      if (s.own[i]) { for (let k = 0; k < 4; k++) sampleOut[i * 4 + k] = s.cq[i * 6 + k]!; continue; }
+      const dx = s.p[i * 3]! - origin.x, dy = s.p[i * 3 + 1]! - origin.y;
+      sampleOut[i * 4] = (dx * fwd.x + dy * fwd.y) / scale; sampleOut[i * 4 + 1] = (dy * fwd.x - dx * fwd.y) / scale; sampleOut[i * 4 + 2] = s.p[i * 3 + 2]! / scale; sampleOut[i * 4 + 3] = 0;
+    }
+    coatLayers = {c0: s.l0.slice(0, s.nv * 3), c1: s.l1.slice(0, s.nv * 3), c2: s.l2.slice(0, s.nv * 3), sample: sampleOut};
+  }
+  const out: ComposerSkin = {version: COMPOSER_SKIN_VERSION, positions, colors, skinIndex, skinWeight, index, regions, gloss, eyeFallbacks: eyeCtx.fallbacks, parts: s.parts, vertexCount: positions.length / 3, triangleCount: index.length / 3, coatScale: {pattern: genome.pattern, requested: requestedScale, effective: genome.scale}, coatCrisp, coatLayers};
   if (options.debug) out.debug = {
     rings: debugRings!, splineFallbacks,
     coat: {pattern: genome.pattern, requestedScale, effectiveScale: genome.scale, cellsPerBody: cells, meanCellDiameter: cells > 0 ? scale / (cells * genome.scale) : Infinity, torsoEdgeEstimate: torsoEdge},
     traitsNeutral: traits.neutral,
+    coatVertex: crispPattern ? {own: s.own.slice(0, s.nv), sample: s.cq.slice(0, s.nv * 6)} : null,
     eyes: eyeCtx.eyes, eyeColours: {eye: eyeCtx.colours.eye, iris: eyeCtx.colours.iris, lidFactor: eyeCtx.colours.lidFactor, compound: eyeCtx.colours.compound ?? null},
   };
   return out;

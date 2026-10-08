@@ -9,6 +9,8 @@
         "COAT_GENOME_RANGES",
         "COAT_MORPHS",
         "COAT_MORPH_RATES",
+        "COAT_PATTERN_SALTS",
+        "COAT_WORLEY_JITTER",
         "FAUNA_COAT_FIELD_VERSION",
         "applyCoatDrift",
         "coatCanonicalSamples",
@@ -18,10 +20,12 @@
         "coatMinFeature",
         "coatPatternProbe",
         "coatRandom",
+        "coatSeedMix",
         "coatSpeciesColours",
         "coatStringHash",
         "defaultCoatGenome",
         "evaluateCoat",
+        "evaluateCoatWithMask",
         "fbm2",
         "hash3u",
         "hexToLinear",
@@ -263,6 +267,8 @@
     },
     "fauna-composer-mesh.ts": {
       "values": [
+        "COMPOSER_COAT_CRISP_PATTERNS",
+        "COMPOSER_COAT_CRISP_VERSION",
         "COMPOSER_EYESPOT_PITCH_DEG",
         "COMPOSER_EYE_CATALOGUE",
         "COMPOSER_EYE_CONTRAST",
@@ -287,6 +293,9 @@
         "composerSpeciesBodyLength"
       ],
       "types": [
+        "ComposerCoatCrisp",
+        "ComposerCoatCrispPattern",
+        "ComposerCoatLayers",
         "ComposerSkin",
         "ComposerSkinDebug",
         "ComposerSkinEyeDebug",
@@ -400,6 +409,8 @@
     },
     "fauna-composer.ts": {
       "values": [
+        "COMPOSER_COAT_CRISP_GLSL",
+        "COMPOSER_COAT_CRISP_PATCH",
         "COMPOSER_GLOSS_CACHE_KEY",
         "COMPOSER_GLOSS_PATCH",
         "COMPOSER_GLOSS_ROUGHNESS",
@@ -407,6 +418,8 @@
         "composerHeadBounds",
         "createComposerColouredMaterial",
         "createComposerCreature",
+        "createComposerCrispCoatMaterial",
+        "patchComposerCoatCrispShader",
         "patchComposerGlossShader"
       ],
       "types": [

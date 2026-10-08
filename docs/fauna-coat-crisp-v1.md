@@ -127,3 +127,41 @@ verdicts never gate; "intact / no tearing" failing twice stops the task.
 - Export (`fauna-composer-export.ts`, not touched here): the GLB keeps vertex colours, so an exported creature carries
   the vertex-density (clamped) pattern, not the crisp one. It does pick up the new shading normals, because it reads the
   runtime geometry; its V1_PINS skip with "composer core moved" (expected).
+
+## 2. Results (added per step; section 1 is unchanged)
+
+### Step 0: lineage-B guard
+
+`tests/fauna-coat-fields.test.mjs`, run on the branch after the 6d0a1c7 merge with the step-2 appends present: guard
+PASS (every 3e0d6e8 export of both coat modules, Object.is) and its one-ulp negative control PASS.
+
+### Step 2: crisp coat (`fauna-composer-coat-crisp-1`)
+
+- **What it does.** For the patterns spots, rosettes, reticulated, dapple, stripes, bands and brindle (stripes, bands and
+  brindle off the limbs only), every vertex whose colour came from exactly one coat sample at that vertex (lofted
+  rings, zip bands, flat caps) is evaluated three more times with `evaluateCoatWithMask` (mask 0; mask 1 with patch
+  shade 0 and 1). The coat is affine in the mask amount and the patch shade, so the shader's
+  `c0 + m (c1 - c0) + m p (c2 - c1)` with the fragment's own mask is exact. Other vertices (eyes, horn, armour, the
+  head's ellipsoid and tube parts, feet built from patches) carry their vertex colour in all three layers, so they shade
+  exactly as before. The shader (`COMPOSER_COAT_CRISP_GLSL`) re-implements the crisp patterns' `patternMask` in GLSL
+  with the frozen uint hash, at the REQUESTED pattern scale and with a screen-space footprint (`fwidth` of the
+  pattern-space point).
+- **Which vertices are crisp** (preset sweep): torso 89-96 %, legs and arms 71-82 %, head 9-70 %, feet 0-13 %, trunk
+  87 %. Heads built from ellipsoids and tubes stay at vertex density in v1.
+- **Vertex colours did not move.** The 28 skin-4 link texts and every eye-catalogue specimen build the same positions,
+  index, weights, colours and gloss bytes as before (composer-identity: `skin4Links` and `eyeCatalogue` sections
+  identical to 634ca06). The layer evaluations are side-effect free.
+- **Export.** `fauna-composer-export.ts` is not touched: a GLB keeps the vertex colours, so an exported creature carries
+  the clamped vertex-density pattern, not the crisp one.
+- **Gate (pre-registered metric a).**
+
+  | body | dominant frequency, scale 1 -> 2 (cycles per body length) | crisp ratio | vertex ratio (negative case) |
+  |---|---|---|---|
+  | giraffe, spots, bodyLength 0.3 | crisp 2.96 -> 10.34; vertex 4.43 -> 4.43 | 3.50 (>= 1.5 PASS) | 1.00 (< 1.5 PASS) |
+  | dinosaur, reticulated, bodyLength 0.3 | crisp 8.08 -> 12.92; vertex 3.23 -> 3.23 | 1.60 (>= 1.5 PASS) | 1.00 (< 1.5 PASS) |
+
+  The giraffe's scale-1 crisp peak sits at a low frequency (a broad tonal component outweighs the spot peak), which
+  inflates its ratio; the dinosaur's 1.60 is the tighter of the two. Equality at the vertices: giraffe 5762 / 5762
+  crisp vertices checked, max error 5.8e-8; dinosaur 4964 / 4964, max error 4.9e-8 (<= 2e-6 and >= 95 % PASS).
+  Extra coverage (not pre-registered): rosettes, dapple, stripes, bands, brindle and the trunked centipede, max error
+  <= 5.8e-8; on the bird's plumage palette (accent blue = 0) 1132 / 2296 vertices are away from the 0.002 floor.
