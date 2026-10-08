@@ -30,7 +30,9 @@ for any single module. Node refuses to type-strip `.ts` inside `node_modules`, s
 
 `three` is a **peer** dependency, pinned to `npm:super-three@0.181.0` (the same alias Atlas uses; the gloss shader patch
 depends on three's internals). Dev: `typescript@5.9.3`, `@types/three@0.181.0`, and `vite@7.3.6` for the Creature Lab app.
-Nothing else (the app's browser tests also use `playwright`, which the junctioned `node_modules` provides; see below).
+Nothing else declared. **Known hidden dependency:** the app's browser tests (`tests/browser/`) import `playwright`,
+which is NOT in `devDependencies`; it resolves only through the junctioned Atlas `node_modules` (below). A standalone
+checkout cannot run `npm run test:browser` until it is declared (planned with the Atlas cut-over, phase 4b).
 
 No `package-lock.json` exists yet and `npm install` has not been run: in this workspace `node_modules` is a **junction**
 to `C:/LLM/IWSDK/universe-atlas/node_modules`, which has exactly these versions. To recreate it:
@@ -62,8 +64,15 @@ On this machine, run CPU-heavy tests through Atlas's shared test slot:
 npm run lab:dev      # http://127.0.0.1:5206/apps/creature-lab/creature-lab.html (dev server rooted at the kit)
 npm run lab:build    # apps/creature-lab/dist/creature-lab.html + assets/, relative URLs: deployable under any subpath
 npm run test:lab     # tests/lab/*.test.mjs + tests/lab-boundary.test.mjs (no browser)
-$env:ATLAS_DIR='C:/LLM/IWSDK/universe-atlas'; node --test tests/lab/creature-lab-atlas-parity.test.mjs
-npm run test:browser -- --list    # the browser tests; running them needs the GPU browser lock
+npm run test:browser -- --list    # the browser tests; running them needs the GPU browser lock (never inside the slot)
+```
+
+On this machine the CPU tests go through Atlas's shared test slot (as above), e.g. the parity test:
+
+```powershell
+$env:ATLAS_DIR='C:/LLM/IWSDK/universe-atlas'
+node C:/LLM/IWSDK/universe-atlas/tests/helpers/test-slot.mjs --shared 4 -- node --test tests/lab/creature-lab-atlas-parity.test.mjs
+node C:/LLM/IWSDK/universe-atlas/tests/helpers/test-slot.mjs --shared 4 -- npm run test:lab
 ```
 
 - **Links.** The URL contract is Atlas's composer contract, key for key: `mode view time compare neutral skeleton recipe
