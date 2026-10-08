@@ -102,12 +102,32 @@ node C:/LLM/IWSDK/universe-atlas/tests/helpers/test-slot.mjs --shared 4 -- npm r
 
 - Recipe links `v1`..`v4` decode forever; the vocabulary is append-only (`composer-v1-links`, `baseline-v2`,
   `baseline-v3` fixtures).
-- Skin byte digests in `tests/fixtures/composer-skin4-links.json` stay identical unless a version bump is documented.
-- Subsystem versions: graph `fauna-composer-graph-3`, skin `fauna-composer-skin-4`, eye `fauna-composer-eye-2`, eye
-  catalogue `fauna-composer-eye-catalogue-1`, face `fauna-composer-face-2`, face geometry
-  `fauna-composer-face-geometry-1`, individual `fauna-composer-individual-2`, species `composer-species-v1`, coat
-  `fauna-coat-1`, export `fauna-composer-export-1`/`-2`, LOD `fauna-composer-lod-1`.
+- Skin byte digests in `tests/fixtures/composer-skin5-links.json` (skin-5) stay identical unless a version bump is
+  documented. `composer-skin4-links.json` (skin-4) and the older link fixtures are kept as history.
+- Subsystem versions: graph `fauna-composer-graph-4`, skin `fauna-composer-skin-5`, crisp-coat material shader
+  `fauna-composer-coat-crisp-1`, eye `fauna-composer-eye-2`, eye catalogue `fauna-composer-eye-catalogue-1`, face
+  `fauna-composer-face-2`, face geometry `fauna-composer-face-geometry-2`, individual `fauna-composer-individual-2`,
+  species `composer-species-v1`, coat `fauna-coat-1`, export `fauna-composer-export-3`, skeleton
+  `fauna-composer-skeleton-1`, LOD `fauna-composer-lod-1`.
 - `fauna-coat-*` is also used by Atlas's planet renderer (lineage B): changing the coat moves Atlas's life digests.
+  `tests/fixtures/coat-lineage-b-guard.json` freezes every 3e0d6e8 export of both coat modules.
+
+### Coat crisp v1 merged (kit main 13c7b35, `docs/fauna-coat-crisp-v1.md`)
+
+- The crisp coat is runtime-only: the `fauna-composer-coat-crisp-1` shader evaluates the pattern per fragment. GLB
+  export keeps vertex colours, so an exported creature carries the coarser clamped vertex pattern, not the crisp coat.
+  A GLB's colours do follow the skin-5 geometry (the coat is sampled at each vertex's position, so where the neck-to-head
+  blend moved a vertex its colour moved too).
+- Sexual dichromatism uses existing recipe fields only (sex, dimorphism, maturity, palette): an adult male's back and
+  flanks take a richer coat; females and sexless animals are unchanged.
+- Seam normals: welded per-position normals replace three's `computeVertexNormals`, so part seams shade continuously.
+- OPEN:
+  - the trunk tip still reads as a cap (metric d3 met, visual goal not met; Atlas backlog FAUNA-TRUNK-TIP-2);
+  - one trunk join band on the trunked centipede (FAUNA-TRUNK-JOIN-BAND);
+  - leg-to-body joins read as gaps or merges, pre-existing (FAUNA-LEG-JOIN);
+  - the head start-cap pokes through the throat on 25 of 83 specimens, up from 20 (FAUNA-HEAD-CAP-CLIP);
+  - ostrich and shelled-giraffe-bird eyes sit about 2.3 eye radii further back; check on the next review sheet;
+  - a breeding male bird can come out duller than the female (blue female, tan male for colorSeed 5).
 
 ## Consumers
 
