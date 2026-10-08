@@ -21,9 +21,15 @@ function measure(fn) {
   gc(); gc();
   const heap0 = process.memoryUsage().heapUsed, profiler = new v8.GCProfiler();
   profiler.start(); fn();
-  const stats = profiler.stop()?.statistics ?? [], heap1 = process.memoryUsage().heapUsed;
+  const profile = profiler.stop(), heap1 = process.memoryUsage().heapUsed;
+  assert.ok(Array.isArray(profile?.statistics), 'GCProfiler did not return a statistics array');
+  const stats = profile.statistics;
   let freed = 0;
-  for (const st of stats) freed += Math.max(0, st.beforeGC.heapStatistics.usedHeapSize - st.afterGC.heapStatistics.usedHeapSize);
+  for (const st of stats) {
+    const before = st.beforeGC?.heapStatistics?.usedHeapSize, after = st.afterGC?.heapStatistics?.usedHeapSize;
+    assert.ok(Number.isFinite(before) && Number.isFinite(after), 'GC event lacks finite before/after usedHeapSize');
+    freed += Math.max(0, before - after);
+  }
   return {calls: N, gcEvents: stats.length, heapGrowthBytes: heap1 - heap0, freedByGcBytes: freed, bytesPerCall: (Math.max(0, heap1 - heap0) + freed) / N};
 }
 const result = {node: process.version, control: measure(runControl), coat: measure(run)};
