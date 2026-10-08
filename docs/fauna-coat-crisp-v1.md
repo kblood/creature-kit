@@ -373,3 +373,45 @@ check.
   | upgrade-before-eyespot-giraffe | 0a15c6abc960 | 7ddde9a5166c | blend |
   | upgrade-v3-compound-giraffe | dcd3f3190adf | 33425888f6ec | blend |
   | upgrade-before-compound-giraffe | 0a15c6abc960 | 7ddde9a5166c | blend |
+
+### Step 7: GPU review sheets, Luna (advisory) and the scratch-Atlas check
+
+- **Scratch Atlas.** `C:/LLM/IWSDK/universe-atlas-wt/_coat-preview`, detached at Atlas main c6526d0, node_modules
+  junctioned; "before" = Atlas main's vendored kit (6ca5e18), "after" = `sync-creature-kit.mjs --write --kit
+  <coat-crisp>` at e5903da (uncommitted; 16 files). Junction removed first, then the worktree; Atlas node_modules intact.
+- **Capture.** `tests/fauna-face-closeups.browser.mjs --label before|after --only <8> --port 5247` (GPU lock taken by
+  the tool: holds 1766 ms / 2212 ms, 0 console errors, SwiftShader). Specimens: preset-giraffe, eye-cat,
+  preset-trunked-centipede, plausible-pachyderm-1 from tests/fauna-face-specimens.json, plus four scratch-only
+  entries appended to the scratch tree's copy (group `coat`, not in the kit fixture): coat-small-giraffe-spots and
+  coat-small-dinosaur-reticulated (the metric (a) specimens, bodyLength 0.3), coat-bird-male / coat-bird-female
+  (bird preset, dimorphism 1, individualSeed 7, variability 0). Sheets and the six composed before/after review
+  images: `C:/LLM/IWSDK/universe-atlas/test-results/coat-crisp-v1-2026-10-08/` (before/, after/, luna/, asks.json).
+- **Luna (GPT Luna 6, luna-vote --asks 3, fixed asks in asks.json; VISUAL-ADVISORY, never gates):**
+
+  | criterion | image | verdicts | result | Luna's diagnosis |
+  |---|---|---|---|---|
+  | crisp pattern edges | luna/1-crisp.png | F F F | FAIL | "spots and rosettes are sparse, oversized blotches rather than many small distinct marks" (pattern scale, high) |
+  | male / female differently coloured | luna/2-dichromatism.png | F P P | PASS 2/3 | - |
+  | no light line at the seams | luna/3-seam.png | P F F | FAIL 1/3 | "thin bright lines ... across the top of the head and around the head-neck junction" (seam line, high) |
+  | no facets on the trunk | luna/4-trunk-facets.png | F F F | FAIL | "circumferential bands and uneven shading remain along the trunk" (trunk shading, high) |
+  | trunk tip is not a cap | luna/5-trunk-tip.png | F F F | FAIL | "a visible raised rim and a distinct flat face, so it reads like a cap" (tip closure, high) |
+  | intact / no tearing (after) | luna/6-intact.png | F F F | FAIL | "the trunked centipede has repeated legs that appear to intersect or merge with its body" (geometry, medium) |
+  | intact / no tearing (before, control) | luna/6-intact-before.png | F F F | FAIL | "dark gaps between their legs and bodies" (tearing/holes, medium) |
+
+  A per-creature follow-up on the after sheet (luna/6-intact-detail.txt, not a vote) answered "None seen" for all
+  eight. The intact FAIL is the same on the unchanged before renders and names leg-to-body junctions, which this
+  round did not touch; no iteration was made (nothing in files_owned addresses it). Flagged to the coordinator under
+  the STOP rule rather than worked around.
+- **Own reading of the sheets (not a gate):** the crisp coat is clearly sharper (coat-small-giraffe-spots: distinct
+  round spots vs. smeared blotches before; the ask also asked for "small" marks, which pattern scale 1 does not give
+  on a 0.3 body, so Luna's FAIL is on scale, not edge crispness); the dotted bright line along the giraffe's head-neck
+  seam (zoom-giraffe-seam.png, before) is gone, and the bright lines Luna names in the after column are the
+  reticulated net of the now-crisp coat; the trunked centipede's top view loses most ring steps but keeps one band
+  at the trunk join (zoom-trunk-top.png); the trunk ends still read as a rimmed flat face at sheet scale (d3 passes
+  numerically: ratio 0.564, two roll-in rings). Bird pair: the male's back and flanks take the plumage accent (tan
+  for colorSeed 5) and the female keeps the blue base; the before renders are identical.
+- **Scratch-Atlas life-cpu-digest** (through the slot): 2 / 2 pass (identity 26 s, hidden life 248 s): unchanged.
+  Also run there: fauna-coat-fields (Atlas lineage-B check), fauna-composer, creature-core-boundary, creature-kit-vendor:
+  31 pass, 1 skip, 1 fail: the vendor test asserts `license: NOASSERTION` but the kit has been `UNLICENSED` since kit
+  main 3e0d6e8 (A13); this fails for any sync of current kit main, not for this branch.
+
