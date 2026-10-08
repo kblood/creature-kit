@@ -96,6 +96,8 @@ export interface ComposerSkinDebug {
   coatVertex: {own: Uint8Array; sample: Float64Array} | null;
   /** skin-5: 1 per triangle of a cap or disc that closes a part inside another part (left out of welded seam normals). */
   hiddenTriangles: Uint8Array;
+  /** skin-5: the neck-to-head blend rings still crossed after fanOutBends and were turned monotonically instead. */
+  blendUnfolded: boolean;
   /** The eyes as built (fauna-composer-eye-1): one entry per eye, head-local geometry and the skin vertex range. */
   eyes: ComposerSkinEyeDebug[];
   /** The palette's eye colour and the built iris colour (null: compound eyes or eyespots), for colour audits. */
@@ -670,7 +672,7 @@ export function buildComposerSkin(graph: ComposerGraph, options: ComposerSkinOpt
   const L = d.bodyLength, scale = Math.max(L, 0.2);
   const one = (bone: number): W => [[bone, 1]];
   const debugRings: ComposerSkinRing[] | undefined = options.debug ? [] : undefined;
-  let splineFallbacks = 0;
+  let splineFallbacks = 0, blendUnfolded = false;
   const T = COMPOSER_SKIN_TESSELLATION;
 
   // ---- individual stream: fixed draw order, mesh-local, never colorSeed
@@ -984,6 +986,7 @@ export function buildComposerSkin(graph: ComposerGraph, options: ComposerSkinOpt
   // turn monotonically from the neck's last frame to the head axis instead, eased over the blend's arc length
   const firstBlend = axialChain.rings.length - 1;
   if (axialRings.slice(firstBlend, -1).some((r, i) => ringsCross(r, axialRings[firstBlend + i + 1]!))) {
+    blendUnfolded = true;
     const from = axialRings[firstBlend]!.t.clone().normalize(), to = axialRings[axialRings.length - 1]!.t.clone().normalize(), arc = [0];
     for (let i = firstBlend + 1; i < axialRings.length; i++) arc.push(arc[arc.length - 1]! + axialRings[i]!.c.distanceTo(axialRings[i - 1]!.c));
     const total = arc[arc.length - 1]! || 1, q = new THREE.Quaternion().setFromUnitVectors(from, to), id = new THREE.Quaternion();
@@ -1339,7 +1342,7 @@ export function buildComposerSkin(graph: ComposerGraph, options: ComposerSkinOpt
     coat: {pattern: genome.pattern, requestedScale, effectiveScale: genome.scale, cellsPerBody: cells, meanCellDiameter: cells > 0 ? scale / (cells * genome.scale) : Infinity, torsoEdgeEstimate: torsoEdge},
     traitsNeutral: traits.neutral,
     coatVertex: crispPattern ? {own: s.own.slice(0, s.nv), sample: s.cq.slice(0, s.nv * 6)} : null,
-    hiddenTriangles: s.hid.slice(0, s.ni / 3),
+    hiddenTriangles: s.hid.slice(0, s.ni / 3), blendUnfolded,
     eyes: eyeCtx.eyes, eyeColours: {eye: eyeCtx.colours.eye, iris: eyeCtx.colours.iris, lidFactor: eyeCtx.colours.lidFactor, compound: eyeCtx.colours.compound ?? null},
   };
   return out;

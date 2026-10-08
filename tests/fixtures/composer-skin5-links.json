@@ -1,0 +1,286 @@
+{
+ "schema": "composer-skin5-links-1",
+ "capturedAt": {
+  "commitBase": "7f73976",
+  "date": "2026-10-08",
+  "graph": "fauna-composer-graph-3",
+  "skin": "fauna-composer-skin-5",
+  "eye": "fauna-composer-eye-2",
+  "recipe": 4,
+  "note": "Skin-5 digests (positions, index, skinIndex, skinWeight, colors) and gloss digests of the 28 migrated neutral v1 texts of composer-skin4-links.json under the current eye rules (eyeRules 2), captured on kit/coat-crisp after step 4 (docs/fauna-coat-crisp-v1.md). Skin-5 adds the crisp coat layers and sexual dichromatism, which leave neutral vertex colours unchanged, and step 4 moved vertices: unfolded neck-to-head blends and the trunk. An entry without skin5Drift builds its skin-4 pin byte for byte. Shading normals are not part of the digest. composer-skin4-links.json is kept as history. Regenerate only with a deliberate skin, eye or graph version bump."
+ },
+ "driftFromSkin4": {
+  "changed": 12,
+  "reasons": {
+   "fauna-composer-skin-5 (coat crisp v1 step 4): neck-to-head blend rings that still crossed after fanOutBends turn monotonically to the head axis (no fold at the top of the seam)": 11,
+   "fauna-composer-skin-5 (coat crisp v1 step 4): trunk join on a Hermite curve, trunk rings respaced by turn and taper, tip rolled in over one more ring": 1
+  },
+  "of": 28
+ },
+ "byText": {
+  "v1*layout_biped*legPairs_1*bodyLength_1.6*girth_1.05*posture_0.12*torso_deep-chest*neckLength_0.45*head_jaws*headSize_1.35*snoutLength_1*horns_crest*legs_digitigrade*legLength_1.05*feet_claw*arms_small*armLength_0.38*hands_claw*tail_reptile*tailLength_1.6*armor_none*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_reptile*colorSeed_17": {
+   "skin": "01b679c6fc289aceb51ae53f8e04cdb9f0d7a230fd02057cda28727075a1ba05",
+   "gloss": "50a3a54413ce90711d76e867216854a459b187220c5b095240ef239da2e04948",
+   "vertices": 8146,
+   "triangles": 16032,
+   "bones": 31,
+   "skin4": "01b679c6fc289aceb51ae53f8e04cdb9f0d7a230fd02057cda28727075a1ba05",
+   "gloss4": "50a3a54413ce90711d76e867216854a459b187220c5b095240ef239da2e04948"
+  },
+  "v1*layout_sprawled*legPairs_2*bodyLength_0.55*girth_1.1*posture_0*torso_flat*neckLength_0.35*head_beak*headSize_0.9*snoutLength_0.25*horns_none*legs_pillar*legLength_0.42*feet_pad*arms_none*armLength_0.6*hands_hand*tail_stub*tailLength_0.25*armor_dome*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_reptile*colorSeed_211": {
+   "skin": "9f973d3e588752e97fc830aaabfd0e82fdf23779a20c22cb42cfceefad2de4f6",
+   "gloss": "f73ac5b835ee9524ba84db55e45f8a33a52decf9a28161be479219c34b9db171",
+   "vertices": 6238,
+   "triangles": 12288,
+   "bones": 21,
+   "skin4": "9f973d3e588752e97fc830aaabfd0e82fdf23779a20c22cb42cfceefad2de4f6",
+   "gloss4": "f73ac5b835ee9524ba84db55e45f8a33a52decf9a28161be479219c34b9db171"
+  },
+  "v1*layout_quadruped*legPairs_2*bodyLength_1.5*girth_0.9*posture_0.7*torso_slim*neckLength_1.5*head_muzzle*headSize_0.85*snoutLength_0.8*horns_ossicones*legs_unguligrade*legLength_1.45*feet_hoof*arms_none*armLength_0.6*hands_hand*tail_tufted*tailLength_0.6*armor_none*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_savanna*colorSeed_37": {
+   "skin": "82ba8bd606e3bd6415e674a01046af96bf8a72c65a14973a4e4d51502b89ae34",
+   "gloss": "990ea49a573265903c88dc2f03eee4acc29e326a609add41470c0b00ca86fd0d",
+   "vertices": 7816,
+   "triangles": 15468,
+   "bones": 32,
+   "skin4": "27a1fcf1a8faced9baaa2d60b3502beabb3efb57cf4b45aa8cdd1bd69ec36339",
+   "gloss4": "990ea49a573265903c88dc2f03eee4acc29e326a609add41470c0b00ca86fd0d",
+   "skin5Drift": "fauna-composer-skin-5 (coat crisp v1 step 4): neck-to-head blend rings that still crossed after fanOutBends turn monotonically to the head axis (no fold at the top of the seam)"
+  },
+  "v1*layout_biped*legPairs_1*bodyLength_0.22*girth_1.2*posture_0.45*torso_barrel*neckLength_0.45*head_beak*headSize_1.2*snoutLength_0.55*horns_none*legs_digitigrade*legLength_0.85*feet_claw*arms_none*armLength_0.6*hands_hand*tail_feather-fan*tailLength_0.9*armor_none*wings_feathered*wingSpan_3.2*trunk_none*trunkLength_0.8*palette_plumage*colorSeed_5": {
+   "skin": "f289e38cbb72a10db0d50aac4061690e691380b0bf6a358a26853b480e0610b5",
+   "gloss": "3c0dabad017f40468c903b07c79167f2b137c06a67a8a8c26ae143132bc880fe",
+   "vertices": 6072,
+   "triangles": 11900,
+   "bones": 24,
+   "skin4": "f289e38cbb72a10db0d50aac4061690e691380b0bf6a358a26853b480e0610b5",
+   "gloss4": "3c0dabad017f40468c903b07c79167f2b137c06a67a8a8c26ae143132bc880fe"
+  },
+  "v1*layout_biped*legPairs_1*bodyLength_0.8*girth_1.1*posture_0.3*torso_barrel*neckLength_1.5*head_beak*headSize_0.75*snoutLength_0.45*horns_none*legs_digitigrade*legLength_1.8*feet_claw*arms_none*armLength_0.6*hands_hand*tail_feather-fan*tailLength_0.4*armor_none*wings_feathered*wingSpan_1.3*trunk_none*trunkLength_0.8*palette_ink*colorSeed_88": {
+   "skin": "5c77013ff28dafefe5b5baf895df15a4d901b5bcbd427c4d3c3b9d00273f05f1",
+   "gloss": "8296c3ce26ada24444650de2e8c9544adb99d5751cc3899163e46ee804c91da6",
+   "vertices": 6804,
+   "triangles": 13364,
+   "bones": 27,
+   "skin4": "7e54707dd3ccbf8b362f052a1146c280c2039659b20172eb419b9fb91bc1abb1",
+   "gloss4": "8296c3ce26ada24444650de2e8c9544adb99d5751cc3899163e46ee804c91da6",
+   "skin5Drift": "fauna-composer-skin-5 (coat crisp v1 step 4): neck-to-head blend rings that still crossed after fanOutBends turn monotonically to the head axis (no fold at the top of the seam)"
+  },
+  "v1*layout_quadruped*legPairs_2*bodyLength_2.1*girth_1.4*posture_0.1*torso_barrel*neckLength_0.2*head_muzzle*headSize_1.15*snoutLength_0.75*horns_nasal*legs_pillar*legLength_0.5*feet_pad*arms_none*armLength_0.6*hands_hand*tail_tufted*tailLength_0.25*armor_osteoderms*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_slate*colorSeed_61": {
+   "skin": "6a3b7eea6ba4fd0991a07613e2f6bd8a9b4dcc11268f6bb100755838a2961ee0",
+   "gloss": "a9f56697c7629873d6e42bc4c1a0fd52f6a0e11e1b5c2a230d6b6dc235eed681",
+   "vertices": 9044,
+   "triangles": 17684,
+   "bones": 24,
+   "skin4": "6a3b7eea6ba4fd0991a07613e2f6bd8a9b4dcc11268f6bb100755838a2961ee0",
+   "gloss4": "a9f56697c7629873d6e42bc4c1a0fd52f6a0e11e1b5c2a230d6b6dc235eed681"
+  },
+  "v1*layout_biped*legPairs_1*bodyLength_0.6*girth_1.15*posture_0.85*torso_deep-chest*neckLength_0.1*head_flat-face*headSize_1.1*snoutLength_0.35*horns_none*legs_plantigrade*legLength_1.05*feet_hand*arms_grasping*armLength_1.25*hands_hand*tail_none*tailLength_0*armor_none*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_ink*colorSeed_143": {
+   "skin": "9f7f9e88caf4429988e103c06d7f47b6e0ca0556b55ebb36fe5c99066573a8c0",
+   "gloss": "9f106c24ff58984d5c7535220c5c67c257f9ceeb8d07ac75d1c953904c037d98",
+   "vertices": 6242,
+   "triangles": 12224,
+   "bones": 20,
+   "skin4": "ec0ecfd09b0cf3507aca08554cf63fd3d579235aa9bfdfa7a610be0560851f4a",
+   "gloss4": "9f106c24ff58984d5c7535220c5c67c257f9ceeb8d07ac75d1c953904c037d98",
+   "skin5Drift": "fauna-composer-skin-5 (coat crisp v1 step 4): neck-to-head blend rings that still crossed after fanOutBends turn monotonically to the head axis (no fold at the top of the seam)"
+  },
+  "v1*layout_limbless*legPairs_0*bodyLength_1.1*girth_1*posture_0*torso_annulated*neckLength_0*head_blunt*headSize_1*snoutLength_0.2*horns_none*legs_pillar*legLength_0.8*feet_pad*arms_none*armLength_0.6*hands_hand*tail_none*tailLength_0*armor_none*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_earth*colorSeed_401": {
+   "skin": "b1ed44ecdaf24e004b03a9a18444c46aac62114874f634d5c79ca7367a658060",
+   "gloss": "e51ac9fd190ad96956db949c24f27e9228564ee89b3b9e8190d5ea11639bfe08",
+   "vertices": 3353,
+   "triangles": 6616,
+   "bones": 15,
+   "skin4": "b1ed44ecdaf24e004b03a9a18444c46aac62114874f634d5c79ca7367a658060",
+   "gloss4": "e51ac9fd190ad96956db949c24f27e9228564ee89b3b9e8190d5ea11639bfe08"
+  },
+  "v1*layout_many-legged*legPairs_11*bodyLength_0.55*girth_0.9*posture_0*torso_segmented*neckLength_0*head_mandibles*headSize_1*snoutLength_0.3*horns_none*legs_arthropod*legLength_0.2*feet_spike*arms_none*armLength_0.6*hands_hand*tail_none*tailLength_0*armor_bands*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_ink*colorSeed_909": {
+   "skin": "2b0a2110b914c1df219d9927eb87c64afdc63462161c34bda8c4a892c0e0b8c5",
+   "gloss": "d391d25e204a96ab0c16221d77cb77831bf8f94510a9d288a34744cab5f5eaf2",
+   "vertices": 8944,
+   "triangles": 17636,
+   "bones": 79,
+   "skin4": "2b0a2110b914c1df219d9927eb87c64afdc63462161c34bda8c4a892c0e0b8c5",
+   "gloss4": "d391d25e204a96ab0c16221d77cb77831bf8f94510a9d288a34744cab5f5eaf2"
+  },
+  "v1*layout_biped*legPairs_1*bodyLength_0.9*girth_1.2*posture_0.3*torso_barrel*neckLength_1.3*head_beak*headSize_0.9*snoutLength_0.5*horns_ossicones*legs_unguligrade*legLength_1.3*feet_hoof*arms_none*armLength_0.6*hands_hand*tail_stub*tailLength_0.3*armor_dome*wings_feathered*wingSpan_1.6*trunk_none*trunkLength_0.8*palette_savanna*colorSeed_2718": {
+   "skin": "07041247551f3033f0854737bacf8701c1525347e06daf7ee3174b47bef6cd65",
+   "gloss": "b2c34aec3338a914e310f3e406c8601be3639037d64dec2db2ca40b914783c54",
+   "vertices": 5946,
+   "triangles": 11736,
+   "bones": 26,
+   "skin4": "43892194b12ebc9f6bb8247247127978553fb82cafdfa59847d1a02b658643b9",
+   "gloss4": "b2c34aec3338a914e310f3e406c8601be3639037d64dec2db2ca40b914783c54",
+   "skin5Drift": "fauna-composer-skin-5 (coat crisp v1 step 4): neck-to-head blend rings that still crossed after fanOutBends turn monotonically to the head axis (no fold at the top of the seam)"
+  },
+  "v1*layout_many-legged*legPairs_7*bodyLength_1.4*girth_1.3*posture_0*torso_segmented*neckLength_0.3*head_muzzle*headSize_1*snoutLength_0.4*horns_nasal*legs_pillar*legLength_0.24*feet_pad*arms_none*armLength_0.6*hands_hand*tail_tufted*tailLength_0.2*armor_bands*wings_none*wingSpan_2*trunk_trunk*trunkLength_1*palette_slate*colorSeed_3141": {
+   "skin": "889ac842b59a8788b81e22fc49a4bd3cbc51b63ca69018859e9e6ae79d504314",
+   "gloss": "2f26c70cacd1a996845eb04842fc411171db86433076463c496c97b4af1e95bf",
+   "vertices": 14558,
+   "triangles": 28452,
+   "bones": 63,
+   "skin4": "4d01dd21b26c92b2c74daea533a2d13a4f5e3bf9e60874fdd49b1bdfec30b64b",
+   "gloss4": "c08e955f88c9aa5e33c35d3e4841653d42ac8f22ece48a3e52fc619f5d82c1f5",
+   "skin5Drift": "fauna-composer-skin-5 (coat crisp v1 step 4): trunk join on a Hermite curve, trunk rings respaced by turn and taper, tip rolled in over one more ring"
+  },
+  "v1*layout_quadruped*legPairs_2*bodyLength_1.2*girth_1.25*posture_0.25*torso_deep-chest*neckLength_0.15*head_flat-face*headSize_1.1*snoutLength_0.5*horns_nasal*legs_plantigrade*legLength_0.7*feet_hand*arms_grasping*armLength_0.8*hands_hand*tail_club*tailLength_0.8*armor_none*wings_membrane*wingSpan_2.4*trunk_none*trunkLength_0.8*palette_earth*colorSeed_1618": {
+   "skin": "f48ca6d14eceebcd68841f9f169ef73e32efd9bbae8bb8ef6d56f12eb26e5394",
+   "gloss": "a6157f7bb7a9efa76b94b30e1349ca53e8543a907df0bbfe426530cba72a7f7c",
+   "vertices": 11348,
+   "triangles": 22288,
+   "bones": 40,
+   "skin4": "f48ca6d14eceebcd68841f9f169ef73e32efd9bbae8bb8ef6d56f12eb26e5394",
+   "gloss4": "a6157f7bb7a9efa76b94b30e1349ca53e8543a907df0bbfe426530cba72a7f7c"
+  },
+  "v1*layout_biped*legPairs_1*bodyLength_2.02*girth_1.1*posture_0.76*torso_deep-chest*neckLength_0.69*head_jaws*headSize_1.26*snoutLength_0.41*horns_crest*legs_unguligrade*legLength_0.44*feet_hoof*arms_grasping*armLength_0.44*hands_claw*tail_feather-fan*tailLength_1.2*armor_dome*wings_membrane*wingSpan_1.02*trunk_trunk*trunkLength_0.68*palette_ink*colorSeed_4922": {
+   "skin": "e7657e9153d54673c710b2e05f31d701cf9993fe0c6e925f2c3e669e3d034403",
+   "gloss": "c440a1919993c25c80ae5f93c9788853e0c0b5a382195beb15fda448374c4c12",
+   "vertices": 7312,
+   "triangles": 14332,
+   "bones": 32,
+   "skin4": "d1d3a069c5c6de9f29193dc1ac4fb53de09efff037670695d21b4fd1b393df9d",
+   "gloss4": "c440a1919993c25c80ae5f93c9788853e0c0b5a382195beb15fda448374c4c12",
+   "skin5Drift": "fauna-composer-skin-5 (coat crisp v1 step 4): neck-to-head blend rings that still crossed after fanOutBends turn monotonically to the head axis (no fold at the top of the seam)"
+  },
+  "v1*layout_biped*legPairs_1*bodyLength_1.83*girth_0.85*posture_0.33*torso_deep-chest*neckLength_0.21*head_mandibles*headSize_1.21*snoutLength_0.89*horns_none*legs_unguligrade*legLength_0.41*feet_hoof*arms_grasping*armLength_0.59*hands_pincer*tail_tufted*tailLength_1.31*armor_dome*wings_membrane*wingSpan_2.61*trunk_none*trunkLength_0.41*palette_earth*colorSeed_4293": {
+   "skin": "812b6779bd1018bab3c3cac01ba73f390c47f26686ea830e18a01827a108f0f0",
+   "gloss": "ba5574100c6604015e25296946303d19535e2fea2f72bcd9547e4b3c2d68b6f5",
+   "vertices": 7240,
+   "triangles": 14332,
+   "bones": 34,
+   "skin4": "812b6779bd1018bab3c3cac01ba73f390c47f26686ea830e18a01827a108f0f0",
+   "gloss4": "ba5574100c6604015e25296946303d19535e2fea2f72bcd9547e4b3c2d68b6f5"
+  },
+  "v1*layout_quadruped*legPairs_2*bodyLength_0.84*girth_0.77*posture_0.43*torso_slim*neckLength_0.3*head_blunt*headSize_0.94*snoutLength_0.87*horns_paired*legs_plantigrade*legLength_0.47*feet_pad*arms_none*armLength_0.86*hands_hand*tail_tufted*tailLength_0.8*armor_none*wings_none*wingSpan_2.33*trunk_none*trunkLength_0.67*palette_slate*colorSeed_7350": {
+   "skin": "e02a3791899ba009a39a2d804a3878e48895afd51a7302d7ace7f15c2176495e",
+   "gloss": "b89b92b1826e8b71ec2cef0c48984740cb2b679849d7fac46f9671890318e1de",
+   "vertices": 6105,
+   "triangles": 12036,
+   "bones": 24,
+   "skin4": "82d5b843221af5d24e5341c25dcd13d8b64cccb32d5c339772c29866cc040dbe",
+   "gloss4": "b89b92b1826e8b71ec2cef0c48984740cb2b679849d7fac46f9671890318e1de",
+   "skin5Drift": "fauna-composer-skin-5 (coat crisp v1 step 4): neck-to-head blend rings that still crossed after fanOutBends turn monotonically to the head axis (no fold at the top of the seam)"
+  },
+  "v1*layout_biped*legPairs_1*bodyLength_2.23*girth_0.83*posture_0.23*torso_flat*neckLength_0.69*head_muzzle*headSize_0.95*snoutLength_0.77*horns_nasal*legs_pillar*legLength_1.46*feet_paw*arms_grasping*armLength_0.85*hands_claw*tail_feather-fan*tailLength_1.32*armor_bands*wings_none*wingSpan_2.77*trunk_none*trunkLength_0.59*palette_earth*colorSeed_2066": {
+   "skin": "a79d58beb60ad92138487dd5088ca25e41f4bc0d46a1740ba37285471c755615",
+   "gloss": "feea272bbdc7251375121cdec9041b69471850d12c95e52fd9ba7c5b3bb6890a",
+   "vertices": 7218,
+   "triangles": 14128,
+   "bones": 24,
+   "skin4": "2fcaf311e23c895389b8cce439a829e219d8006580269ec40aa754d57558f400",
+   "gloss4": "feea272bbdc7251375121cdec9041b69471850d12c95e52fd9ba7c5b3bb6890a",
+   "skin5Drift": "fauna-composer-skin-5 (coat crisp v1 step 4): neck-to-head blend rings that still crossed after fanOutBends turn monotonically to the head axis (no fold at the top of the seam)"
+  },
+  "v1*layout_many-legged*legPairs_3*bodyLength_0.7*girth_1.24*posture_0.66*torso_segmented*neckLength_0.2*head_jaws*headSize_1.31*snoutLength_0.17*horns_nasal*legs_pillar*legLength_0.3*feet_paw*arms_grasping*armLength_1.08*hands_pincer*tail_feather-fan*tailLength_1.08*armor_none*wings_none*wingSpan_1.07*trunk_none*trunkLength_0.89*palette_ink*colorSeed_530": {
+   "skin": "e213c299b9056833159ef2d7d4bb848be78df211ad7dfa686074bdddc3472e57",
+   "gloss": "36e00963cb67b8e04209f62b294af32d5d1423ed7e0b0b632b26bf01f91bd137",
+   "vertices": 9820,
+   "triangles": 19180,
+   "bones": 34,
+   "skin4": "e213c299b9056833159ef2d7d4bb848be78df211ad7dfa686074bdddc3472e57",
+   "gloss4": "36e00963cb67b8e04209f62b294af32d5d1423ed7e0b0b632b26bf01f91bd137"
+  },
+  "v1*layout_biped*legPairs_1*bodyLength_0.32*girth_0.92*posture_0.8*torso_flat*neckLength_0.11*head_muzzle*headSize_1.02*snoutLength_0.31*horns_ossicones*legs_unguligrade*legLength_1.6*feet_pad*arms_none*armLength_0.41*hands_pincer*tail_reptile*tailLength_0.71*armor_plates*wings_none*wingSpan_2.67*trunk_none*trunkLength_0.57*palette_plumage*colorSeed_3620": {
+   "skin": "b9febb2c11c94d4c1d046d8625f1c0cdbb4af54c8bf91fe04935701bd9e375f7",
+   "gloss": "34c763722c0186991b9ef8068bc96fc1168ed2451c84b65eb28bd0eefc2b262e",
+   "vertices": 6078,
+   "triangles": 11936,
+   "bones": 21,
+   "skin4": "67c46b9e6c79b3d5740bddd27d9d1cf635edde60764a08165bf938a92946626c",
+   "gloss4": "34c763722c0186991b9ef8068bc96fc1168ed2451c84b65eb28bd0eefc2b262e",
+   "skin5Drift": "fauna-composer-skin-5 (coat crisp v1 step 4): neck-to-head blend rings that still crossed after fanOutBends turn monotonically to the head axis (no fold at the top of the seam)"
+  },
+  "v1*layout_biped*legPairs_1*bodyLength_1.89*girth_0.92*posture_0.85*torso_flat*neckLength_0.46*head_flat-face*headSize_1.09*snoutLength_0.14*horns_crest*legs_plantigrade*legLength_1.51*feet_pad*arms_grasping*armLength_0.95*hands_pincer*tail_none*tailLength_0*armor_none*wings_none*wingSpan_1.18*trunk_none*trunkLength_1.15*palette_plumage*colorSeed_8224": {
+   "skin": "8c52ef9a960520b49d80f4316085b6244620d9530fe130cbeaf28c3258766b2b",
+   "gloss": "4054f6df4a7d7ffc2318173f3206f4136b3909ed9f783eef10daec038c5642f0",
+   "vertices": 5618,
+   "triangles": 11048,
+   "bones": 22,
+   "skin4": "8c52ef9a960520b49d80f4316085b6244620d9530fe130cbeaf28c3258766b2b",
+   "gloss4": "4054f6df4a7d7ffc2318173f3206f4136b3909ed9f783eef10daec038c5642f0"
+  },
+  "v1*layout_limbless*legPairs_0*bodyLength_0.69*girth_0.82*posture_0.66*torso_annulated*neckLength_0*head_blunt*headSize_0.75*snoutLength_0.59*horns_none*legs_unguligrade*legLength_0.53*feet_hand*arms_none*armLength_0.77*hands_pincer*tail_club*tailLength_0.91*armor_bands*wings_none*wingSpan_2.41*trunk_none*trunkLength_1*palette_savanna*colorSeed_3601": {
+   "skin": "2e6acaad7861a8efb3a48ed477a046ade093b6adbda045a0eaaa3e984bcdfd86",
+   "gloss": "790efef59eef1f64a667a5190161ffecca7f4e8a7339c76b3c09cfda00d70f21",
+   "vertices": 5537,
+   "triangles": 10924,
+   "bones": 22,
+   "skin4": "2e6acaad7861a8efb3a48ed477a046ade093b6adbda045a0eaaa3e984bcdfd86",
+   "gloss4": "790efef59eef1f64a667a5190161ffecca7f4e8a7339c76b3c09cfda00d70f21"
+  },
+  "v1*layout_quadruped*legPairs_2*bodyLength_1.12*girth_1.03*posture_0.41*torso_deep-chest*neckLength_0.8*head_beak*headSize_1.28*snoutLength_0.89*horns_nasal*legs_plantigrade*legLength_0.84*feet_claw*arms_none*armLength_0.42*hands_pincer*tail_none*tailLength_0*armor_none*wings_membrane*wingSpan_1.79*trunk_none*trunkLength_0.68*palette_savanna*colorSeed_3319": {
+   "skin": "fd878b19ea429c167378d55ab78bf68641d14da693aa435bb474789a3793a6c6",
+   "gloss": "559fc8c1f3809015a2c160e2409ac99f505345b33e2aeb0aa92eaf8d3cde6180",
+   "vertices": 7486,
+   "triangles": 14672,
+   "bones": 27,
+   "skin4": "fd878b19ea429c167378d55ab78bf68641d14da693aa435bb474789a3793a6c6",
+   "gloss4": "559fc8c1f3809015a2c160e2409ac99f505345b33e2aeb0aa92eaf8d3cde6180"
+  },
+  "v1*layout_limbless*legPairs_0*bodyLength_1.56*girth_1.23*posture_0.87*torso_segmented*neckLength_0*head_muzzle*headSize_0.83*snoutLength_1.08*horns_crest*legs_plantigrade*legLength_1.19*feet_spike*arms_none*armLength_0.4*hands_pincer*tail_tufted*tailLength_0.89*armor_none*wings_feathered*wingSpan_2.99*trunk_none*trunkLength_1.03*palette_slate*colorSeed_5521": {
+   "skin": "d2dd7cfe33feb78e42a6325320760b472746d6756f3dc929453be0bcb02f39b5",
+   "gloss": "d032ec1d6e37d343aae0c20595a31a6b611c47daa94f3d0aed207494226e9197",
+   "vertices": 5016,
+   "triangles": 9884,
+   "bones": 26,
+   "skin4": "d2dd7cfe33feb78e42a6325320760b472746d6756f3dc929453be0bcb02f39b5",
+   "gloss4": "d032ec1d6e37d343aae0c20595a31a6b611c47daa94f3d0aed207494226e9197"
+  },
+  "v1*layout_quadruped*legPairs_2*bodyLength_2.38*girth_1.22*posture_0.49*torso_slim*neckLength_0.32*head_blunt*headSize_1.21*snoutLength_0.21*horns_ossicones*legs_arthropod*legLength_0.5*feet_spike*arms_none*armLength_0.51*hands_hand*tail_club*tailLength_0.94*armor_plates*wings_none*wingSpan_1.12*trunk_none*trunkLength_1.05*palette_earth*colorSeed_9819": {
+   "skin": "962abd763b19c88b24d12cf3854ecd71e157156ea6ddd1f348b90772a2ac8029",
+   "gloss": "98641642c54f47ad56524775d4636914eb1fbeea4b0cdd945fa34e4543b02438",
+   "vertices": 5097,
+   "triangles": 10008,
+   "bones": 26,
+   "skin4": "1cd2085951d341403e6a6eca81e3ae18596db07f5a009745f89c618f79c25c94",
+   "gloss4": "98641642c54f47ad56524775d4636914eb1fbeea4b0cdd945fa34e4543b02438",
+   "skin5Drift": "fauna-composer-skin-5 (coat crisp v1 step 4): neck-to-head blend rings that still crossed after fanOutBends turn monotonically to the head axis (no fold at the top of the seam)"
+  },
+  "v1*layout_biped*legPairs_1*bodyLength_0.31*girth_0.84*posture_0.78*torso_deep-chest*neckLength_0.41*head_blunt*headSize_1.07*snoutLength_0.14*horns_none*legs_pillar*legLength_0.54*feet_claw*arms_grasping*armLength_0.64*hands_hand*tail_feather-fan*tailLength_0.49*armor_none*wings_feathered*wingSpan_1.64*trunk_trunk*trunkLength_0.43*palette_reptile*colorSeed_6480": {
+   "skin": "a8f8a8905c6cf9f83cc5034ddf0295d280721373bcca58c7df5d338e7b8b0c94",
+   "gloss": "315ea16f3d46b19b631b8d7c826c3037ec303d07f73d7d61254a284d48d569f5",
+   "vertices": 6545,
+   "triangles": 12804,
+   "bones": 29,
+   "skin4": "0ca2271afbf84d9b7000701ddd8fa50a4d1eb5ea731bb84b788ab9210d883149",
+   "gloss4": "315ea16f3d46b19b631b8d7c826c3037ec303d07f73d7d61254a284d48d569f5",
+   "skin5Drift": "fauna-composer-skin-5 (coat crisp v1 step 4): neck-to-head blend rings that still crossed after fanOutBends turn monotonically to the head axis (no fold at the top of the seam)"
+  },
+  "v1*layout_many-legged*legPairs_12*bodyLength_1.76*girth_0.88*posture_0.88*torso_flat*neckLength_1.4*head_jaws*headSize_1.38*snoutLength_0.5*horns_ossicones*legs_arthropod*legLength_0.17*feet_spike*arms_none*armLength_0.62*hands_hand*tail_reptile*tailLength_0.6*armor_dome*wings_membrane*wingSpan_1.74*trunk_none*trunkLength_0.84*palette_ink*colorSeed_9691": {
+   "skin": "5a19d92a9ef7eff009b6604cb5d07f0ad696ba19814abfdadc084b75abdf9f33",
+   "gloss": "c8a10785710ceb60c547a8a6d525711c18c2b982f2e8e37b8227fc9a44ab72a7",
+   "vertices": 14072,
+   "triangles": 27748,
+   "bones": 104,
+   "skin4": "5a19d92a9ef7eff009b6604cb5d07f0ad696ba19814abfdadc084b75abdf9f33",
+   "gloss4": "c8a10785710ceb60c547a8a6d525711c18c2b982f2e8e37b8227fc9a44ab72a7"
+  },
+  "v1*layout_quadruped*legPairs_2*bodyLength_2.02*girth_0.95*posture_0.57*torso_barrel*neckLength_0.8*head_jaws*headSize_1.25*snoutLength_0.99*horns_crest*legs_digitigrade*legLength_1.53*feet_paw*arms_grasping*armLength_0.82*hands_hand*tail_none*tailLength_0*armor_osteoderms*wings_none*wingSpan_2.52*trunk_none*trunkLength_0.53*palette_reptile*colorSeed_4636": {
+   "skin": "1c75c8890a92e7635bb070b752f94ebef16070d1f20b03f56e710758d2f809eb",
+   "gloss": "adb32924827ca0251a92156dbab195d05a6d4380c7a245dc2af7bf0a00ff78c6",
+   "vertices": 11928,
+   "triangles": 23292,
+   "bones": 33,
+   "skin4": "26b34c9c6d1a3f965c8bb9d898d3684c1d861a13b19b35fbe00e387c0427dfc7",
+   "gloss4": "adb32924827ca0251a92156dbab195d05a6d4380c7a245dc2af7bf0a00ff78c6",
+   "skin5Drift": "fauna-composer-skin-5 (coat crisp v1 step 4): neck-to-head blend rings that still crossed after fanOutBends turn monotonically to the head axis (no fold at the top of the seam)"
+  },
+  "v1*layout_sprawled*legPairs_2*bodyLength_0.8*girth_1.35*posture_0.75*torso_slim*neckLength_0.13*head_mandibles*headSize_0.87*snoutLength_0.6*horns_crest*legs_arthropod*legLength_0.51*feet_spike*arms_none*armLength_0.49*hands_pincer*tail_feather-fan*tailLength_1.36*armor_bands*wings_feathered*wingSpan_1.98*trunk_none*trunkLength_1.19*palette_slate*colorSeed_1258": {
+   "skin": "30160ba78ab6ae2a14ec56d2f33ab54e76a259bdfcfb6e2a74b3aac63e313ffd",
+   "gloss": "7ad7f0b1b409f2fc9ab1996056ae0ef4e83ccd7a0cd6b5da4cd130ab8346f766",
+   "vertices": 4738,
+   "triangles": 9300,
+   "bones": 26,
+   "skin4": "30160ba78ab6ae2a14ec56d2f33ab54e76a259bdfcfb6e2a74b3aac63e313ffd",
+   "gloss4": "7ad7f0b1b409f2fc9ab1996056ae0ef4e83ccd7a0cd6b5da4cd130ab8346f766"
+  },
+  "v1*layout_biped*legPairs_1*bodyLength_1.7*girth_1.12*posture_0.33*torso_slim*neckLength_0.19*head_beak*headSize_1.23*snoutLength_0.37*horns_paired*legs_pillar*legLength_1.14*feet_hand*arms_none*armLength_1.19*hands_claw*tail_tufted*tailLength_1.41*armor_none*wings_none*wingSpan_2.22*trunk_none*trunkLength_0.7*palette_plumage*colorSeed_4688": {
+   "skin": "225ad56a5510aab003cfb7d25270c94b17ad6826c822e5201981fc32a8705fd9",
+   "gloss": "42109c8687d4d460e83bb1c8448491e90b28b13bb18c93d82176336fcb305e87",
+   "vertices": 5856,
+   "triangles": 11516,
+   "bones": 18,
+   "skin4": "225ad56a5510aab003cfb7d25270c94b17ad6826c822e5201981fc32a8705fd9",
+   "gloss4": "42109c8687d4d460e83bb1c8448491e90b28b13bb18c93d82176336fcb305e87"
+  }
+ }
+}

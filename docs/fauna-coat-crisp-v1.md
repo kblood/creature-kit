@@ -291,3 +291,85 @@ PASS (every 3e0d6e8 export of both coat modules, Object.is) and its one-ulp nega
 | trunked-centipede/female-0.5 | 27e370cf20970ee1 | 7f51c8e62852ee07 |
 | trunked-centipede/none | 27e370cf20970ee1 | 7f51c8e62852ee07 |
 | trunked-centipede/male-0 | 27e370cf20970ee1 | 7f51c8e62852ee07 |
+
+### Step 5: neck-to-head crease (optional): not done
+
+The step-4 blend fix already removed the fold at the top of the neck-to-head seam (giraffe, cat, ostrich and the
+other 11 skin-4 links that unfold). A separate crease pass was not started; step 7's Luna asks on the seam line are the
+check.
+
+### Step 6: re-pins (old -> new ledger)
+
+- **Fixtures.** New `tests/fixtures/composer-skin5-links.json` (schema composer-skin5-links-1): the 28 skin-4 link texts
+  under the current eye rules at fauna-composer-skin-5 / eye-2; every entry records its skin-4 pin (`skin4`,
+  `gloss4`) and, if it moved, `skin5Drift`. 12 of 28 drift (11 blend, 1 trunk); 16 build their skin-4 pin byte for byte.
+  `composer-skin4-links.json` is unchanged history. `composer-skin3-links.json` (the earlier eye rules) and
+  `composer-eye-catalogue-links.json` were repinned in place (`repinnedAtSkin5`; each drifted entry keeps every
+  history field and adds `skinPreSkin5`, `glossPreSkin5`, `verticesPreSkin5`, `trianglesPreSkin5`, `skin5Drift`):
+  12 / 28 and 11 / 30; the catalogue's skin-4 capture is kept in `capturedAtSkin4`.
+- **Causes are checked, not just recorded.** `debug.blendUnfolded` (new) says whether a build turned its blend rings;
+  the tests require `skin5Drift` to name the blend exactly when it is set and the trunk exactly when the graph has a
+  trunk, and every drifted entry to differ from the pin it replaces. Cross-check: with the blend fix switched off
+  (scratch build), only the one trunk entry still drifts in each set (0 of 30 catalogue links).
+- **Tests updated.** fauna-composer-skin4-links.test.mjs: skin-4 fixture kept as history (its `skin3` field is
+  compared with `skinPreSkin5` where a skin-3 pin was repinned); new skin-5 fixture test; the byte-for-byte build
+  test now builds the skin-5 pins; the catalogue test checks `skin5Drift`. fauna-composer-individual.test.mjs: the
+  skin-3 legacy test checks the skin-5 repins like the EC4 ones.
+- **Unchanged:** composer-baseline-v2 / v3 (their tests pass), the face specimens, composer-v1/skin2 links.
+- **creature-core-exports.json:** + `composerSeamNormals`, `TRUNK_JOIN_LEAD`, `TRUNK_RESPACE_TURN`,
+  `TRUNK_RESPACE_TAPER` (step 4; step 2 added 13).
+- **Export test V1_PINS** (owned by R2, not touched): the composer core hash moved in step 2, so the test reports
+  "v1 byte pins not applicable" and returns; the GLBs also carry the new seam normals. Needs a re-key by its owner.
+- **Gate.** tsc 0; suite 212 tests: 210 pass, 2 skip (atlas parity, no ATLAS_DIR), 0 fail. composer-identity digest
+  -> f255c404... (`v1Pins`, `skin4Links`, `eyeCatalogue` as at step 4; `sourceHash` and `cli` move with the source).
+- **Ledger** (sha256 prefixes):
+
+  skin-5 links (current eye rules; skin-4 pin -> skin-5 pin):
+
+  | text (layout/head/seed) | skin-4 | skin-5 | cause |
+  |---|---|---|---|
+  | quadruped/muzzle/seed 37 | 27a1fcf1a8fa | 82ba8bd606e3 | blend |
+  | biped/beak/seed 88 | 7e54707dd3cc | 5c77013ff28d | blend |
+  | biped/flat-face/seed 143 | ec0ecfd09b0c | 9f7f9e88caf4 | blend |
+  | biped/beak/seed 2718 | 43892194b12e | 07041247551f | blend |
+  | many-legged/muzzle/seed 3141 | 4d01dd21b26c | 889ac842b59a | trunk |
+  | biped/jaws/seed 4922 | d1d3a069c5c6 | e7657e9153d5 | blend |
+  | quadruped/blunt/seed 7350 | 82d5b843221a | e02a3791899b | blend |
+  | biped/muzzle/seed 2066 | 2fcaf311e23c | a79d58beb60a | blend |
+  | biped/muzzle/seed 3620 | 67c46b9e6c79 | b9febb2c11c9 | blend |
+  | quadruped/blunt/seed 9819 | 1cd2085951d3 | 962abd763b19 | blend |
+  | biped/blunt/seed 6480 | 0ca2271afbf8 | a8f8a8905c6c | blend |
+  | quadruped/jaws/seed 4636 | 26b34c9c6d1a | 1c75c8890a92 | blend |
+
+  skin-3 links under the earlier eye rules (repinned in place):
+
+  | text (layout/head/seed) | before | after | cause |
+  |---|---|---|---|
+  | quadruped/muzzle/seed 37 | a27f90f81d84 | ef0130e42be1 | blend |
+  | biped/beak/seed 88 | 9d213669acd8 | 3042c95803af | blend |
+  | biped/flat-face/seed 143 | dd5952bdeb36 | fc6f91fe318f | blend |
+  | biped/beak/seed 2718 | 541dfe8bceed | 9f776afd4a2d | blend |
+  | many-legged/muzzle/seed 3141 | a98d37fb711b | 2ac030b4d3e6 | trunk |
+  | biped/jaws/seed 4922 | e718d8531595 | 9a2f9dae30e0 | blend |
+  | quadruped/blunt/seed 7350 | ce82030ba9d3 | 355808bc52f9 | blend |
+  | biped/muzzle/seed 2066 | c79104779676 | c7dfdd6fe330 | blend |
+  | biped/muzzle/seed 3620 | ccf036160932 | 75dca1d72e11 | blend |
+  | quadruped/blunt/seed 9819 | 08c5f7f56cde | a259e1b386de | blend |
+  | biped/blunt/seed 6480 | 30ad288d8fd6 | 7d2841d89cc1 | blend |
+  | quadruped/jaws/seed 4636 | d5bac2f2322d | 5797bd0a195c | blend |
+
+  eye-catalogue links (repinned in place):
+
+  | specimen | before | after | cause |
+  |---|---|---|---|
+  | cat-cat-carnivore | c38f63e20ca2 | 2255f305dc36 | blend |
+  | cat-sclera-ape | 151b12bdead4 | 11ebc8fee6c8 | blend |
+  | cat-nocturnal-primate | 1be0e3825c71 | 2f7a7d5db2eb | blend |
+  | cat-cephalopod-ape | ceb71a2f9b25 | 2576bc2c1440 | blend |
+  | odd-cephalopod-horse | 347e50e935b7 | b8fbfa755521 | blend |
+  | odd-eyespot-giraffe | 3f36910fc815 | be204b805a3a | blend |
+  | odd-wild-33 | 1d5ff254147c | 677833cd07af | blend |
+  | upgrade-v3-eyespot-giraffe | 3f36910fc815 | be204b805a3a | blend |
+  | upgrade-before-eyespot-giraffe | 0a15c6abc960 | 7ddde9a5166c | blend |
+  | upgrade-v3-compound-giraffe | dcd3f3190adf | 33425888f6ec | blend |
+  | upgrade-before-compound-giraffe | 0a15c6abc960 | 7ddde9a5166c | blend |
