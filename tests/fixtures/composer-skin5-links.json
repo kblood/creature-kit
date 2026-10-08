@@ -151,14 +151,16 @@
    "gloss4": "ba5574100c6604015e25296946303d19535e2fea2f72bcd9547e4b3c2d68b6f5"
   },
   "v1*layout_quadruped*legPairs_2*bodyLength_0.84*girth_0.77*posture_0.43*torso_slim*neckLength_0.3*head_blunt*headSize_0.94*snoutLength_0.87*horns_paired*legs_plantigrade*legLength_0.47*feet_pad*arms_none*armLength_0.86*hands_hand*tail_tufted*tailLength_0.8*armor_none*wings_none*wingSpan_2.33*trunk_none*trunkLength_0.67*palette_slate*colorSeed_7350": {
-   "skin": "e02a3791899ba009a39a2d804a3878e48895afd51a7302d7ace7f15c2176495e",
+   "skin": "797c21573eb5fa49a13f34fcc6325bb120caa62e4e0cb6c53cb59de43e66f278",
    "gloss": "b89b92b1826e8b71ec2cef0c48984740cb2b679849d7fac46f9671890318e1de",
    "vertices": 6105,
    "triangles": 12036,
    "bones": 24,
    "skin4": "82d5b843221af5d24e5341c25dcd13d8b64cccb32d5c339772c29866cc040dbe",
    "gloss4": "b89b92b1826e8b71ec2cef0c48984740cb2b679849d7fac46f9671890318e1de",
-   "skin5Drift": "fauna-composer-skin-5 (coat crisp v1 step 4): neck-to-head blend rings that still crossed after fanOutBends turn monotonically to the head axis (no fold at the top of the seam)"
+   "skin5Drift": "fauna-composer-skin-5 (coat crisp v1 step 4): neck-to-head blend rings that still crossed after fanOutBends turn monotonically to the head axis (no fold at the top of the seam)",
+   "skinPreNudgeStable2": "e02a3791899ba009a39a2d804a3878e48895afd51a7302d7ace7f15c2176495e",
+   "nudgeStable2Drift": "mouth-cap-crossing-tie-and-midline"
   },
   "v1*layout_biped*legPairs_1*bodyLength_2.23*girth_0.83*posture_0.23*torso_flat*neckLength_0.69*head_muzzle*headSize_0.95*snoutLength_0.77*horns_nasal*legs_pillar*legLength_1.46*feet_paw*arms_grasping*armLength_0.85*hands_claw*tail_feather-fan*tailLength_1.32*armor_bands*wings_none*wingSpan_2.77*trunk_none*trunkLength_0.59*palette_earth*colorSeed_2066": {
    "skin": "a79d58beb60ad92138487dd5088ca25e41f4bc0d46a1740ba37285471c755615",
@@ -226,24 +228,28 @@
    "gloss4": "d032ec1d6e37d343aae0c20595a31a6b611c47daa94f3d0aed207494226e9197"
   },
   "v1*layout_quadruped*legPairs_2*bodyLength_2.38*girth_1.22*posture_0.49*torso_slim*neckLength_0.32*head_blunt*headSize_1.21*snoutLength_0.21*horns_ossicones*legs_arthropod*legLength_0.5*feet_spike*arms_none*armLength_0.51*hands_hand*tail_club*tailLength_0.94*armor_plates*wings_none*wingSpan_1.12*trunk_none*trunkLength_1.05*palette_earth*colorSeed_9819": {
-   "skin": "962abd763b19c88b24d12cf3854ecd71e157156ea6ddd1f348b90772a2ac8029",
+   "skin": "1535f877243413c9a7b449b2fb40cffe05b262b8766cfcf1953b820e93962c66",
    "gloss": "98641642c54f47ad56524775d4636914eb1fbeea4b0cdd945fa34e4543b02438",
    "vertices": 5097,
    "triangles": 10008,
    "bones": 26,
    "skin4": "1cd2085951d341403e6a6eca81e3ae18596db07f5a009745f89c618f79c25c94",
    "gloss4": "98641642c54f47ad56524775d4636914eb1fbeea4b0cdd945fa34e4543b02438",
-   "skin5Drift": "fauna-composer-skin-5 (coat crisp v1 step 4): neck-to-head blend rings that still crossed after fanOutBends turn monotonically to the head axis (no fold at the top of the seam)"
+   "skin5Drift": "fauna-composer-skin-5 (coat crisp v1 step 4): neck-to-head blend rings that still crossed after fanOutBends turn monotonically to the head axis (no fold at the top of the seam)",
+   "skinPreNudgeStable2": "962abd763b19c88b24d12cf3854ecd71e157156ea6ddd1f348b90772a2ac8029",
+   "nudgeStable2Drift": "mouth-cap-crossing-tie-and-midline"
   },
   "v1*layout_biped*legPairs_1*bodyLength_0.31*girth_0.84*posture_0.78*torso_deep-chest*neckLength_0.41*head_blunt*headSize_1.07*snoutLength_0.14*horns_none*legs_pillar*legLength_0.54*feet_claw*arms_grasping*armLength_0.64*hands_hand*tail_feather-fan*tailLength_0.49*armor_none*wings_feathered*wingSpan_1.64*trunk_trunk*trunkLength_0.43*palette_reptile*colorSeed_6480": {
-   "skin": "a8f8a8905c6cf9f83cc5034ddf0295d280721373bcca58c7df5d338e7b8b0c94",
+   "skin": "c4912b12a18cb5ebd283254674eb40431dc85795f952225a93b00a4121abd8a3",
    "gloss": "315ea16f3d46b19b631b8d7c826c3037ec303d07f73d7d61254a284d48d569f5",
    "vertices": 6545,
    "triangles": 12804,
    "bones": 29,
    "skin4": "0ca2271afbf84d9b7000701ddd8fa50a4d1eb5ea731bb84b788ab9210d883149",
    "gloss4": "315ea16f3d46b19b631b8d7c826c3037ec303d07f73d7d61254a284d48d569f5",
-   "skin5Drift": "fauna-composer-skin-5 (coat crisp v1 step 4): neck-to-head blend rings that still crossed after fanOutBends turn monotonically to the head axis (no fold at the top of the seam)"
+   "skin5Drift": "fauna-composer-skin-5 (coat crisp v1 step 4): neck-to-head blend rings that still crossed after fanOutBends turn monotonically to the head axis (no fold at the top of the seam)",
+   "skinPreNudgeStable2": "a8f8a8905c6cf9f83cc5034ddf0295d280721373bcca58c7df5d338e7b8b0c94",
+   "nudgeStable2Drift": "mouth-cap-crossing-tie-and-midline"
   },
   "v1*layout_many-legged*legPairs_12*bodyLength_1.76*girth_0.88*posture_0.88*torso_flat*neckLength_1.4*head_jaws*headSize_1.38*snoutLength_0.5*horns_ossicones*legs_arthropod*legLength_0.17*feet_spike*arms_none*armLength_0.62*hands_hand*tail_reptile*tailLength_0.6*armor_dome*wings_membrane*wingSpan_1.74*trunk_none*trunkLength_0.84*palette_ink*colorSeed_9691": {
    "skin": "5a19d92a9ef7eff009b6604cb5d07f0ad696ba19814abfdadc084b75abdf9f33",
@@ -282,5 +288,11 @@
    "skin4": "225ad56a5510aab003cfb7d25270c94b17ad6826c822e5201981fc32a8705fd9",
    "gloss4": "42109c8687d4d460e83bb1c8448491e90b28b13bb18c93d82176336fcb305e87"
   }
+ },
+ "repinnedAtNudgeStable2": {
+  "date": "2026-10-08",
+  "replacesPinsAt": "aa89701",
+  "reason": "FAUNA-NUDGE-STABLE-2: engine-independent mouth cap and cephalopod luminance-floor ties",
+  "changed": 3
  }
 }

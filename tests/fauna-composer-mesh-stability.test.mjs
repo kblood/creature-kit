@@ -151,13 +151,7 @@ const SKIN5_TEXTS = Object.keys(fixture('composer-skin5-links.json').byText);
 const CATALOGUE = fixture('composer-eye-catalogue-links.json');
 /** Specimens that still move under a nudge for a cause other than the eye seat, each with its backlog id. When a fix
  * makes one stable, the test below fails until it is removed from this list (the golden runner's known-mismatch rule). */
-const NUDGE_UNSTABLE_KNOWN = Object.freeze({
-  'skin5-link-14': 'mouth disc on a blunt head: a midline vertex sits a hair off z = 0 and flips sign (FAUNA-NUDGE-STABLE-2)',
-  'skin5-link-22': 'mouth disc on a blunt head: midline vertices sit a hair off z = 0 and flip sign (FAUNA-NUDGE-STABLE-2)',
-  'skin5-link-23': 'mouth disc on a blunt head: midline vertices sit a hair off z = 0 and flip sign (FAUNA-NUDGE-STABLE-2)',
-  'cat:odd-earlier-rules-worm': 'mouth disc on a blunt head: a midline vertex flips sign and moves in x/y (FAUNA-NUDGE-STABLE-2)',
-  'cat:odd-cephalopod-horse': 'cephalopod eye colours (246 colour floats) move under three modes (FAUNA-NUDGE-STABLE-2)',
-});
+const NUDGE_UNSTABLE_KNOWN = Object.freeze({});
 /** The pinned corpus: the 12 presets and GOLDEN-FAUNA-1 to 4 (the golden fauna key), the 28 skin-5 link texts (built as
  * composer-skin4-links.test.mjs builds them) and the 30 eye-catalogue specimens. */
 const CORPUS = [
@@ -193,10 +187,31 @@ test('the pinned composer corpus holds the golden grid under every 1-ULP nudge m
 });
 
 test('NUDGE_UNSTABLE_KNOWN: every listed specimen still moves under a nudge (else remove it from the list)', () => {
+  assert.deepEqual(Object.keys(NUDGE_UNSTABLE_KNOWN), [], 'FAUNA-NUDGE-STABLE-2 leaves no known unstable specimen');
   for (const [name, cause] of Object.entries(NUDGE_UNSTABLE_KNOWN)) {
     const make = CORPUS.find(([n]) => n === name)[1];
     assert.ok(nudgeMoves(make).length > 0, `${name} is stable under every nudge mode now (${cause}): remove it from NUDGE_UNSTABLE_KNOWN`);
   }
+});
+
+test('nudge-stable-2 ledger: only the three blunt links and the two diagnosed catalogue specimens are re-pinned', () => {
+  const links = fixture('composer-skin5-links.json');
+  const changed = Object.entries(links.byText).map(([text, pin], i) => ({text, pin, i})).filter(({pin}) => 'nudgeStable2Drift' in pin || 'skinPreNudgeStable2' in pin);
+  assert.deepEqual(changed.map(({i}) => i), [14, 22, 23]);
+  for (const {pin} of changed) {
+    assert.equal(pin.nudgeStable2Drift, 'mouth-cap-crossing-tie-and-midline');
+    assert.match(pin.skinPreNudgeStable2, /^[0-9a-f]{64}$/);
+    assert.notEqual(pin.skin, pin.skinPreNudgeStable2);
+  }
+  const cats = CATALOGUE.links.filter(l => 'nudgeStable2Drift' in l || 'skinPreNudgeStable2' in l);
+  assert.deepEqual(cats.map(l => l.name), ['odd-cephalopod-horse', 'odd-earlier-rules-worm']);
+  for (const l of cats) {
+    assert.equal(l.nudgeStable2Drift, l.name === 'odd-cephalopod-horse' ? 'cephalopod-luminance-floor-tie' : 'mouth-cap-crossing-tie-and-midline');
+    assert.match(l.skinPreNudgeStable2, /^[0-9a-f]{64}$/);
+    assert.notEqual(l.skin, l.skinPreNudgeStable2);
+  }
+  assert.equal(links.repinnedAtNudgeStable2.changed, changed.length);
+  assert.equal(CATALOGUE.repinnedAtNudgeStable2.changed, cats.length);
 });
 
 test('eye-tie repin: exactly cat-raptor-bird, cat-cephalopod-ape and odd-wild-33 carry eyeTieDrift, each a real repin', () => {

@@ -1530,10 +1530,23 @@ function buildHead(s: Skin, graph: ComposerGraph, hb: ComposerBone, pal: Palette
     // dense enough (20 x 4) that a chord between disc vertices sags < 0.002 H below the convex cap
     const discRings = 4, discSeg = 20, lift = MOUTH_DISC_LIFT * H;
     const onCap = (y: number, z: number) => {
-      const h = raycastFirstHit(capTris, [xt, y, z], [1, 0, 0]);
+      // Neutral earlier-rule links retain their frozen skin-3 geometry. The
+      // current mouth and non-neutral earlier-rule individuals use stable ties.
+      if (composerEyeRulesOf(r) === 1 && tr.neutral) {
+        const h = raycastFirstHit(capTris, [xt, y, z], [1, 0, 0]);
+        if (!h) return at(hb, xt + 0.72 * cW + lift, y, z);
+        const sg = h.normal[0] < 0 ? -1 : 1;
+        return at(hb, h.point[0] + sg * h.normal[0] * lift, h.point[1] + sg * h.normal[1] * lift, h.point[2] + sg * h.normal[2] * lift);
+      }
+      // A generated point on the mirror plane must not inherit the lateral
+      // normal of whichever seam facet wins a floating-point depth tie.
+      if (Math.abs(z) < 1e-12 * H) z = 0;
+      const hits = raycastLine(capTris, [xt, y, z], [1, 0, 0]).filter(h => h.t > 1e-9);
+      const first = hits[0];
+      const h = first ? hits.filter(h => Math.abs(h.t - first.t) <= 1e-9).sort((a, b) => a.tri - b.tri)[0] : null;
       if (!h) return at(hb, xt + 0.72 * cW + lift, y, z);
       const sg = h.normal[0] < 0 ? -1 : 1;
-      return at(hb, h.point[0] + sg * h.normal[0] * lift, h.point[1] + sg * h.normal[1] * lift, h.point[2] + sg * h.normal[2] * lift);
+      return at(hb, h.point[0] + sg * h.normal[0] * lift, h.point[1] + sg * h.normal[1] * lift, z === 0 ? 0 : h.point[2] + sg * h.normal[2] * lift);
     };
     if (composerEyeRulesOf(r) === 1) {
       // the earlier eye rules keep the face round's flat dark disc (byte-identical)
@@ -2201,7 +2214,11 @@ function buildCatalogueEyes(e: CatalogueEyeEnv) {
     const want = Math.max(C.overPupil * luminance(PUPIL_RGB), C.overLid * lidLum, K.irisMin), have = luminance(iris);
     if (have < want && have > 0) iris = gainC(iris, Math.min(K.maxIrisGain, want / have));
     let lidFactor = C.lid;
-    if (luminance(iris) < C.overLid * lidLum) lidFactor = C.lid * luminance(iris) / (C.overLid * lidLum) * 0.999;
+    // The cephalopod's boosted iris reaches this floor mathematically exactly.
+    // One rounding bit must not toggle the discontinuous extra 0.999 darkening.
+    // Other profiles retain their pinned contrast calculation.
+    const lidFloor = C.overLid * lidLum, deficit = eyes.kind === 'cephalopod' ? lidFloor * (1 - 1e-12) : lidFloor;
+    if (luminance(iris) < deficit) lidFactor = C.lid * luminance(iris) / lidFloor * 0.999;
     ctx.colours.iris = iris; ctx.colours.lidFactor = lidFactor;
     const irisInner = gainC(iris, 1.1), limbus = scaleC(iris, 0.45);
     for (const {patch, side, centre, gaze, hit, surf} of built) {

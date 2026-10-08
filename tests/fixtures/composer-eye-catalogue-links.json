@@ -196,7 +196,7 @@
    "text": "v4*layout_quadruped*legPairs_2*bodyLength_1.5*girth_0.9*posture_0.7*torso_slim*neckLength_1.5*head_muzzle*headSize_0.85*snoutLength_0.8*horns_ossicones*legs_unguligrade*legLength_1.45*feet_hoof*arms_none*armLength_0.6*hands_hand*tail_tufted*tailLength_0.6*armor_none*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_savanna*colorSeed_37*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0.3*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0*eyes_cephalopod*iris_blue*eyeRules_2",
    "kind": "cephalopod",
    "eyeRules": 2,
-   "skin": "b8fbfa7555219e30923ae474004f8844729421ab89017caac3bec5a9f2a81588",
+   "skin": "329dc5ed29ea909ec2ba9492f4a2b3c27df585623fb886b57bd53f028e7c277e",
    "gloss": "990ea49a573265903c88dc2f03eee4acc29e326a609add41470c0b00ca86fd0d",
    "vertices": 7816,
    "triangles": 15468,
@@ -205,7 +205,9 @@
    "glossPreSkin5": "990ea49a573265903c88dc2f03eee4acc29e326a609add41470c0b00ca86fd0d",
    "verticesPreSkin5": 7816,
    "trianglesPreSkin5": 15468,
-   "skin5Drift": "fauna-composer-skin-5 (coat crisp v1 step 4): neck-to-head blend rings that still crossed after fanOutBends turn monotonically to the head axis (no fold at the top of the seam)"
+   "skin5Drift": "fauna-composer-skin-5 (coat crisp v1 step 4): neck-to-head blend rings that still crossed after fanOutBends turn monotonically to the head axis (no fold at the top of the seam)",
+   "skinPreNudgeStable2": "b8fbfa7555219e30923ae474004f8844729421ab89017caac3bec5a9f2a81588",
+   "nudgeStable2Drift": "cephalopod-luminance-floor-tie"
   },
   {
    "name": "odd-owl-rhino",
@@ -311,11 +313,13 @@
    "text": "v4*layout_limbless*legPairs_0*bodyLength_1.1*girth_1*posture_0*torso_annulated*neckLength_0*head_blunt*headSize_1*snoutLength_0.2*horns_none*legs_pillar*legLength_0.8*feet_pad*arms_none*armLength_0.6*hands_hand*tail_none*tailLength_0*armor_none*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_earth*colorSeed_401*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0*eyes_horizontal*iris_auto*eyeRules_1",
    "kind": "eyespot",
    "eyeRules": 1,
-   "skin": "2eaec782dce0200933ebab32bb31670713b3b93f1421bb877074e84086f64019",
+   "skin": "17db35c53dcd0a694e87d4f29000bbe83e80910a70fe7c3a7868f41e14f0cb63",
    "gloss": "e80239f10965a5d95846dc9715cab23ce7970fa5a6e2fa8e40a6a24955405053",
    "vertices": 3271,
    "triangles": 6492,
-   "bones": 15
+   "bones": 15,
+   "skinPreNudgeStable2": "2eaec782dce0200933ebab32bb31670713b3b93f1421bb877074e84086f64019",
+   "nudgeStable2Drift": "mouth-cap-crossing-tie-and-midline"
   },
   {
    "name": "odd-wild-33",
@@ -493,5 +497,11 @@
   "of": 30,
   "reason": "catalogue-closest-tie: the catalogue eye patch's surfaceZ closest-point fallback resolves candidates within 1e-9 m of the best distance by the lowest triangle index (closestPointOnSoupLowTie) instead of whichever one rounding made a few ulps closer; the three entries were the ones whose current pick was the higher index of an inexact tie; positions and normals of 2-4 eye-rim vertices move (max 5.09e-4 m), gloss, colours, weights and index unchanged",
   "note": "Pre-ship skin-5 correction, repinned in place, no version change (Opus-decided on Kasper's instruction, overrulable). Each drifted entry records the replaced pin (skinPreEyeTie) and the reason (eyeTieDrift); gloss did not move. Ledger: docs/fauna-eye-seat-tie-2026-10-08.md."
+ },
+ "repinnedAtNudgeStable2": {
+  "date": "2026-10-08",
+  "replacesPinsAt": "aa89701",
+  "reason": "FAUNA-NUDGE-STABLE-2: engine-independent mouth cap and cephalopod luminance-floor ties",
+  "changed": 2
  }
 }
