@@ -4,8 +4,16 @@
  * - `mkdir` of the lock directory is the atomic acquire; `owner.txt` inside names the holder and is refreshed every minute;
  * - a held lock is waited for, never broken, except a leaked one: owner.txt older than 20 min while no chrome/headless
  *   browser runs (the coordinator rule of 2026-09-29), which is renamed away and logged;
- * - while held, ATLAS_GPU_LOCK_HELD is set for child processes, so Atlas's tests/helpers/test-slot.mjs refuses to take the
- *   CPU slot inside a GPU hold (lock order: slot -> GPU, never GPU -> slot);
+ * - while held, ATLAS_GPU_LOCK_HELD is set for child processes, and while waiting or held the in-process state is on the
+ *   globalThis symbol 'atlas.gpu-lock.state', so Atlas's tests/helpers/test-slot.mjs refuses to take the CPU slot inside
+ *   a GPU wait or hold (lock order: merge -> slot -> GPU, never GPU -> slot);
+ * - lock-order guards ported from Atlas (rule I8: captures do their GPU work OUTSIDE the CPU test slot). Every kit GPU
+ *   user is a browser capture, so `capture` defaults to TRUE here (Atlas: opt-in): acquire is refused while this process
+ *   holds Atlas's test slot (globalThis 'atlas.test-slot.held') or inherited ATLAS_TEST_SLOT_TOKEN from a slot holder,
+ *   i.e. `test-slot.mjs -- npm run test:browser` fails fast instead of holding CPU tokens for the whole capture. It is also
+ *   refused while this process has a test-slot wait pending (globalThis 'atlas.test-slot.pending'). The guards read only
+ *   env vars and globalThis symbols that Atlas's test-slot.mjs publishes: no Atlas import. `capture: false` keeps the
+ *   pending-wait guard and lifts only the slot guard (a non-capture GPU user taking slot -> GPU, as Atlas allows);
  * - released on success, failure, exit and SIGINT/SIGTERM.
  * Acquire immediately before launching a browser and release as soon as that run ends: withGpuLock(options, work). */
 import {mkdir, readFile, rename, rm, stat, writeFile} from 'node:fs/promises';
@@ -19,6 +27,25 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 export const GPU_LOCK_DIR = process.env.ATLAS_GPU_LOCK_DIR || 'C:/LLM/IWSDK/.gpu-browser-lock';
 export const GPU_LOCK_STALE_MS = Number(process.env.ATLAS_GPU_LOCK_STALE_MS || 20 * 60 * 1000);
 const OWNER = `${GPU_LOCK_DIR}/owner.txt`;
+/** Same symbol and shape as Atlas's helper, so Atlas's test-slot.mjs sees a GPU wait/hold of this process. */
+const STATE = globalThis[Symbol.for('atlas.gpu-lock.state')] ??= {waiting: 0, held: 0, owners: []};
+const INHERITED_HELD = process.env.ATLAS_GPU_LOCK_HELD;
+function publish() {
+  const v = STATE.owners.at(-1) ?? INHERITED_HELD;
+  if (v === undefined) delete process.env.ATLAS_GPU_LOCK_HELD; else process.env.ATLAS_GPU_LOCK_HELD = v;
+}
+
+/** Refuses a capture path that holds Atlas's test slot (in this process or inherited through ATLAS_TEST_SLOT_TOKEN). */
+export function assertCaptureOutsideSlot(owner) {
+  const held = globalThis[Symbol.for('atlas.test-slot.held')]?.length > 0;
+  if (held || process.env.ATLAS_TEST_SLOT_TOKEN) throw new Error(`lock order: capture path "${owner}" asks for the GPU lock while holding the test slot (${held ? 'this process' : 'ATLAS_TEST_SLOT_TOKEN inherited'}); captures take the GPU lock outside the CPU slot: run the browser tests WITHOUT test-slot.mjs (creature-kit README "Creature Lab app"; Atlas docs/test-policy.md "Lock order")`);
+}
+
+/** Refuses the GPU lock while this process still waits for the test slot (lock order merge -> slot -> GPU). */
+export function assertNoPendingSlotWait(owner) {
+  const p = globalThis[Symbol.for('atlas.test-slot.pending')];
+  if (p?.waits > 0) throw new Error(`lock order violation: "${owner}" asks for the GPU lock while this process is still waiting for the test slot (${p.owners.join('; ')}); await or abort the slot wait first: the order is merge -> slot -> GPU`);
+}
 const lockOwner = async () => { try { return (await readFile(OWNER, 'utf8')).trim(); } catch { return '(no owner.txt)'; } };
 
 /** Chrome / headless-shell processes currently running. */
@@ -47,8 +74,14 @@ async function tryBreakStale(staleMs, log, listBrowsers) {
 }
 
 /** Resolves to {release, owner, waitedMs, attempts} once held; retries every `retryMs` until `timeoutMs`. */
-export async function acquireGpuLock({owner, retryMs = 60000, timeoutMs = Infinity, staleMs = GPU_LOCK_STALE_MS, listBrowsers = runningBrowsers, heartbeatMs = 60000, log = console.error} = {}) {
+export async function acquireGpuLock({owner, retryMs = 60000, timeoutMs = Infinity, staleMs = GPU_LOCK_STALE_MS, listBrowsers = runningBrowsers, heartbeatMs = 60000, log = console.error, capture = true} = {}) {
   if (!owner) throw new Error('acquireGpuLock needs an owner name');
+  assertNoPendingSlotWait(owner);
+  if (capture) assertCaptureOutsideSlot(owner);
+  STATE.waiting++;
+  try { return await acquire({owner, retryMs, timeoutMs, staleMs, listBrowsers, heartbeatMs, log}); } finally { STATE.waiting--; }
+}
+async function acquire({owner, retryMs, timeoutMs, staleMs, listBrowsers, heartbeatMs, log}) {
   const started = Date.now(); let attempts = 0;
   for (;;) {
     attempts++;
@@ -63,11 +96,10 @@ export async function acquireGpuLock({owner, retryMs = 60000, timeoutMs = Infini
     }
     const text = `${owner} pid=${process.pid} host=${hostname()} acquired=${new Date().toISOString()}`;
     await writeFile(OWNER, text + '\n');
-    const inherited = process.env.ATLAS_GPU_LOCK_HELD;
-    process.env.ATLAS_GPU_LOCK_HELD = text;
     let released = false;
     const ours = () => { try { return readFileSync(OWNER, 'utf8').trim() === text; } catch { return false; } };
-    const unpublish = () => { if (inherited === undefined) delete process.env.ATLAS_GPU_LOCK_HELD; else process.env.ATLAS_GPU_LOCK_HELD = inherited; };
+    STATE.held++; STATE.owners.push(text); publish();
+    const unpublish = () => { STATE.held--; const i = STATE.owners.lastIndexOf(text); if (i >= 0) STATE.owners.splice(i, 1); publish(); };
     const onExit = () => { if (!released && ours()) { released = true; unpublish(); rmSync(GPU_LOCK_DIR, {recursive: true, force: true}); } };
     const onSignal = () => { onExit(); process.exit(130); };
     process.on('exit', onExit); process.on('SIGINT', onSignal); process.on('SIGTERM', onSignal);
@@ -82,7 +114,7 @@ export async function acquireGpuLock({owner, retryMs = 60000, timeoutMs = Infini
   }
 }
 
-/** Holds the lock only for `work()`, releasing it on success or failure. */
+/** Holds the lock only for `work()`, releasing it on success or failure. Never call it inside a test-slot hold (see above). */
 export async function withGpuLock(options, work) {
   const lock = await acquireGpuLock(options);
   try { return await work(lock); } finally { await lock.release(); }

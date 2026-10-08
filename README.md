@@ -82,6 +82,12 @@ npm run test:browser -- --list    # the browser tests; running them needs the GP
   `fauna-composer-herd`, `creature-lab-eye-review`. `npm run test:browser` starts the dev server and runs them one after
   another; each takes the machine-wide GPU lock `C:/LLM/IWSDK/.gpu-browser-lock` (`tests/helpers/gpu-lock.mjs`, same lock
   as Atlas) and waits for it. SwiftShader unless `ATLAS_HARDWARE` is set.
+- **Lock order: never run the browser tests inside the test slot.** The order is merge -> slot -> GPU, and captures do
+  their GPU work outside the CPU slot (Atlas rule I8), so `test-slot.mjs ... -- npm run test:browser` is wrong: it would
+  hold CPU tokens for the whole capture and wait. `tests/helpers/gpu-lock.mjs` carries Atlas's guards: it refuses the GPU
+  lock while the process holds the slot or inherited `ATLAS_TEST_SLOT_TOKEN` (every kit GPU user is a capture, so this is
+  on by default; `capture: false` lifts it) and while a slot wait of the process is pending; `npm run test:browser`
+  checks the same before it starts the dev server. Run it bare, from a shell that holds no slot.
 
 ## Contracts
 

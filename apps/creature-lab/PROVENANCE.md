@@ -63,7 +63,10 @@ modules; `./fixtures/` becomes `../fixtures/`); further changes are listed.
 
 `tests/helpers/gpu-lock.mjs` is new: a smaller rewrite of Atlas `tests/helpers/gpu-lock.mjs` (blob
 `b3844a3c7e57c148fac0fb1cfeeb5685729fe7fd`) with the same lock directory (`C:/LLM/IWSDK/.gpu-browser-lock`), owner.txt,
-heartbeat, 20-minute stale rule and `ATLAS_GPU_LOCK_HELD` publication; Atlas's slot-pending and capture-in-slot guards are
-not carried over (the kit has no test slot of its own). New kit tests with no Atlas source:
+heartbeat, 20-minute stale rule, `ATLAS_GPU_LOCK_HELD` and globalThis `atlas.gpu-lock.state` publication, and Atlas's
+lock-order guards `assertCaptureOutsideSlot` / `assertNoPendingSlotWait` (ported; they read only the env var
+`ATLAS_TEST_SLOT_TOKEN` and the globalThis symbols `atlas.test-slot.held` / `atlas.test-slot.pending` that Atlas's
+test-slot.mjs publishes, no Atlas import). One deliberate difference: `capture` defaults to `true` (Atlas: opt-in),
+because every kit GPU user is a browser capture. New kit tests with no Atlas source:
 `tests/lab/creature-lab-atlas-parity.test.mjs`, `tests/lab/creature-lab-app-state.test.mjs`, `tests/lab/gpu-lock.test.mjs`,
 `tests/lab-boundary.test.mjs`.

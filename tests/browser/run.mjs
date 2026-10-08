@@ -9,6 +9,7 @@ import {spawn} from 'node:child_process';
 import {existsSync, mkdirSync, readFileSync} from 'node:fs';
 import {dirname, join, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {assertCaptureOutsideSlot} from '../helpers/gpu-lock.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url)), kit = resolve(here, '../..');
 export const BROWSER_TESTS = Object.freeze([
@@ -28,6 +29,9 @@ if (argv.includes('--list')) {
   process.exit(0);
 }
 
+// Lock order (I8): the captures take the GPU lock OUTSIDE Atlas's CPU test slot. Fail before the dev server starts when
+// run as `test-slot.mjs -- npm run test:browser` (each test's withGpuLock would refuse anyway, one by one).
+assertCaptureOutsideSlot('test:browser');
 const {createServer} = await import('vite');
 const server = await createServer({configFile: resolve(kit, 'apps/creature-lab/vite.config.mjs'), server: {hmr: false, watch: null}, logLevel: 'warn'});
 await server.listen();
