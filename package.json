@@ -42,7 +42,11 @@
     "test": "node --test --test-concurrency=8 tests/*.test.mjs",
     "test:parity": "node --test tests/atlas-parity.test.mjs",
     "identity": "node scripts/composer-identity.mjs",
-    "export": "node scripts/export-creature.mjs"
+    "export": "node scripts/export-creature.mjs",
+    "lab:dev": "vite --config apps/creature-lab/vite.config.mjs",
+    "lab:build": "vite build --config apps/creature-lab/vite.config.mjs",
+    "test:lab": "node --test --test-concurrency=4 tests/lab/*.test.mjs tests/lab-boundary.test.mjs",
+    "test:browser": "node tests/browser/run.mjs"
   },
   "peerDependencies": {
     "three": "npm:super-three@0.181.0"
@@ -50,6 +54,7 @@
   "devDependencies": {
     "@types/three": "0.181.0",
     "three": "npm:super-three@0.181.0",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vite": "7.3.6"
   }
 }

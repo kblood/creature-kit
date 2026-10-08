@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#08131a" />
+    <title>Creature Lab · creature-kit</title>
+    <style>
+      .composer-random-row{display:grid;grid-template-columns:1fr 1.4fr 1fr;gap:6px}.composer-random-row button{white-space:normal;line-height:1.2}
+      .composer-marks{display:grid;grid-template-columns:1fr 1fr;gap:3px 8px;font-size:11px}.composer-marks>span{grid-column:1/-1;color:#cfe2dc}.composer-marks label.check{margin:0}.composer-marks .composer-why{grid-column:1/-1}
+      .composer-why.composer-info{color:#9fc4bb}.composer-swatch{display:inline-block;width:11px;height:11px;margin-left:4px;vertical-align:-1px;border:1px solid #9dbab6;border-radius:50%}.composer-swatch-wrap{margin-left:2px;font-size:10px;color:#9bbab4;letter-spacing:0;text-transform:none}.composer-swatch-wrap[hidden]{display:none}#composer-controls select:disabled{opacity:.55;cursor:not-allowed}.composer-hint{margin:0;font-size:10px;color:#9bbab4}
+      .composer-individual{margin:4px 0 6px;font-size:11px}.composer-individual summary{cursor:pointer;color:#d8ebe4}.composer-deltas{margin:2px 0 4px;padding-left:16px;color:#b6ccc9}
+      @media(max-width:850px){.composer-random-row{grid-template-columns:1fr 1fr}.composer-random-row button:nth-child(2){grid-column:1/-1}}</style>
+  </head>
+  <body>
+    <main id="viewport" aria-label="Inspectable procedural creature composer"></main>
+    <header class="topbar">
+      <span class="brand">◒ CREATURE KIT <em>CREATURE LAB</em></span>
+    </header>
+    <aside class="side-panel">
+      <span class="eyebrow">MODULAR CREATURE EXPERIMENT</span><h1 id="title">Modular creature composer</h1><p id="description"></p>
+      <div class="controls">
+        <div id="composer-controls" hidden>
+          <p id="composer-limitations" class="composer-limitations">Experimental procedural creatures: simple smooth shapes without fur, scales or feather detail. Motion stays on the ground; wings fold and spread but flight is not simulated. Checked on desktop browsers only.</p>
+          <label>Starting animal <select id="composer-preset"></select></label>
+          <label>Random seed <input id="composer-seed" maxlength="160" value="composer-1"></label>
+          <div class="composer-random-row"><button id="composer-randomize" type="button" title="Every part drawn independently: anything can combine with anything.">Wild hybrid</button><button id="composer-random-species" type="button" title="A plausible animal drawn from real body plans (hoofed animals, carnivores, birds, lizards ...).">Random plausible species</button><button id="composer-next-seed" type="button" title="Next seed with the random kind used last.">New seed</button></div>
+          <label class="check"><input id="composer-compare" type="checkbox"> Compare two animals</label>
+          <label>Show <select id="composer-herd"></select><small id="composer-herd-why" class="composer-why" hidden>Comparison shows one animal per recipe; turn it off to show a herd.</small></label>
+          <label hidden>Edit which animal <select id="composer-edit-target"><option value="first">First (left)</option><option value="second">Second (right)</option></select></label>
+          <p id="composer-edit-hint" role="status"></p>
+          <div id="composer-parts"></div>
+          <fieldset class="composer-group"><legend>Motion and view</legend>
+            <label>Motion <select id="composer-motion"></select></label>
+            <div class="button-row"><button id="composer-play" type="button">Play</button><button id="composer-frame" type="button">Frame animals</button></div>
+            <label>Frame <select id="composer-focus"><option value="body">Whole animal</option><option value="head">Head and face</option><option value="eyes">Eye close-up</option></select></label>
+            <label>Pose time (seconds) <input id="composer-time" type="number" min="0" max="120" step="0.01" value="0"></label>
+            <label>Scrub within one cycle <input id="composer-phase" type="range" min="0" max="1" step="0.001" value="0"></label>
+            <label>View <select id="composer-view"><option value="three-quarter">Three-quarter</option><option value="side">Side</option><option value="front">Front</option></select></label>
+          </fieldset>
+          <section aria-label="Part adjustments"><h2>How parts were fitted together</h2><div id="composer-constraints" class="composer-notes"></div></section>
+          <div id="composer-issues" class="notice" hidden></div>
+        </div>
+        <div id="anatomy-controls"><label id="lighting-row">Lighting <select id="lighting"></select></label><label class="check"><input id="skeleton" type="checkbox"> Actual solved skeleton</label><label class="check"><input id="neutral" type="checkbox"> Neutral material</label></div>
+      </div>
+      <section id="notice" class="notice" hidden></section>
+      <section id="input-notices" class="notice" role="status" hidden></section>
+      <section><h2 id="species-heading">Composed creature</h2><div id="species-detail" class="detail"></div></section>
+      <section><h2>Live diagnostics</h2><div id="metrics" class="metrics"></div></section>
+      <button id="share-specimen" class="wide">Copy specimen link</button><p id="share-status" role="status"></p><label id="share-fallback" hidden>Specimen link <input id="share-link" readonly aria-label="Specimen link"></label>
+      <button id="export-json" class="wide">Export complete lab JSON</button>
+    </aside>
+    <section class="caption"><span id="caption-eyebrow" class="eyebrow">EXPERIMENTAL · COMMON METRE SCALE</span><h2 id="caption-title">Modular creature composer</h2><p id="caption-copy"></p></section>
+    <footer><span id="status" role="status">Preparing creature lab…</span><span>Orbit drag · Pan right drag · Zoom wheel/pinch</span></footer>
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>
