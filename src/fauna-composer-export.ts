@@ -1,5 +1,7 @@
 /**
- * Headless GLB export for the modular creature composer (fauna-composer-export-1; backlog task 10, creature-kit phase 3).
+ * Headless GLB export for the modular creature composer (fauna-composer-export-3; v1: backlog task 10, creature-kit
+ * phase 3; v2: LOD chain, quest-3 budget, seamless loops; v3: creature-kit strings, bone-reducing skeleton,
+ * docs/creature-export-v3.md).
  *
  * exportCreatureGlb(recipe) builds the creature exactly as the runtime does (createComposerCreature: normalise, derive
  * the individual, graph, skin, three's vertex normals) and writes a binary glTF 2.0 file directly. three's GLTFExporter
@@ -18,7 +20,7 @@
  * Axes: metres, +Y up, right-handed. By default the skeleton root turns the composer's +X heading onto +Z, glTF's
  * asset front; forward '+X' keeps the composer frame. The skinned mesh node is a scene root with no transform.
  *
- * Export v2 (opt-in; with none of these options the bytes are exactly v1's):
+ * Export v2 options (opt-in; with none of them the BIN chunk is exactly v1's):
  * - `lods` / `target`: an LOD chain from fauna-composer-lod.ts. Level 0 is the scene's skinned mesh; lower levels are
  *   extra skinned meshes on nodes outside the scene, linked by MSFT_lod on the level-0 node (with MSFT_screencoverage
  *   hints). Every level shares the one skin, material and clip set. A loader without MSFT_lod shows level 0 only.
@@ -26,6 +28,12 @@
  *   export over budget throws ComposerExportBudgetError, whose `reasons` are machine readable.
  * - `seamless: true`: idle and display are baked as crossfaded loops (source window starts at t = b, the last b
  *   seconds blend back into the pre-roll 0..b), so the last key is the first key bit for bit.
+ *
+ * Export v3 (docs/creature-export-v3.md): every export is fauna-composer-export-3 with the creature-kit generator string.
+ * A profile whose bone budget is below the graph's joint count (quest-3: 80) gets a reduced skeleton by the
+ * pre-registered rule fauna-composer-skeleton-1 (planComposerSkeleton: feet, metapodials, then odd tail, torso and neck
+ * joints collapse into their nearest surviving ancestor); the skin error against the full skeleton must stay within
+ * COMPOSER_SKELETON_SKIN_ERROR_BOUND or the export fails with a `skin-error` reason. Every other export keeps every joint.
  *
  * This module imports only the composer core, the LOD reducer and three (no Atlas module, no Node API), so it runs in
  * a browser too.
@@ -44,9 +52,15 @@ import {COMPOSER_SPECIES_GENERATOR_VERSION} from './fauna-composer-species.ts';
 import {FAUNA_COAT_FIELD_VERSION} from './fauna-coat-fields.ts';
 import {COMPOSER_LOD_VERSION, buildComposerLodChain, type ComposerLodLevel} from './fauna-composer-lod.ts';
 
+/** Historical: written by plain exports up to export v2 (kept exported for compatibility; no longer written). */
 export const COMPOSER_EXPORT_VERSION = 'fauna-composer-export-1';
-/** Written instead of COMPOSER_EXPORT_VERSION when an LOD chain or a crossfaded loop changes the GLB. */
+/** Historical: written by profiled exports (an LOD chain or a crossfaded loop) in export v2 (kept for compatibility). */
 export const COMPOSER_EXPORT_V2_VERSION = 'fauna-composer-export-2';
+/** Written by every export since v3 (docs/creature-export-v3.md): creature-kit generator string, plain or profiled.
+ * A plain export's BIN chunk is byte-identical to export-1's, a profiled in-budget export's to export-2's. */
+export const COMPOSER_EXPORT_V3_VERSION = 'fauna-composer-export-3';
+/** The generator named in asset.generator (`<generator> <export version>`). */
+export const COMPOSER_EXPORT_GENERATOR = 'creature-kit';
 export type ComposerExportTarget = 'desktop-web' | 'quest-3';
 /** A hard export budget. Triangles apply to level 0 (what the scene draws up close); every level must also meet its
  * own target. Textures: the composer creature has none (vertex colour), so its texture bytes are 0. */
@@ -69,7 +83,9 @@ export const COMPOSER_EXPORT_TARGETS: Readonly<Record<ComposerExportTarget, {lod
 /** Default crossfade length (s) of a seamless idle/display loop; capped at half the clip window. */
 export const COMPOSER_EXPORT_SEAMLESS_BLEND = 1;
 /** One machine-readable reason an export broke its budget. */
-export interface ComposerBudgetReason {code: 'triangles' | 'bones' | 'materials' | 'texture-bytes' | 'draw-calls' | 'lod-target'; level?: number; limit: number; actual: number}
+/** `skin-error` (export v3): a reduced skeleton moved a level-0 vertex by more than COMPOSER_SKELETON_SKIN_ERROR_BOUND of the
+ * body diagonal (limit and actual are fractions of the diagonal). */
+export interface ComposerBudgetReason {code: 'triangles' | 'bones' | 'materials' | 'texture-bytes' | 'draw-calls' | 'lod-target' | 'skin-error'; level?: number; limit: number; actual: number}
 /** Thrown when an export breaks its target's budget; nothing is written. */
 export class ComposerExportBudgetError extends Error {
   readonly code = 'composer-export-budget';
@@ -128,6 +144,9 @@ export interface ComposerExportOptions {
   seamless?: boolean;
   /** v2: crossfade length in seconds (default COMPOSER_EXPORT_SEAMLESS_BLEND, at most half the window). */
   seamlessBlend?: number;
+  /** v3: with a profile whose bone budget is below the graph's joint count, reduce the skeleton by the pre-registered
+   * rule (COMPOSER_SKELETON_VERSION; default true). false keeps every joint, so such an export fails on `bones`. */
+  reduceSkeleton?: boolean;
 }
 export interface ComposerClipWindow {
   duration: number; keys: number;
@@ -154,7 +173,7 @@ export interface ComposerExportLodReport {
   sourceVertex: Uint32Array;
 }
 export interface ComposerExportReport {
-  version: typeof COMPOSER_EXPORT_VERSION | typeof COMPOSER_EXPORT_V2_VERSION;
+  version: typeof COMPOSER_EXPORT_V3_VERSION;
   recipeText: string; speciesKey: string;
   versions: Record<string, string | number>;
   individual: {deltas: string[]; effectiveRecipeText: string};
@@ -170,6 +189,18 @@ export interface ComposerExportReport {
   target?: ComposerExportTarget;
   lods?: ComposerExportLodReport[];
   budget?: {target: ComposerExportTarget; limits: ComposerExportBudget | null; actual: {level0Triangles: number; bones: number; materials: number; textureBytes: number; drawCallsPerLevel: number}; pass: boolean};
+  /** v3, profiled exports only: the skeleton as written. `reduced: false` means every graph joint is a GLB joint. */
+  skeleton?: ComposerExportSkeletonReport;
+}
+export interface ComposerExportSkeletonReport {
+  version: typeof COMPOSER_SKELETON_VERSION; fullJoints: number; joints: number; reduced: boolean; stage: ComposerSkeletonStage | null;
+  collapsed: {joint: string; into: string; stage: ComposerSkeletonStage}[];
+  /** [graph joint name, written joint it is skinned by], every graph joint in graph order (sidecar: mappingSha256). */
+  mapping: [string, string][];
+  /** Graph bone index of every written joint, in joint order. */
+  survivors: number[];
+  /** The pre-registered metric (null when nothing was reduced). */
+  skinError: {max: number; diagonal: number; fraction: number; bound: number; vertex: number; motion: string | null; key: number; verticesChecked: number; keys: number; pass: boolean} | null;
 }
 export interface ComposerExportResult {glb: Uint8Array; report: ComposerExportReport}
 
@@ -182,7 +213,7 @@ const FORWARD_ROOT: Record<ComposerExportForward, [number, number, number, numbe
 /** The versions a GLB depends on, in a fixed order. */
 export function composerExportVersions(): Record<string, string | number> {
   return {
-    export: COMPOSER_EXPORT_VERSION, recipe: COMPOSER_RECIPE_VERSION, graph: COMPOSER_GRAPH_VERSION, skin: COMPOSER_SKIN_VERSION,
+    export: COMPOSER_EXPORT_V3_VERSION, recipe: COMPOSER_RECIPE_VERSION, graph: COMPOSER_GRAPH_VERSION, skin: COMPOSER_SKIN_VERSION,
     individual: COMPOSER_INDIVIDUAL_VERSION, face: COMPOSER_FACE_VERSION, faceGeometry: COMPOSER_FACE_GEOMETRY_VERSION,
     eye: COMPOSER_EYE_VERSION, eyeCatalogue: COMPOSER_EYE_CATALOGUE_VERSION, species: COMPOSER_SPECIES_GENERATOR_VERSION,
     coat: FAUNA_COAT_FIELD_VERSION, three: THREE.REVISION,
@@ -368,6 +399,133 @@ export function bakeComposerLoopClip(graph: ComposerGraph, motion: ComposerMotio
   return {times, translation, rotation, scale: scaleRaw.map((s, i) => scaleUsed[i] ? s : null), travelSpeed: 0};
 }
 
+// ------------------------------------------------------------------ bone-reducing skeleton (export v3)
+
+/** The reduction rule (docs/creature-export-v3.md "The reduction rule", pre-registered before any measurement). */
+export const COMPOSER_SKELETON_VERSION = 'fauna-composer-skeleton-1';
+/** Pre-registered bound: a reduced skeleton may move no level-0 vertex, at any key of any baked clip, by more than this
+ * fraction of the body diagonal (the unreduced skin's rest bounding box) against the full skeleton. Never loosened. */
+export const COMPOSER_SKELETON_SKIN_ERROR_BOUND = 0.02;
+/** Unit stages, in the order they are applied. */
+export const COMPOSER_SKELETON_STAGES = Object.freeze(['feet', 'metapodials', 'tail', 'torso', 'neck'] as const);
+export type ComposerSkeletonStage = typeof COMPOSER_SKELETON_STAGES[number];
+/** One reduction unit: joints removed together (both sides of a leg pair, or one midline joint). */
+export interface ComposerSkeletonUnit {stage: ComposerSkeletonStage; joints: number[]}
+export interface ComposerSkeletonPlan {
+  version: typeof COMPOSER_SKELETON_VERSION;
+  fullJoints: number; joints: number; maxBones: number;
+  /** True when joints were removed; false when the graph fits (nothing to do) or the units ran out (nothing removed). */
+  reduced: boolean;
+  /** joints <= maxBones. */
+  reached: boolean;
+  /** The last stage that removed a joint (null when nothing was removed). */
+  stage: ComposerSkeletonStage | null;
+  /** Surviving graph bones, ascending (graph order); every bone when nothing is removed. */
+  survivors: number[];
+  /** Graph bone -> its nearest surviving ancestor (itself when it survives). */
+  into: number[];
+  /** Removed joints by name, in removal order. */
+  collapsed: {joint: string; into: string; stage: ComposerSkeletonStage}[];
+}
+
+/** The reduction units of a graph, in application order: feet (per leg pair, pair ascending), metapodials (three-segment
+ * legs, per pair), then the odd tail joints tip-most first, the odd torso joints rearmost first and the odd neck joints
+ * base first, each merging into the joint before it. Knees (upper, lower), the root, head, arms, wings and trunk never
+ * appear. */
+export function composerSkeletonUnits(graph: ComposerGraph): ComposerSkeletonUnit[] {
+  const units: ComposerSkeletonUnit[] = [];
+  const legs = graph.limbs.filter(l => l.kind === 'leg');
+  const pairs = [...new Set(legs.map(l => l.pair))].sort((a, b) => a - b);
+  const perPair = (stage: ComposerSkeletonStage, pick: (limb: ComposerGraph['limbs'][number]) => number | null) => {
+    for (const pair of pairs) {
+      const joints = legs.filter(l => l.pair === pair).map(pick).filter((j): j is number => j !== null).sort((a, b) => a - b);
+      if (joints.length) units.push({stage, joints});
+    }
+  };
+  perPair('feet', l => { const j = l.bones[l.bones.length - 1]; return j !== undefined && graph.bones[j]!.part === 'foot' ? j : null; });
+  perPair('metapodials', l => l.segments.length === 3 && l.bones.length === 4 ? l.bones[2]! : null);
+  const odd = (chain: readonly number[]) => chain.filter((_, i) => i % 2 === 1);
+  for (const j of odd(graph.chains.tail).reverse()) units.push({stage: 'tail', joints: [j]});
+  for (const j of odd(graph.chains.torso)) units.push({stage: 'torso', joints: [j]});
+  for (const j of odd(graph.chains.neck)) units.push({stage: 'neck', joints: [j]});
+  return units;
+}
+
+/** Applies the units in order until the joint count is at most `maxBones`, and no further. If they run out first,
+ * nothing is removed (`reached: false`). */
+export function planComposerSkeleton(graph: ComposerGraph, maxBones: number): ComposerSkeletonPlan {
+  const n = graph.bones.length;
+  const identity = Array.from({length: n}, (_, i) => i);
+  const plan = (removed: Set<number>, stage: ComposerSkeletonStage | null, collapsedOrder: {joint: number; stage: ComposerSkeletonStage}[], reached: boolean): ComposerSkeletonPlan => {
+    const into = new Array<number>(n);
+    for (let j = 0; j < n; j++) {
+      const parent = graph.bones[j]!.parent;
+      if (removed.has(j) && !(parent >= 0 && parent < j)) throw new Error(`composer skeleton: joint ${graph.bones[j]!.name} has no earlier parent to collapse into`);
+      into[j] = removed.has(j) ? into[parent]! : j;
+    }
+    return {version: COMPOSER_SKELETON_VERSION, fullJoints: n, joints: n - removed.size, maxBones, reduced: removed.size > 0, reached, stage,
+      survivors: identity.filter(j => !removed.has(j)), into,
+      collapsed: collapsedOrder.map(c => ({joint: graph.bones[c.joint]!.name, into: graph.bones[into[c.joint]!]!.name, stage: c.stage}))};
+  };
+  if (n <= maxBones) return plan(new Set(), null, [], true);
+  const removed = new Set<number>(), order: {joint: number; stage: ComposerSkeletonStage}[] = [];
+  for (const unit of composerSkeletonUnits(graph)) {
+    for (const j of unit.joints) { removed.add(j); order.push({joint: j, stage: unit.stage}); }
+    if (n - removed.size <= maxBones) return plan(removed, unit.stage, order, true);
+  }
+  return plan(new Set(), null, [], false);
+}
+
+/** The pre-registered skin error of a reduced skeleton: the largest distance between a vertex skinned with its full
+ * rows (graph joints) and with its reduced rows (indices into `survivors`), over every key of every baked clip, with
+ * joint matrices composed in float64 from the stored float32 channels times the stored float32 inverse bind matrices.
+ * Rows whose joints all survive are identical in both skeletons and skipped. */
+export function composerSkeletonSkinError(positions: Float32Array, full: {joints: Uint16Array; weights: Float32Array}, reduced: {joints: Uint16Array; weights: Float32Array},
+  survivors: readonly number[], ibm: Float32Array, clips: readonly {motion: string; translation: Float32Array[]; rotation: Float32Array[]; scale: (Float32Array | null)[]; keys: number}[]): {
+  max: number; vertex: number; motion: string | null; key: number; verticesChecked: number; keys: number;
+} {
+  const surviving = new Set(survivors);
+  const rows: number[] = [];
+  for (let v = 0; v < full.joints.length / 4; v++) {
+    for (let k = 0; k < 4; k++) if (full.weights[v * 4 + k]! > 0 && !surviving.has(full.joints[v * 4 + k]!)) { rows.push(v); break; }
+  }
+  const n = ibm.length / 16, S = new Float64Array(n * 12);
+  let max = 0, vertex = -1, motion: string | null = null, key = -1, keys = 0;
+  for (const clip of clips) {
+    for (let k = 0; k < clip.keys; k++) {
+      keys++;
+      for (let j = 0; j < n; j++) {
+        const t = clip.translation[j]!, r = clip.rotation[j]!, s = clip.scale[j];
+        const x = r[k * 4]!, y = r[k * 4 + 1]!, z = r[k * 4 + 2]!, w = r[k * 4 + 3]!;
+        const sx = s ? s[k * 3]! : 1, sy = s ? s[k * 3 + 1]! : 1, sz = s ? s[k * 3 + 2]! : 1;
+        // M = T * R * S as a 3x4 row-major matrix, then M * IBM (IBM column-major, as glTF stores it)
+        const m = [
+          (1 - 2 * (y * y + z * z)) * sx, (2 * (x * y - z * w)) * sy, (2 * (x * z + y * w)) * sz, t[k * 3]!,
+          (2 * (x * y + z * w)) * sx, (1 - 2 * (x * x + z * z)) * sy, (2 * (y * z - x * w)) * sz, t[k * 3 + 1]!,
+          (2 * (x * z - y * w)) * sx, (2 * (y * z + x * w)) * sy, (1 - 2 * (x * x + y * y)) * sz, t[k * 3 + 2]!,
+        ];
+        const b = j * 16;
+        for (let row = 0; row < 3; row++) for (let col = 0; col < 4; col++) {
+          S[j * 12 + row * 4 + col] = m[row * 4]! * ibm[b + col * 4]! + m[row * 4 + 1]! * ibm[b + col * 4 + 1]! + m[row * 4 + 2]! * ibm[b + col * 4 + 2]! + m[row * 4 + 3]! * ibm[b + col * 4 + 3]!;
+        }
+      }
+      for (const v of rows) {
+        const px = positions[v * 3]!, py = positions[v * 3 + 1]!, pz = positions[v * 3 + 2]!;
+        let fx = 0, fy = 0, fz = 0, rx = 0, ry = 0, rz = 0;
+        for (let c = 0; c < 4; c++) {
+          const fw = full.weights[v * 4 + c]!;
+          if (fw > 0) { const o = full.joints[v * 4 + c]! * 12; fx += fw * (S[o]! * px + S[o + 1]! * py + S[o + 2]! * pz + S[o + 3]!); fy += fw * (S[o + 4]! * px + S[o + 5]! * py + S[o + 6]! * pz + S[o + 7]!); fz += fw * (S[o + 8]! * px + S[o + 9]! * py + S[o + 10]! * pz + S[o + 11]!); }
+          const rw = reduced.weights[v * 4 + c]!;
+          if (rw > 0) { const o = survivors[reduced.joints[v * 4 + c]!]! * 12; rx += rw * (S[o]! * px + S[o + 1]! * py + S[o + 2]! * pz + S[o + 3]!); ry += rw * (S[o + 4]! * px + S[o + 5]! * py + S[o + 6]! * pz + S[o + 7]!); rz += rw * (S[o + 8]! * px + S[o + 9]! * py + S[o + 10]! * pz + S[o + 11]!); }
+        }
+        const d = Math.sqrt((fx - rx) * (fx - rx) + (fy - ry) * (fy - ry) + (fz - rz) * (fz - rz));
+        if (d > max) { max = d; vertex = v; motion = clip.motion; key = k; }
+      }
+    }
+  }
+  return {max, vertex, motion, key, verticesChecked: rows.length, keys};
+}
+
 // ------------------------------------------------------------------ GLB writer
 
 const GL = Object.freeze({FLOAT: 5126, UNSIGNED_BYTE: 5121, UNSIGNED_SHORT: 5123, UNSIGNED_INT: 5125, ARRAY_BUFFER: 34962, ELEMENT_ARRAY_BUFFER: 34963, TRIANGLES: 4});
@@ -523,7 +681,7 @@ export function composerLodScreenCoverage(levels: number): number[] {
 interface ResolvedV2 {target: ComposerExportTarget; lods: (number | 'full')[] | null; budget: ComposerExportBudget; seamless: boolean; blend: number}
 /** The desktop budget is the composer's own (the core already refuses a creature over it). */
 const DESKTOP_BUDGET: Readonly<ComposerExportBudget> = Object.freeze({maxTriangles: COMPOSER_BUDGET.maxTriangles, maxBones: COMPOSER_BUDGET.maxBones, maxMaterials: 1, maxTextureBytes: 0, maxDrawCallsPerLevel: 1});
-/** Resolves the v2 options; null when none is given (the v1 path, byte-identical to fauna-composer-export-1). */
+/** Resolves the v2 options; null when none is given (the plain path: its BIN chunk is byte-identical to fauna-composer-export-1). */
 function resolveV2(options: ComposerExportOptions): ResolvedV2 | null {
   const lodsGiven = options.lods !== undefined && options.lods !== false;
   if (options.target === undefined && !lodsGiven && options.seamless !== true && options.budget === undefined && options.seamlessBlend === undefined) return null;
@@ -592,7 +750,20 @@ export function exportCreatureGlb(input: ComposerRecipe | string, options: Compo
         skinWeight: l.skinWeight, index: l.index, vertexCount: l.vertices, parts: l.parts, target: l.target, reduced: l}));
       levels = v2.lods[0] === 'full' ? [levels[0]!, ...reducedLevels] : reducedLevels;
     }
-    const budgetActual = {level0Triangles: levels[0]!.index.length / 3, bones: n, materials: 1, textureBytes: 0, drawCallsPerLevel: 1};
+    // ---- skeleton (v3): a profile whose bone budget is below the graph's joint count reduces the skeleton by the
+    // pre-registered rule; every other export writes every graph joint (and its bytes do not change)
+    const plan = v2 && options.reduceSkeleton !== false && v2.budget.maxBones < n ? planComposerSkeleton(graph, v2.budget.maxBones) : null;
+    const reduction = plan?.reduced ? plan : null;
+    const joints = reduction ? reduction.survivors : graph.bones.map((_, i) => i);
+    const jointCount = joints.length;
+    const fullLevel0 = levels[0]!;
+    if (reduction) {
+      // joints map to their nearest surviving ancestor; the glTF row repair (writeLevelMesh) merges duplicates and renormalises
+      const slot = new Int32Array(n).fill(-1); joints.forEach((j, k) => { slot[j] = k; });
+      const remap = (index: Uint16Array) => index.map(j => slot[reduction.into[j]!]!);
+      levels = levels.map(level => ({...level, skinIndex: remap(level.skinIndex)}));
+    }
+    const budgetActual = {level0Triangles: levels[0]!.index.length / 3, bones: jointCount, materials: 1, textureBytes: 0, drawCallsPerLevel: 1};
     if (v2) {
       // a failing budget throws here, before anything is written, so a report that carries a budget always passed it
       const check = checkComposerExportBudget(v2.budget, {...budgetActual, levels: levels.map(l => ({triangles: l.index.length / 3, target: l.target}))});
@@ -603,8 +774,9 @@ export function exportCreatureGlb(input: ComposerRecipe | string, options: Compo
     const rootName = options.name ?? 'composer-creature';
     const recipeText = encodeComposerRecipe(recipe);
     const effectiveRecipeText = encodeComposerRecipe(creature.individual.effectiveRecipe);
-    const versions = v2 ? {...composerExportVersions(), export: COMPOSER_EXPORT_V2_VERSION, lod: COMPOSER_LOD_VERSION} : composerExportVersions();
-    const exportVersion = v2 ? COMPOSER_EXPORT_V2_VERSION : COMPOSER_EXPORT_VERSION;
+    const versions: Record<string, string | number> = v2 ? {...composerExportVersions(), lod: COMPOSER_LOD_VERSION} : composerExportVersions();
+    if (reduction) versions.skeleton = COMPOSER_SKELETON_VERSION;
+    const exportVersion = COMPOSER_EXPORT_V3_VERSION;
 
     // ---- meshes (level 0 first; v1 writes exactly one)
     const written = levels.map(level => writeLevelMesh(b, level, gloss));
@@ -612,13 +784,15 @@ export function exportCreatureGlb(input: ComposerRecipe | string, options: Compo
     const parts = levels[0]!.parts;
 
     // ---- skeleton
-    const ibm = new Float32Array(n * 16), m = new THREE.Matrix4();
+    const ibmAll = new Float32Array(n * 16), m = new THREE.Matrix4();
     graph.bones.forEach((bone, i) => {
       m.compose(new THREE.Vector3().fromArray(bone.restPosition), new THREE.Quaternion().fromArray(bone.restQuaternion), new THREE.Vector3(1, 1, 1)).invert();
-      ibm.set(m.elements, i * 16);
+      ibmAll.set(m.elements, i * 16);
     });
+    let ibm = ibmAll;
+    if (reduction) { ibm = new Float32Array(jointCount * 16); joints.forEach((j, k) => ibm.set(ibmAll.subarray(j * 16, j * 16 + 16), k * 16)); }
     const ibmAccessor = b.data(ibm, 'MAT4');
-    const SKIN_NODE = 0, ROOT_NODE = 1, FIRST_JOINT = 2, FIRST_LOD_NODE = FIRST_JOINT + n;
+    const SKIN_NODE = 0, ROOT_NODE = 1, FIRST_JOINT = 2, FIRST_LOD_NODE = FIRST_JOINT + jointCount;
     const coverage = composerLodScreenCoverage(levels.length);
     const skinNode: Record<string, unknown> = {name: 'composer-skin', mesh: 0, skin: 0};
     if (levels.length > 1) {
@@ -627,8 +801,8 @@ export function exportCreatureGlb(input: ComposerRecipe | string, options: Compo
     }
     const nodes: Record<string, unknown>[] = [
       skinNode,
-      {name: rootName, ...(forward === '+X' ? {} : {rotation: FORWARD_ROOT[forward]}), children: graph.bones.map((_, i) => FIRST_JOINT + i)},
-      ...graph.bones.map(bone => {
+      {name: rootName, ...(forward === '+X' ? {} : {rotation: FORWARD_ROOT[forward]}), children: joints.map((_, k) => FIRST_JOINT + k)},
+      ...joints.map(j => graph.bones[j]!).map(bone => {
         const q = new THREE.Quaternion().fromArray(bone.restQuaternion).normalize();
         return {name: bone.name, rotation: [q.x, q.y, q.z, q.w], translation: [...bone.restPosition]};
       }),
@@ -639,6 +813,7 @@ export function exportCreatureGlb(input: ComposerRecipe | string, options: Compo
     // ---- animations
     const clipReports: ComposerBakedClipReport[] = [];
     const animations: Record<string, unknown>[] = [];
+    const bakedClips: {motion: string; keys: number; translation: Float32Array[]; rotation: Float32Array[]; scale: (Float32Array | null)[]}[] = [];
     for (const request of requests) {
       const clipFps = request.fps ?? fps;
       let window = composerClipWindow(graph, request.motion, clipFps, request.duration);
@@ -654,22 +829,37 @@ export function exportCreatureGlb(input: ComposerRecipe | string, options: Compo
       const input = b.data(baked.times, 'SCALAR', undefined, true);
       const samplers: Record<string, unknown>[] = [], channels: Record<string, unknown>[] = [];
       const counts = {translation: 0, rotation: 0, scale: 0};
-      const channel = (bone: number, path: 'translation' | 'rotation' | 'scale', data: Float32Array, type: AccessorType) => {
+      const channel = (joint: number, path: 'translation' | 'rotation' | 'scale', data: Float32Array, type: AccessorType) => {
         const output = b.data(data, type);
-        channels.push({sampler: samplers.push({input, interpolation: 'LINEAR', output}) - 1, target: {node: FIRST_JOINT + bone, path}});
+        channels.push({sampler: samplers.push({input, interpolation: 'LINEAR', output}) - 1, target: {node: FIRST_JOINT + joint, path}});
         counts[path]++;
       };
-      for (let i = 0; i < n; i++) {
-        channel(i, 'translation', baked.translation[i]!, 'VEC3');
-        channel(i, 'rotation', baked.rotation[i]!, 'VEC4');
-        if (baked.scale[i]) channel(i, 'scale', baked.scale[i]!, 'VEC3');
-      }
+      // the full pose is baked for every graph bone; a reduced skeleton writes the surviving joints' channels
+      joints.forEach((i, k) => {
+        channel(k, 'translation', baked.translation[i]!, 'VEC3');
+        channel(k, 'rotation', baked.rotation[i]!, 'VEC4');
+        if (baked.scale[i]) channel(k, 'scale', baked.scale[i]!, 'VEC3');
+      });
+      if (reduction) bakedClips.push({motion: request.motion, keys: baked.times.length, translation: baked.translation, rotation: baked.rotation, scale: baked.scale});
       const travelSpeed = baked.travelSpeed;
       const report: ComposerBakedClipReport = {motion: request.motion, fps: clipFps, ...window, travelSpeed, channels: counts, ...(crossfade ? {crossfade} : {})};
       clipReports.push(report);
       const extras: Record<string, unknown> = {travelSpeed, seamless: window.seamless, seamPosition: window.seamPosition, seamAngle: window.seamAngle, seamScale: window.seamScale};
       if (crossfade) extras.crossfade = {blendSeconds: crossfade.blendSeconds, sourceStart: crossfade.sourceStart};
       animations.push({name: request.motion, channels, samplers, extras: {composer: extras}});
+    }
+
+    // ---- the pre-registered skin-error bound of a reduced skeleton (level 0, every key of every baked clip)
+    let skinError: ComposerExportSkeletonReport['skinError'] = null;
+    if (reduction) {
+      const sb = componentBounds(skin.positions, 3);
+      const diagonal = Math.sqrt((sb.max[0]! - sb.min[0]!) ** 2 + (sb.max[1]! - sb.min[1]!) ** 2 + (sb.max[2]! - sb.min[2]!) ** 2);
+      const fullRows = gltfSkinRows(fullLevel0.skinIndex, fullLevel0.skinWeight);
+      const e = composerSkeletonSkinError(levels[0]!.positions, fullRows, written[0]!.rows, joints, ibmAll, bakedClips);
+      const fraction = e.max / diagonal;
+      skinError = {max: e.max, diagonal, fraction, bound: COMPOSER_SKELETON_SKIN_ERROR_BOUND, vertex: e.vertex, motion: e.motion, key: e.key, verticesChecked: e.verticesChecked, keys: e.keys,
+        pass: fraction <= COMPOSER_SKELETON_SKIN_ERROR_BOUND};
+      if (!skinError.pass) throw new ComposerExportBudgetError(v2!.target, v2!.budget, [{code: 'skin-error', limit: COMPOSER_SKELETON_SKIN_ERROR_BOUND, actual: fraction}]);
     }
 
     const restBounds = componentBounds(levels[0]!.positions, 3) as {min: [number, number, number]; max: [number, number, number]};
@@ -679,21 +869,22 @@ export function exportCreatureGlb(input: ComposerRecipe | string, options: Compo
       extras: {composer: i === 0 && levels.length === 1 ? {parts: level.parts} : {parts: level.parts, lod: {level: i, target: level.target, triangles: level.index.length / 3}}},
     }));
     const glb = b.finish({
-      asset: {version: '2.0', generator: `universe-atlas ${exportVersion}`, extras: {composer: {recipeText, speciesKey: composerSpeciesKey(recipe), versions}}},
+      asset: {version: '2.0', generator: `${COMPOSER_EXPORT_GENERATOR} ${exportVersion}`, extras: {composer: {recipeText, speciesKey: composerSpeciesKey(recipe), versions,
+        ...(reduction ? {skeleton: {version: reduction.version, fullJoints: reduction.fullJoints, joints: reduction.joints, collapsed: reduction.collapsed.map(c => [c.joint, c.into])}} : {})}}},
       ...(levels.length > 1 ? {extensionsUsed: ['MSFT_lod']} : {}),
       scene: 0,
       scenes: [{name: rootName, nodes: [SKIN_NODE, ROOT_NODE]}],
       nodes,
       meshes,
       materials: [{name: 'composer-coloured', pbrMetallicRoughness: {baseColorFactor: [1, 1, 1, 1], metallicFactor: 0, roughnessFactor: 0.82}}],
-      skins: [{name: 'composer-skeleton', inverseBindMatrices: ibmAccessor, skeleton: ROOT_NODE, joints: graph.bones.map((_, i) => FIRST_JOINT + i)}],
+      skins: [{name: 'composer-skeleton', inverseBindMatrices: ibmAccessor, skeleton: ROOT_NODE, joints: joints.map((_, k) => FIRST_JOINT + k)}],
       ...(animations.length ? {animations} : {}),
     });
     const report: ComposerExportReport = {
       version: exportVersion, recipeText, speciesKey: composerSpeciesKey(recipe), versions,
       individual: {deltas: creature.individual.deltas, effectiveRecipeText},
       axes: {units: 'metres', up: '+Y', handedness: 'right', forward},
-      mesh: {vertices: levels[0]!.vertexCount, triangles: levels[0]!.index.length / 3, bones: n, parts, restBounds},
+      mesh: {vertices: levels[0]!.vertexCount, triangles: levels[0]!.index.length / 3, bones: jointCount, parts, restBounds},
       gloss, repairs: {weightRows: rows.rows, maxWeightChange: rows.maxChange, zeroNormals}, clips: clipReports, glbBytes: glb.byteLength,
     };
     if (v2) {
@@ -706,6 +897,9 @@ export function exportCreatureGlb(input: ComposerRecipe | string, options: Compo
           parts: level.parts, sourceVertex: r ? r.sourceVertex : Uint32Array.from({length: level.vertexCount}, (_, v) => v)};
       });
       report.budget = {target: v2.target, limits: v2.budget, actual: budgetActual, pass: true};
+      const into = reduction ? reduction.into : joints;
+      report.skeleton = {version: COMPOSER_SKELETON_VERSION, fullJoints: n, joints: jointCount, reduced: !!reduction, stage: reduction?.stage ?? null,
+        collapsed: reduction ? reduction.collapsed : [], mapping: graph.bones.map((bone, j) => [bone.name, graph.bones[into[j]!]!.name]), survivors: [...joints], skinError};
     }
     return {glb, report};
   } finally {
