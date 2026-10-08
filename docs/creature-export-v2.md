@@ -155,6 +155,10 @@ Coherent species, which is what the export CLI draws, never exceed 80. Raw rando
 `many-legged` layouts with 8 to 12 leg pairs (82 to 126 joints), and they fail the quest-3 export with a `bones` reason. Whether 11 % counts as "often" is
 an owner call; per D4 the answer would be a bone-reducing LOD skeleton, not a higher limit.
 
+**Superseded in export v3** (`docs/creature-export-v3.md`): the reduced skeleton `fauna-composer-skeleton-1` now brings
+all 11 to at most 80 joints under quest-3 within a pre-registered 2 % skin-error bound, and the sweep is an assertion
+(0 of 100 over the limit with the rule, the same 11 without it). The limit itself is unchanged.
+
 ## LOD chain (`src/fauna-composer-lod.ts`, `fauna-composer-lod-1`)
 
 The module is pure: it has no imports and no Node, three or Atlas API. No core module imports it, and both of those facts are tested.
@@ -302,10 +306,12 @@ Reading the table:
 1. **No visual review was done.** No Luna sheet and no headset check covers the LOD levels. Level 2 can lose up to 8.8 % of the body diagonal (rhinoceros), and the centipede's level 1 shortens leg tips by 6.6 %. Both fall within the 0.1 and 0.25 screen-coverage switch hints, but a person has not looked at them.
 2. **The 80-joint limit is a CPU budget we set** (see "Why 80 joints"). The Quest 3 per-bone cost is an estimate, not a
    headset measurement. The centipede at 79 passes by one joint, and 11 of 100 raw random recipes exceed 80 (coherent
-   species: 0 of 100).
+   species: 0 of 100). Export v3 reduces those 11 to at most 80 joints (`docs/creature-export-v3.md`); the per-bone
+   headset cost is still an estimate.
 3. **The display crossfade is a blend, not `poseComposer`.** Inside the last second, the clip is a blend between two source poses. On the creatures with large raw seams, a smoothstep blend over 1 s could look like a slow drift. `--seamless-blend` can lengthen the blend, up to half the window.
 4. **The evidence goes stale when the composer core moves.** When a core source changes, the v1 pins skip (with a
    "composer core moved" diagnostic) and do not fail, and this table must be regenerated. Done 2026-10-07 for T2 and
    the ocellus package: core re-keyed to `a0a31556…`, all five v1 shas and the whole table unchanged.
 5. **Some tools hide the extension.** gltf-transform-based tools (`assetctl validate`/`inspect`) report `extensions.used: []` because MSFT_lod is not registered with them, and a gltf-transform rewrite would drop it (not tested here; `assetctl package` was not run). Only the exporter's GLB keeps it. Do not run a gltf-transform optimisation pass over a v2 GLB without a step that adds the extension back.
 6. **Licence.** The licence is `NOASSERTION` in the template, the sidecars and the briefs. There is no Creature Lab Export button.
+   Export v3 sets it to `UNLICENSED` (private, owner decision A13) and runs `assetctl package` on its evidence.
