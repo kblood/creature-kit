@@ -124,3 +124,86 @@ loosened: a recipe that fails it is reported, not accepted.
 - Known before starting, outside this rule: `bone-sweep-70` also fails quest-3 on `lod-target` level 2 (1116 > 1000)
   at `3e0d6e8`. That is an LOD reducer limit, not a joint one; this task does not change the reducer, so it is
   reported, not fixed.
+
+## Results (measured after the pre-registration; nothing above was changed)
+
+Code at `kit/export-3` `d957a21` (steps 1 to 4); the evidence was exported from that commit. Evidence directory:
+`C:/LLM/IWSDK/Assets/_assetctl/creature-kit/export-3/`. `baseline-3e0d6e8/` holds the same exports from unmodified
+creature-kit main `3e0d6e8`, and `v3-d957a21/` holds the v3 exports, comparisons and assetctl output (`compare.json`,
+`lod-table.md`, `lod-table-vs-v2.txt`, `raw11-table.md`, `raw100-quest3-budget*.json`, `assetctl/`, `exit-codes.txt`).
+
+### Bytes: only the pre-registered strings moved
+
+| Check | Result |
+|---|---|
+| 16 species, plain export (no v2 flag) vs `3e0d6e8`: BIN chunk | byte-identical, 16 of 16 |
+| 16 species, quest-3 `--seamless` vs `3e0d6e8`: BIN chunk | byte-identical, 16 of 16 |
+| JSON chunk, both sets, with `asset.generator` and `versions.export` mapped back to the `3e0d6e8` strings | identical text, 32 of 32 (GLB length moves by 0 or −4 bytes of chunk padding) |
+| quest-3 run a vs run b | all 48 files byte-identical |
+| sidecar fields that differ from `3e0d6e8` | `schema`, `versions.export`, `generator.sourceSha256`, `asset.sha256`, `asset.bytes` (where the padding moved), `provenance.generator.provider` / `.version`, `provenance.license.expression` / `.restrictions`, `provenance.notes`, and (quest-3 only) the new `skeleton` block: the pre-registered list, nothing else |
+| brief fields that differ | `purpose`, `target.project`, the manifest deliverable's `format`, `provenance.generator.provider` / `.version`, `provenance.license.*`, `provenance.notes`: the pre-registered list, nothing else |
+| 100 raw recipes, quest-3 budget rows of the 89 in-budget recipes | identical to `3e0d6e8` (bones, LOD triangles) |
+| composer-identity report, branch vs main `3e0d6e8` | `skin4Links` and `eyeCatalogue` (every skin, gloss and count) identical; `sourceHash`, `v1Pins` and `cli` move with the exporter source and the two strings, so the top-level `digest` moves by design (main `c6354860…`, branch `6d6fbab0…`) |
+
+`V1_PINS` ledger (also in `tests/fauna-composer-export.test.mjs`, which pins each BIN chunk sha and each `3e0d6e8` JSON
+text):
+
+| Specimen | GLB sha256 `3e0d6e8` → v3 | Bytes |
+|---|---|---|
+| bird | `bb87f35b228bab8a…` → `a9007575ad408f80…` | 1007708 → 1007704 |
+| centipede | `709abe3ce33ccfaf…` → `b3981c9365265006…` | 1721324 |
+| worm | `86fecc903ec8f19b…` → `1395baa897fbc8a8…` | 619412 → 619408 |
+| winged-ape-rhino | `ae1784773193c049…` → `c26e0d16388e289f…` | 1488260 |
+| coherent (`export-test-1`) | `01b43824c05d6733…` → `a91e920cab8c5607…` | 905608 |
+| quest-3 bird (`--seamless`) | `7a590ed3f6c2ed5d…` → `d45acf82a921e081…` | unchanged BIN |
+
+### Reduced skeletons: all 11 within the 2 % bound
+
+| Seed | Asset key | Joints full → written | Stage | Collapsed | Skin error (% of diagonal) | Worst at | LODs | mappingSha256 |
+|---|---|---:|---|---:|---:|---|---|---|
+| bone-sweep-3 | recipe-b7f6404a | 105 → 80 | tail | 25 | 0.762 | walk key 12 | 7998/2998/1000 | a81d348ee51b5a3e… |
+| bone-sweep-9 | recipe-cb1aa46e | 91 → 79 | feet | 12 | 0.269 | walk key 1 | 8000/2998/1000 | d4b06107903aa4b6… |
+| bone-sweep-15 | recipe-c929a9bc | 94 → 80 | feet | 14 | 0.240 | walk key 2 | 7998/3000/1000 | 0e3e473c1bf7c7e5… |
+| bone-sweep-20 | recipe-17b06523 | 126 → 80 | metapodials | 46 | 1.303 | walk key 0 | 7999/2999/999 | 4123de5d64e2e2e7… |
+| bone-sweep-24 | recipe-9e3d87ac | 82 → 80 | feet | 2 | 0.164 | walk key 14 | 8000/2998/1000 | ec944696f6f303fe… |
+| bone-sweep-28 | recipe-1a26c7be | 103 → 80 | tail | 23 | 0.753 | walk key 8 | 8000/2998/1000 | bf8a70fc862ac1aa… |
+| bone-sweep-29 | recipe-bd36e13a | 91 → 79 | feet | 12 | 0.136 | walk key 1 | 7998/3000/1000 | a9142e6190c8072a… |
+| bone-sweep-46 | recipe-5af31756 | 111 → 79 | metapodials | 32 | **1.786** | walk key 4 | 7999/2999/999 | 7a47a0ed4875afb0… |
+| bone-sweep-53 | recipe-20f86cfa | 105 → 80 | tail | 25 | 0.613 | walk key 1 | 8000/3000/1000 | 62b1097b1961e279… |
+| bone-sweep-70 | recipe-f863e004 | 89 → 79 | feet | 10 | 0.379 | walk key 5 | 8000/3000 (see below) | deed000f1ec46f85… |
+| bone-sweep-81 | recipe-bd0a067b | 87 → 79 | feet | 8 | 1.055 | walk key 6 | 7998/3000/1000 | 1b41aabfa2a84d66… |
+
+- The worst case is bone-sweep-46 at 1.786 %, so the margin to the bound is about 11 %. The worst key is always in `walk`.
+- A three.js `GLTFLoader` + `AnimationMixer` playback of bone-sweep-46's reduced GLB against its full-skeleton
+  desktop-web export (same LOD chain) gives a worst vertex distance of 0.02468 m, which equals the reported metric
+  (test "GLTFLoader playback ...").
+- With the rule off (`--no-reduce-skeleton`), all 11 exit 3 with a `bones` reason and write nothing
+  (`v3-d957a21/raw11-noreduce-*.stdout.json`). The 100-recipe sweep without the rule gives the `3e0d6e8` outcome
+  exactly (89 pass).
+
+### 100 raw recipes under quest-3
+
+- **Joint budget: 100 of 100** within 80 joints.
+- **Full quest-3 export: 99 of 100.** `bone-sweep-70` still fails, as at `3e0d6e8`, on `lod-target` level 2
+  (1116 > 1000). That is the LOD reducer, not the joint budget, and it was listed before measuring as out of this rule.
+  With `--lods 8000,3000` it exports, reduced to 79 joints, within the bound (`raw70-quest3-lods-8000-3000/`).
+
+### assetctl (run from `C:/LLM/IWSDK`)
+
+| Command | Inputs | Result |
+|---|---|---|
+| `assetctl contract validate asset-brief` | the template and the 27 generated briefs | exit 0 for all 28 (`UNLICENSED` accepted by the schema) |
+| `assetctl validate <glb>` | the 16 quest-3 species and the 11 reduced raw recipes | exit 0 for all 27: valid, 0 Khronos errors / 0 warnings, max 4 influences, skinQuality 0 unweighted / 0 over four / 0 non-normalised |
+| `assetctl package <glb> --brief <brief>` | the same 27 | exit 0 for all 27; each `<glb>.asset.json` carries `license.expression: "UNLICENSED"` with the A13 restriction |
+
+`assetctl validate` prints `Missing optional extension, "MSFT_lod"` on stderr (gltf-transform does not register it;
+v2 open risk 5). The 16 × 3 LOD table (`v3-d957a21/lod-table.md`) equals the v2 table in every column except GLB bytes
+(0 or −4, JSON chunk padding); `lod-table-vs-v2.txt` reports 0 mismatches over 16 rows.
+
+### Open risks
+
+1. **No visual or headset review** of a reduced skeleton. The metric is a worst-case vertex distance, but rigid feet and
+   merged spine joints have not been looked at, and the per-bone headset CPU cost is still an estimate (v2).
+2. **bone-sweep-70** needs a reducer change (or a shorter chain) to meet the default quest-3 chain; out of scope here.
+3. The margin to the bound is 11 % on the worst of 11 recipes; longer many-legged recipes than the sweep's could exceed
+   it. Such an export fails with `skin-error` instead of shipping; the bound is not to be loosened.
