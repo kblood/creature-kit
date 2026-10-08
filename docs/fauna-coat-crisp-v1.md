@@ -415,3 +415,21 @@ check.
   31 pass, 1 skip, 1 fail: the vendor test asserts `license: NOASSERTION` but the kit has been `UNLICENSED` since kit
   main 3e0d6e8 (A13); this fails for any sync of current kit main, not for this branch.
 
+- **Coordinator note (after the merge, kit main 13c7b35; Opus-decided on Kasper's instruction, overrulable).**
+  - The "intact" FAIL is pre-existing: the unchanged before renders fail the same ask 0/3 and Luna names the
+    leg-to-body joins, which this round did not touch. Not a blocker; it goes to backlog item FAUNA-LEG-JOIN. Rule for
+    future rounds: an "intact" FAIL is a STOP only when the before renders, asked the same question, pass.
+  - d3 (trunk tip): metric met, visual goal not met (metric under-specified). The flat-disc ratio passes (0.564 < 0.6),
+    but what reads as a cap is the lip ring at about 1.04 r and the sharp edge to the end face. The threshold stays;
+    follow-up FAUNA-TRUNK-TIP-2 has its own pre-registered gate.
+  - The crisp-edges FAIL is confounded by the ask's wording: it also asked for "small" marks, and pattern scale 1 on a
+    0.3-length body gives large spots. Luna is not re-asked with new wording after the result; next time crispness
+    and mark size are asked separately.
+  - Seam: the coordinator's own reading is that the head-neck light line is fixed on the giraffe (the bright lines in
+    the after column are the reticulated coat). Luna's 1/3 stays as given and the seam counts as unverified until a
+    seam check on uncoloured (plain-material) renders.
+  - Merge gate on kit main 13c7b35 (through `test-slot.mjs --shared 4`): tsc 0; `node --test tests/*.test.mjs` 214
+    tests, 212 pass, 2 skip (atlas parity, no ATLAS_DIR), 0 fail, with the V1_PINS "composer core moved" diagnostic
+    (re-keyed in the next commit); lab suite (`tests/lab/*.test.mjs tests/lab-boundary.test.mjs`) with
+    `ATLAS_DIR=C:/LLM/IWSDK/universe-atlas` 60 / 60 pass (without ATLAS_DIR 56 pass, 4 parity skips), the first run of
+    lab-app's boundary and parity tests against this round's code.
