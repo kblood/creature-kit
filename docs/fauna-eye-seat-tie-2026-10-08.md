@@ -135,3 +135,77 @@ Scratch evidence (session scratchpad `eyetie/`): `d2.mjs` and `d3.mjs` (the cros
 `d4.mjs` (the last-of-ties reproduction), `survey.mjs` with `survey-c5b0cde.log` and `survey-var-*.log` (the nudge
 survey), `scan-1e-9.log` and `scan2.log` (every closest-point tie), `id-base.json` and `id-surfaceZ.json` (the
 composer-identity reports).
+
+## 4. Decision and results
+
+**Decision** (`eye-tie-decision-2`, Opus-decided on Kasper's instruction, overrulable): option (A). Opus amended two of
+its own gates:
+- The eye-catalogue fixture may change in exactly three entries.
+- The nudge test skips five named specimens, which must keep moving until FAUNA-NUDGE-STABLE-2 fixes them.
+
+Option (B) was rejected, and option (C) was not needed.
+
+**Code:**
+- In `src/fauna-composer-eye.ts`, a new module-private function `closestPointOnSoupLowTie` with `CLOSEST_TIE = 1e-9` m.
+  It compares distances, not squared distances. Every candidate within the tie window of the best distance counts as
+  tied, and the lowest triangle index wins. The hit is built exactly the way `closestPointOnSoup` builds it.
+- It is used only at the `surfaceZ` closest-point fallback in `buildCataloguePatch`. The legacy `surfaceZ` and
+  `unair` call sites are untouched, because the survey showed they gain nothing.
+- Every exported function is byte-identical, and `creature-core-exports.json` is unchanged.
+
+**What moved in Node** (composer-identity against c5b0cde):
+- The three catalogue entries below, and the source hash.
+- Unchanged: the 32 CLI GLBs, V1_PINS (GLB, BIN and JSON pins byte-equal), the skin-4 and skin-5 links, baseline-v2
+  and baseline-v3, the face specimens, the lineage-B guard and the LOD budgets.
+- The `.creature.json` sidecars and the V1_PINS `core` key change only because they carry the generator source hash.
+  `core` was re-keyed from 5c941506... to 179e31d7..., with a ledger line in the export test. Export is 20/20 with no
+  diagnostic.
+
+**Re-pin ledger** (`composer-eye-catalogue-links.json`, re-pinned in place; `skinPreEyeTie` holds the old pin and
+`eyeTieDrift` is "catalogue-closest-tie"):
+
+| specimen | skin old -> new | moved |
+|---|---|---|
+| cat-raptor-bird | 7010df494c541bbd... -> 5b001069f5bddd38... | 2 eye-rim vertices, max 1.32e-5 m |
+| cat-cephalopod-ape | 2576bc2c14404a32... -> f6133c1a77db8e56... | 4 eye-rim vertices, max 6.82e-5 m |
+| odd-wild-33 | 677833cd07afd9cc... -> 6d1004a8e79a5269... | 4 eye-rim vertices, max 5.09e-4 m |
+
+- Gloss, vertex counts, triangle counts and bones are unchanged for all three.
+- This is a pre-ship skin-5 correction, so there is no version change.
+
+**Nudge test** (`tests/fauna-composer-mesh-stability.test.mjs`):
+- **Scope:** the six modes over 74 specimens: the 12 presets, GOLDEN-FAUNA-1 to 4, the 28 skin-5 link texts and the
+  30 eye-catalogue specimens.
+- **The rule:** every float must sit on the 1e-6 grid and equal the unnudged build.
+- **`NUDGE_UNSTABLE_KNOWN`** (FAUNA-NUDGE-STABLE-2). Each entry must still move under at least one mode, or the test
+  fails with "remove it from NUDGE_UNSTABLE_KNOWN":
+  - skin5-link-14, skin5-link-22, skin5-link-23 and cat:odd-earlier-rules-worm: the mouth-disc midline.
+  - cat:odd-cephalopod-horse: the cephalopod eye colours.
+- A third new test requires `eyeTieDrift` on exactly the three re-pinned entries, each differing from the pin it
+  replaces.
+
+**Negative control:** the same test file was run against the c5b0cde `src` tree (git archive into the scratchpad,
+with this branch's fixtures). The corpus test fails with these six movers:
+- `ostrich`: pow(1, y) one ulp below 1. It moves to WebKit's bytes.
+- `cat:cat-raptor-bird`: three modes.
+- `cat:cat-cephalopod-ape`: four modes.
+- `cat:odd-wild-33`: four modes.
+- `cat:odd-cat-centipede`: two modes.
+- `skin5-link-24`: alternating from minus.
+
+On this branch the corpus test passes. The output is in `eyetie/negative-control.log`.
+
+**Gates on kit/eye-seat-tie 2fe1fa3** (all through `test-slot.mjs --shared 4`):
+- tsc: 0.
+- `tests/*.test.mjs`: 217 tests, 215 pass, 2 skip (atlas parity, no ATLAS_DIR), 0 fail.
+- Lab suite with ATLAS_DIR: 60 of 60 pass.
+- Export: 20 of 20 pass, with no diagnostic.
+
+**Cross-engine proof** (uncommitted sync of 2fe1fa3 into `universe-atlas-wt/kit-sync-2`, 46 files, then
+`git restore` back to 031f4b5):
+- Strict run against R7's golden.json: Node, Chromium, Firefox and WebKit all give fauna fefcb903 and equal every other
+  key (`fourEngineEqual: true`). The gate reads FAIL only because that golden.json still holds main's skin-4 fauna
+  6bf5d085...; R7 step 3 re-pins it.
+- Strict run with `--fixture` set to Node's proposed result (fauna fefcb903, faunaKnownUnstable 495fa9eb):
+  "GOLDEN CROSS-ENGINE GATE: PASS (all four engines equal)".
+- WebKit 26.5 now builds the ostrich as Node does.
