@@ -79,7 +79,10 @@ line endings. `last Atlas commit` is the most recent universe-atlas commit touch
 | `tests/creature-core-boundary.test.mjs` | Adds the test "every src/** module imports only other src/** modules and three". The 12-module core test and the export-name snapshot are unchanged. | The kit's package boundary (plan phase 2). |
 | `tests/fauna-coat-fields.test.mjs` | Drops the `sampleFaunaCoat` import and the "legacy planet coat is symmetric" half of the asymmetry test. | That half tests Atlas's lineage-B planet renderer (`src/fauna-appearance.ts`), which is not part of the kit. Atlas keeps the full test. |
 
-Every file under `src/`, `scripts/export-creature.mjs` and every fixture stays byte-identical to Atlas.
+Every file under `src/`, `scripts/export-creature.mjs` and every fixture was byte-identical to Atlas at import.
+Since export v3 (kit/export-3) the kit is the source of truth: `src/fauna-composer-export.ts`, `scripts/export-creature.mjs`,
+the brief template and `tests/fauna-composer-export.test.mjs` differ from Atlas until Atlas re-syncs with
+`node scripts/sync-creature-kit.mjs --write --kit ../creature-kit`.
 `tests/atlas-parity.test.mjs` (with `ATLAS_DIR` set) re-checks the sources and the produced bytes.
 
 ## Known Atlas-flavoured strings (renamed in export v3)
