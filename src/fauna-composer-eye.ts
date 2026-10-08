@@ -149,6 +149,32 @@ export function closestPointOnSoup(tris: Tris, p: Vec3): RayHit | null {
   }
   return best;
 }
+/** Tie window (head-local metres) for closestPointOnSoupLowTie: tied candidates differ by <= ~1.4e-17 m (engine noise),
+ * distinct ones by >= ~4.5e-6 m (docs/fauna-eye-seat-tie-2026-10-08.md); the same window as the mesh's SEAM_TIE. */
+const CLOSEST_TIE = 1e-9;
+/** closestPointOnSoup with an engine-independent tie rule, for the catalogue patch's surfaceZ fallback only. The closest
+ * point of a soup often lies on an edge two triangles share: both give the same point and distance, and which one is
+ * "closer" (whose normal wrap() then lifts the rim vertex along) was a 1-ulp question. WebKit 26.5 kept the other half
+ * of the ostrich's neck-to-head blend quad than Node/Chromium/Firefox (8.1e-6 m on two orbit vertices). Every triangle
+ * within CLOSEST_TIE of the best distance ties, and the lowest triangle index wins, never the rounding (the SEAM_TIE /
+ * seamNormal precedent in fauna-composer-mesh.ts). The hit is built exactly as closestPointOnSoup builds it. */
+function closestPointOnSoupLowTie(tris: Tris, p: Vec3): RayHit | null {
+  const n = Math.floor(tris.length / 9), dist = new Float64Array(n);
+  let best = Infinity;
+  for (let i = 0; i < n; i++) {
+    const o = i * 9, A: Vec3 = [tris[o]!, tris[o + 1]!, tris[o + 2]!], B: Vec3 = [tris[o + 3]!, tris[o + 4]!, tris[o + 5]!], C: Vec3 = [tris[o + 6]!, tris[o + 7]!, tris[o + 8]!];
+    const [u, v] = closestBary(A, B, C, p), qx = A[0] + (B[0] - A[0]) * u + (C[0] - A[0]) * v - p[0], qy = A[1] + (B[1] - A[1]) * u + (C[1] - A[1]) * v - p[1], qz = A[2] + (B[2] - A[2]) * u + (C[2] - A[2]) * v - p[2];
+    dist[i] = Math.sqrt(qx * qx + qy * qy + qz * qz);
+    if (dist[i]! < best) best = dist[i]!;
+  }
+  for (let i = 0; i < n; i++) {
+    if (!(dist[i]! <= best + CLOSEST_TIE)) continue;
+    const o = i * 9, A: Vec3 = [tris[o]!, tris[o + 1]!, tris[o + 2]!], B: Vec3 = [tris[o + 3]!, tris[o + 4]!, tris[o + 5]!], C: Vec3 = [tris[o + 6]!, tris[o + 7]!, tris[o + 8]!];
+    const [u, v] = closestBary(A, B, C, p), q: Vec3 = [A[0] + (B[0] - A[0]) * u + (C[0] - A[0]) * v, A[1] + (B[1] - A[1]) * u + (C[1] - A[1]) * v, A[2] + (B[2] - A[2]) * u + (C[2] - A[2]) * v];
+    return {t: 0, point: q, normal: normalize3(cross(sub(B, A), sub(C, A))), tri: i, u, v};
+  }
+  return null;
+}
 /** Barycentric (u for B, v for C) of the closest point of triangle ABC to p. */
 function closestBary(a: Vec3, b: Vec3, c: Vec3, p: Vec3): [number, number] {
   const ab = sub(b, a), ac = sub(c, a), ap = sub(p, a), d1 = dot(ab, ap), d2 = dot(ac, ap);
@@ -567,7 +593,7 @@ function buildCataloguePatch(o: EyePatchOptions, sp: CatalogueEyeSpec): EyePatch
     if (o.surface) {
       const p = at(x, y, E.recess), hit = outermostExit(o.surface, p, g, E.rimSearch * er);
       if (hit) return [E.recess + hit.t / er, hit, 0];
-      const near = closestPointOnSoup(o.surface, p);
+      const near = closestPointOnSoupLowTie(o.surface, p);
       if (near && Math.hypot(...sub(near.point, p)) <= E.closestSearch * er) {
         const d = sub(near.point, p), t = dot(d, g);
         return [E.recess + t / er, {...near, t}, Math.hypot(...addS(d, g, -t)) / er];
