@@ -44,19 +44,8 @@ test('evaluateCoatWithMask with coatPatternProbe mask and patch equals evaluateC
   assert.ok(n > 3000);
 });
 
-test('evaluateCoatWithMask source is evaluateCoat with only the mask and patch substituted (no drift)', () => {
-  const src = readFileSync(new URL('../src/fauna-coat-fields.ts', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
-  const body = name => {
-    const start = src.indexOf(`export function ${name}(`);
-    assert.ok(start >= 0, name);
-    const open = src.indexOf('{\n', start), end = src.indexOf('\n}\n', open);
-    return src.slice(open, end);
-  };
-  const original = body('evaluateCoat'), copy = body('evaluateCoatWithMask');
-  const expected = original.replace('const m = patternMask(genome, sample, fp);', 'const m = mask;').replaceAll('accent[0], PATCH)', 'accent[0], patch)').replaceAll('accent[1], PATCH)', 'accent[1], patch)').replaceAll('accent[2], PATCH)', 'accent[2], patch)');
-  assert.notEqual(expected, original);
-  assert.equal(copy, expected);
-});
+// The two entry points now share the allocation-free colour path. Their
+// Object.is equivalence above guards behaviour without requiring duplicate source.
 
 test('the shader takes its salts and jitter from the coat library', () => {
   for (const v of Object.values(COAT_PATTERN_SALTS)) assert.ok(COMPOSER_COAT_CRISP_GLSL.includes(`0x${(v >>> 0).toString(16)}u`), v.toString(16));

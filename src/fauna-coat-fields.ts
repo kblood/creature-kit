@@ -113,17 +113,17 @@ export const COAT_CELLS_PER_BODY: Readonly<Record<ResolvedCoatPattern, number>> 
 // ------------------------------------------------------------------ small math
 function clamp(v: number, lo: number, hi: number): number { return v < lo ? lo : v > hi ? hi : v; }
 function clamp01(v: number): number { return v < 0 ? 0 : v > 1 ? 1 : v; }
-/** Hermite smoothstep; a > b gives the descending ramp. */
-function smooth(a: number, b: number, x: number): number {
-  let t = (x - a) / (b - a);
-  t = t < 0 ? 0 : t > 1 ? 1 : t;
-  return t * t * (3 - 2 * t);
-}
-function mix(a: number, b: number, t: number): number { return a + (b - a) * t; }
+// The evaluation path (coatQ, patternMaskQ, juvenileSpotMaskQ) inlines these two helpers by hand, operation for
+// operation (see NQ for why), so only their definitions remain, as the reference for the inlined forms:
+//   smooth(a, b, x) (Hermite smoothstep; a > b gives the descending ramp):
+//     let t = (x - a) / (b - a); t = t < 0 ? 0 : t > 1 ? 1 : t; return t * t * (3 - 2 * t);
+//   mix(a, b, t): return a + (b - a) * t;
 
 // ------------------------------------------------------------------ integer lattice hash (FROZEN)
 const INV32 = 1 / 4294967296;
-let H0 = 0, H1 = 0, H2 = 0;
+/** pcg3's three uint32 outputs. Module scratch lives in typed arrays: a module-level `let` that receives a non-Smi
+ * number (a uint32 above 2^31, any non-integer double) boxes a fresh heap number on every write. */
+const HU = new Uint32Array(3);
 
 /** Seed pre-mix so seeds n and n+1 are unrelated lattices. */
 function seedMix(seed: number): number {
@@ -133,7 +133,7 @@ function seedMix(seed: number): number {
   return (s ^ (s >>> 16)) | 0;
 }
 
-/** pcg3d over an integer lattice point and a pre-mixed seed; writes H0..H2. */
+/** pcg3d over an integer lattice point and a pre-mixed seed; writes HU[0..2]. */
 function pcg3(x: number, y: number, z: number, s: number): void {
   let a = (Math.imul(x | 0, 1664525) + 1013904223 + s) | 0;
   let b = (Math.imul(y | 0, 1664525) + 1013904223 ^ ((s << 11) | (s >>> 21))) | 0;
@@ -141,38 +141,47 @@ function pcg3(x: number, y: number, z: number, s: number): void {
   a = (a + Math.imul(b, c)) | 0; b = (b + Math.imul(c, a)) | 0; c = (c + Math.imul(a, b)) | 0;
   a ^= a >>> 16; b ^= b >>> 16; c ^= c >>> 16;
   a = (a + Math.imul(b, c)) | 0; b = (b + Math.imul(c, a)) | 0; c = (c + Math.imul(a, b)) | 0;
-  H0 = a >>> 0; H1 = b >>> 0; H2 = c >>> 0;
+  HU[0] = a >>> 0; HU[1] = b >>> 0; HU[2] = c >>> 0;
 }
 
 /** Integer lattice hash: uint32 for an integer point and a seed. */
 export function hash3u(x: number, y: number, z: number, seed: number): number {
   pcg3(x, y, z, seedMix(seed));
-  return H2;
+  return HU[2];
 }
 
 function fade(t: number): number { return t * t * t * (t * (t * 6 - 15) + 10); }
 
-/** Value noise with a pre-mixed seed; result in [0, 1). */
-function vnoise(x: number, y: number, z: number, s: number): number {
+/** Call-boundary scratch. A double passed to, or returned from, a function V8 does not inline is boxed as a fresh
+ * heap number (16 B), and the noise and mask functions are too large to inline. So the internal forms (suffix Q) take
+ * their point in NQ[0..2] and write a scalar result to NQ[3] (the pattern and juvenile masks use PV[4] and PV[5]);
+ * only integer seeds and objects cross a call. Typed-array slots hold doubles exactly, so every result is
+ * bit-identical to passing the values as arguments (fauna-coat-1 stays frozen). */
+const NQ = new Float64Array(4);
+
+/** Value noise with a pre-mixed seed at the point NQ[0..2]; writes the result in [0, 1) to NQ[3]. */
+function vnoiseQ(s: number): void {
+  const x = NQ[0]!, y = NQ[1]!, z = NQ[2]!;
   const ix = Math.floor(x), iy = Math.floor(y), iz = Math.floor(z);
   const u = fade(x - ix), v = fade(y - iy), w = fade(z - iz);
-  pcg3(ix, iy, iz, s); const c000 = H2;
-  pcg3(ix + 1, iy, iz, s); const c100 = H2;
-  pcg3(ix, iy + 1, iz, s); const c010 = H2;
-  pcg3(ix + 1, iy + 1, iz, s); const c110 = H2;
-  pcg3(ix, iy, iz + 1, s); const c001 = H2;
-  pcg3(ix + 1, iy, iz + 1, s); const c101 = H2;
-  pcg3(ix, iy + 1, iz + 1, s); const c011 = H2;
-  pcg3(ix + 1, iy + 1, iz + 1, s); const c111 = H2;
+  pcg3(ix, iy, iz, s); const c000 = HU[2];
+  pcg3(ix + 1, iy, iz, s); const c100 = HU[2];
+  pcg3(ix, iy + 1, iz, s); const c010 = HU[2];
+  pcg3(ix + 1, iy + 1, iz, s); const c110 = HU[2];
+  pcg3(ix, iy, iz + 1, s); const c001 = HU[2];
+  pcg3(ix + 1, iy, iz + 1, s); const c101 = HU[2];
+  pcg3(ix, iy + 1, iz + 1, s); const c011 = HU[2];
+  pcg3(ix + 1, iy + 1, iz + 1, s); const c111 = HU[2];
   const x00 = c000 + (c100 - c000) * u, x10 = c010 + (c110 - c010) * u;
   const x01 = c001 + (c101 - c001) * u, x11 = c011 + (c111 - c011) * u;
   const y0 = x00 + (x10 - x00) * v, y1 = x01 + (x11 - x01) * v;
-  return (y0 + (y1 - y0) * w) * INV32;
+  NQ[3] = (y0 + (y1 - y0) * w) * INV32;
 }
 
-let NX = 0, NY = 0, NZ = 0;
-/** Three independent value-noise channels from one lattice walk; writes NX..NZ in [0, 1). */
-function vnoise3v(x: number, y: number, z: number, s: number): void {
+const NV = new Float64Array(3);
+/** Three independent value-noise channels from one lattice walk at the point NQ[0..2]; writes NV[0..2] in [0, 1). */
+function vnoise3vQ(s: number): void {
+  const x = NQ[0]!, y = NQ[1]!, z = NQ[2]!;
   const ix = Math.floor(x), iy = Math.floor(y), iz = Math.floor(z);
   const u = fade(x - ix), v = fade(y - iy), w = fade(z - iz);
   let ax = 0, ay = 0, az = 0;
@@ -180,40 +189,45 @@ function vnoise3v(x: number, y: number, z: number, s: number): void {
     const dx = k & 1, dy = (k >> 1) & 1, dz = (k >> 2) & 1;
     const weight = (dx ? u : 1 - u) * (dy ? v : 1 - v) * (dz ? w : 1 - w);
     pcg3(ix + dx, iy + dy, iz + dz, s);
-    ax += H0 * weight; ay += H1 * weight; az += H2 * weight;
+    ax += HU[0] * weight; ay += HU[1] * weight; az += HU[2] * weight;
   }
-  NX = ax * INV32; NY = ay * INV32; NZ = az * INV32;
+  NV[0] = ax * INV32; NV[1] = ay * INV32; NV[2] = az * INV32;
 }
 
 /** Smooth (quintic-interpolated) value noise in [0, 1). */
 export function valueNoise3(x: number, y: number, z: number, seed: number): number {
-  return vnoise(x, y, z, seedMix(seed));
+  NQ[0] = x; NQ[1] = y; NQ[2] = z; vnoiseQ(seedMix(seed)); return NQ[3]!;
 }
 
-function fbm2s(x: number, y: number, z: number, s: number): number {
-  return (2 * vnoise(x, y, z, s) + vnoise(x * 2.03 + 17.31, y * 2.03 - 9.17, z * 2.03 + 5.71, (s ^ 0x5bd1e995) | 0)) / 3;
+/** Two-octave fBm with a pre-mixed seed at the point NQ[0..2]; writes the result to NQ[3]. */
+function fbm2sQ(s: number): void {
+  const x = NQ[0]!, y = NQ[1]!, z = NQ[2]!;
+  vnoiseQ(s); const a = NQ[3]!;
+  NQ[0] = x * 2.03 + 17.31; NQ[1] = y * 2.03 - 9.17; NQ[2] = z * 2.03 + 5.71; vnoiseQ((s ^ 0x5bd1e995) | 0);
+  NQ[3] = (2 * a + NQ[3]!) / 3;
 }
 /** Two-octave value-noise fBm in 3D ("2" is the octave count); result in [0, 1). */
 export function fbm2(x: number, y: number, z: number, seed: number): number {
-  return fbm2s(x, y, z, seedMix(seed));
+  NQ[0] = x; NQ[1] = y; NQ[2] = z; fbm2sQ(seedMix(seed)); return NQ[3]!;
 }
 
 const WORLEY_JITTER = 0.9;
-/** Worley/cellular noise with a pre-mixed seed. Writes out[0]=F1, out[1]=F2,
+/** Worley/cellular noise with a pre-mixed seed at the point NQ[0..2]. Writes out[0]=F1, out[1]=F2,
  * out[2]=nearest-cell hash (uint32) and, when out has room, out[3..5] = the
  * vector from the nearest feature point to the sample. */
-function worleys(x: number, y: number, z: number, s: number, out: ArrayLike<number> & { [i: number]: number }): void {
+function worleysQ(s: number, out: ArrayLike<number> & { [i: number]: number }): void {
+  const x = NQ[0]!, y = NQ[1]!, z = NQ[2]!;
   const ix = Math.floor(x), iy = Math.floor(y), iz = Math.floor(z);
   let f1 = 1e9, f2 = 1e9, h = 0, vx = 0, vy = 0, vz = 0;
   const lo = (1 - WORLEY_JITTER) * 0.5;
   for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) for (let c = -1; c <= 1; c++) {
     const cx = ix + a, cy = iy + b, cz = iz + c;
     pcg3(cx, cy, cz, s);
-    const dx = x - (cx + lo + WORLEY_JITTER * H0 * INV32);
-    const dy = y - (cy + lo + WORLEY_JITTER * H1 * INV32);
-    const dz = z - (cz + lo + WORLEY_JITTER * H2 * INV32);
+    const dx = x - (cx + lo + WORLEY_JITTER * HU[0] * INV32);
+    const dy = y - (cy + lo + WORLEY_JITTER * HU[1] * INV32);
+    const dz = z - (cz + lo + WORLEY_JITTER * HU[2] * INV32);
     const d2 = dx * dx + dy * dy + dz * dz;
-    if (d2 < f1) { f2 = f1; f1 = d2; h = Math.imul(H0 ^ (H2 >>> 7), 0x9e3779b1) ^ H1; vx = dx; vy = dy; vz = dz; }
+    if (d2 < f1) { f2 = f1; f1 = d2; h = Math.imul(HU[0] ^ (HU[2] >>> 7), 0x9e3779b1) ^ HU[1]; vx = dx; vy = dy; vz = dz; }
     else if (d2 < f2) f2 = d2;
   }
   out[0] = Math.sqrt(f1); out[1] = Math.sqrt(f2); out[2] = h >>> 0;
@@ -222,7 +236,7 @@ function worleys(x: number, y: number, z: number, s: number, out: ArrayLike<numb
 /** Worley noise: writes F1, F2 and the nearest cell hash (plus the offset
  * vector to the nearest feature point when out.length >= 6). Allocates nothing. */
 export function worley3(x: number, y: number, z: number, seed: number, out: ArrayLike<number> & { [i: number]: number }): void {
-  worleys(x, y, z, seedMix(seed), out);
+  NQ[0] = x; NQ[1] = y; NQ[2] = z; worleysQ(seedMix(seed), out);
 }
 
 // ------------------------------------------------------------------ string stream (composerHash-compatible)
@@ -433,57 +447,77 @@ export function defaultCoatGenome(paletteId: CoatPaletteId, colorSeed: number | 
 
 // ------------------------------------------------------------------ pattern masks
 const W = new Float64Array(6);
-/** Probe outputs of the last pattern evaluation (F1, F2, cell radius, patch shade). */
-let PF1 = 0, PF2 = 0, PR = 0, PATCH = 0;
+/** Probe outputs of the last pattern evaluation (F1, F2, cell radius, patch shade), then the mask call's footprint
+ * input [4] and its result [5]. */
+const PV = new Float64Array(6);
+/** COAT_CELLS_PER_BODY as a Map: a record read with a variable key goes through V8's generic keyed load, which boxes a
+ * fresh heap number for every non-integer value; Map.get returns the stored number itself. */
+const CELLS_OF: ReadonlyMap<ResolvedCoatPattern, number> = new Map(Object.entries(COAT_CELLS_PER_BODY) as [ResolvedCoatPattern, number][]);
 
 /** Seed offsets per field so the pattern, warp, grain and marks are unrelated. */
 const SALT_WARP = 0x2c1b3c6d, SALT_DETAIL = 0x297a2d39, SALT_GRAIN = 0x5f356495, SALT_TONE = 0x1b873593, SALT_MARK = 0x68e31da4, SALT_BAND = 0x3c6ef372;
 
-/** Raw pattern mask in 0..1 (1 = full mark) before region strength, belly fade
- * and contrast. `fp` is the footprint in body lengths. */
-function patternMask(g: CoatGenome, s: CoatSample, fp: number): number {
-  PF1 = 0; PF2 = 0; PR = 0; PATCH = 0;
+/** Raw pattern mask in 0..1 (1 = full mark) before region strength, belly fade and contrast. Reads the footprint
+ * (body lengths) from PV[4] and writes the mask to PV[5]. Allocation-free by construction (see NQ): every noise call
+ * passes its point through NQ[0..2] and reads NQ[3], and smooth() and clamp01() are inlined by hand, with `h` as
+ * smooth's clamped ramp (`h * h * (3 - 2 * h)` is its value) and `lo`/`hi` as its edges. */
+function patternMaskQ(g: CoatGenome, s: CoatSample): void {
+  const fp = PV[4]!;
+  PV[0] = 0; PV[1] = 0; PV[2] = 0; PV[3] = 0;
   const p = g.pattern;
-  if (p === 'plain') return 0;
+  if (p === 'plain') { PV[5] = 0; return; }
   const seed = seedMix(g.seed), t = g.threshold, warp = g.warp;
-  const cpb = COAT_CELLS_PER_BODY[p] * g.scale;
+  const cpb = CELLS_OF.get(p)! * g.scale;
   const region = s.region;
+  let h: number, lo: number, hi: number;
 
   if (p === 'saddle') {
-    if (region !== 'torso' && region !== 'neck' && region !== 'tail') return 0;
-    const n = fbm2s(s.x * 7, s.y * 7, s.z * 7, (seed ^ SALT_DETAIL) | 0) - 0.5;
+    if (region !== 'torso' && region !== 'neck' && region !== 'tail') { PV[5] = 0; return; }
+    NQ[0] = s.x * 7; NQ[1] = s.y * 7; NQ[2] = s.z * 7; fbm2sQ((seed ^ SALT_DETAIL) | 0);
+    const n = NQ[3]! - 0.5;
     // Grizzled edge: fine noise breaks the boundary like banded guard hairs.
-    const grizzle = vnoise(s.x * 42, s.y * 42, s.z * 42, (seed ^ SALT_MARK) | 0) - 0.5;
+    NQ[0] = s.x * 42; NQ[1] = s.y * 42; NQ[2] = s.z * 42; vnoiseQ((seed ^ SALT_MARK) | 0);
+    const grizzle = NQ[3]! - 0.5;
     // A rounded blanket: full length along the spine, narrowing down the flank.
     const ex = (s.x + 0.03) / (0.3 + 0.3 * t), ey = (1 - s.dorsal) / (0.8 + 0.3 * t);
     const r = Math.sqrt(ex * ex + ey * ey) + 0.22 * warp * n + 0.16 * grizzle;
     const e = Math.max(0.06, fp * 4);
-    return 1 - smooth(0.92 - e, 0.92 + e, r);
+    lo = 0.92 - e; hi = 0.92 + e; h = (r - lo) / (hi - lo); h = h < 0 ? 0 : h > 1 ? 1 : h;
+    PV[5] = 1 - h * h * (3 - 2 * h); return;
   }
 
   if (p === 'dorsal-stripe') {
     const ez = Math.max(0.012, fp * 0.5);
     let m = 0;
     if (region === 'torso' || region === 'neck' || region === 'tail' || region === 'head') {
-      const wob = (vnoise(s.x * 18, 0.5, 0.5, (seed ^ SALT_DETAIL) | 0) - 0.5) * 0.012 * (0.5 + warp);
+      NQ[0] = s.x * 18; NQ[1] = 0.5; NQ[2] = 0.5; vnoiseQ((seed ^ SALT_DETAIL) | 0);
+      const wob = (NQ[3]! - 0.5) * 0.012 * (0.5 + warp);
       const half = 0.04 + 0.03 * t;
-      m = (1 - smooth(half - ez, half + ez, Math.abs(s.z + wob))) * smooth(0.55, 0.72, s.dorsal);
-      if (region === 'head') m *= 1 - smooth(0.05, 0.3, s.along);
+      lo = half - ez; hi = half + ez; h = (Math.abs(s.z + wob) - lo) / (hi - lo); h = h < 0 ? 0 : h > 1 ? 1 : h;
+      const across = 1 - h * h * (3 - 2 * h);
+      h = (s.dorsal - 0.55) / (0.72 - 0.55); h = h < 0 ? 0 : h > 1 ? 1 : h;
+      m = across * (h * h * (3 - 2 * h));
+      if (region === 'head') { h = (s.along - 0.05) / (0.3 - 0.05); h = h < 0 ? 0 : h > 1 ? 1 : h; m *= 1 - h * h * (3 - 2 * h); }
     }
     if (region === 'torso') {
       // Primitive dun markings: a faint shoulder cross over the withers.
       const sx = Math.abs(s.x - 0.26 - 0.05 * (1 - s.dorsal));
       const ex = Math.max(0.012, fp * 0.5);
-      m = Math.max(m, 0.55 * (1 - smooth(0.018 - ex, 0.018 + ex, sx)) * smooth(0.2, 0.55, s.dorsal));
+      lo = 0.018 - ex; hi = 0.018 + ex; h = (sx - lo) / (hi - lo); h = h < 0 ? 0 : h > 1 ? 1 : h;
+      const cross = 0.55 * (1 - h * h * (3 - 2 * h));
+      h = (s.dorsal - 0.2) / (0.55 - 0.2); h = h < 0 ? 0 : h > 1 ? 1 : h;
+      m = Math.max(m, cross * (h * h * (3 - 2 * h)));
     } else if (region === 'limb-lower' || region === 'limb-upper') {
       // ...and faint zebra-like barring on the legs.
       const k = region === 'limb-lower' ? 5 : 3, f = s.along * k + 0.3, d = Math.abs(f - Math.floor(f) - 0.5);
       const e = Math.max(0.06, fp * k * 3);
-      m = 0.45 * (1 - smooth(0.16 - e, 0.16 + e, d)) * (region === 'limb-upper' ? smooth(0.4, 1, s.along) : 1);
+      lo = 0.16 - e; hi = 0.16 + e; h = (d - lo) / (hi - lo); h = h < 0 ? 0 : h > 1 ? 1 : h;
+      m = 0.45 * (1 - h * h * (3 - 2 * h));
+      if (region === 'limb-upper') { h = (s.along - 0.4) / (1 - 0.4); h = h < 0 ? 0 : h > 1 ? 1 : h; m *= h * h * (3 - 2 * h); }
       // Dun 'points': the lower legs darken toward the hoof.
-      if (region === 'limb-lower') m = Math.max(m, 0.6 * smooth(0.25, 0.9, s.along));
+      if (region === 'limb-lower') { h = (s.along - 0.25) / (0.9 - 0.25); h = h < 0 ? 0 : h > 1 ? 1 : h; m = Math.max(m, 0.6 * (h * h * (3 - 2 * h))); }
     } else if (region === 'foot' || region === 'tail-tip') m = 0.6;
-    return m;
+    PV[5] = m; return;
   }
 
   const isLimb = region === 'limb-upper' || region === 'limb-lower' || region === 'foot';
@@ -499,123 +533,140 @@ function patternMask(g: CoatGenome, s: CoatSample, fp: number): number {
     }
     const wAmp = stripes ? 0.55 * warp : 0.12 * warp;
     const qs = cpb * 0.6;
-    u += wAmp * (fbm2s(s.x * qs, s.y * qs * 1.6, s.z * qs * 1.6, (seed ^ SALT_WARP) | 0) - 0.5) * 2;
+    NQ[0] = s.x * qs; NQ[1] = s.y * qs * 1.6; NQ[2] = s.z * qs * 1.6; fbm2sQ((seed ^ SALT_WARP) | 0);
+    u += wAmp * (NQ[3]! - 0.5) * 2;
     const k = Math.floor(u), f = u - k;
     pcg3(k, stripes ? 1 : 2, 0, (seed ^ SALT_BAND) | 0);
     // Width 0.6-1.4 per band, triangular so a few bands cannot swing the coverage.
-    const width = 0.6 + 0.4 * (H0 * INV32 + (H2 & 0xffff) / 65536);
+    const width = 0.6 + 0.4 * (HU[0] * INV32 + (HU[2] & 0xffff) / 65536);
     const duty = (stripes ? 0.43 : 0.42) + 0.3 * t;
     let hw = 0.5 * duty * width;
     let d = Math.abs(f - 0.5);
     if (stripes && !isLimb) {
       // Each stripe tapers to a point at its own height above the belly.
-      const end = g.bellyLine + 0.1 + 0.45 * H1 * INV32;
-      hw *= smooth(end - 0.04, end + 0.22, s.dorsal);
+      const end = g.bellyLine + 0.1 + 0.45 * HU[1] * INV32;
+      lo = end - 0.04; hi = end + 0.22; h = (s.dorsal - lo) / (hi - lo); h = h < 0 ? 0 : h > 1 ? 1 : h;
+      hw *= h * h * (3 - 2 * h);
     }
-    if (stripes && H2 * INV32 < 0.3) { d = Math.abs(d - 0.55 * hw); hw *= 0.42; } // a split (double) stripe
+    if (stripes && HU[2] * INV32 < 0.3) { d = Math.abs(d - 0.55 * hw); hw *= 0.42; } // a split (double) stripe
     // Ragged edges: small edge noise, finer for stripes.
-    const edge = (vnoise(s.x * cpb * 3, s.y * cpb * 3, s.z * cpb * 3, (seed ^ SALT_DETAIL) | 0) - 0.5) * (stripes ? 0.08 : 0.05);
+    NQ[0] = s.x * cpb * 3; NQ[1] = s.y * cpb * 3; NQ[2] = s.z * cpb * 3; vnoiseQ((seed ^ SALT_DETAIL) | 0);
+    const edge = (NQ[3]! - 0.5) * (stripes ? 0.08 : 0.05);
     const e = Math.max(stripes ? 0.03 : 0.02, fp * cpb * 0.5);
-    return hw <= 0 ? 0 : 1 - smooth(hw - e, hw + e, d + edge);
+    if (hw <= 0) { PV[5] = 0; return; }
+    lo = hw - e; hi = hw + e; h = (d + edge - lo) / (hi - lo); h = h < 0 ? 0 : h > 1 ? 1 : h;
+    PV[5] = 1 - h * h * (3 - 2 * h); return;
   }
 
   if (p === 'brindle') {
     const qs = cpb;
-    const n1 = fbm2s(s.x * qs * 0.45, s.y * qs * 0.6, s.z * qs * 0.6, (seed ^ SALT_WARP) | 0) - 0.5;
-    const n2 = vnoise(s.x * qs * 2, s.y * qs * 2, s.z * qs * 2, (seed ^ SALT_DETAIL) | 0) - 0.5;
+    NQ[0] = s.x * qs * 0.45; NQ[1] = s.y * qs * 0.6; NQ[2] = s.z * qs * 0.6; fbm2sQ((seed ^ SALT_WARP) | 0);
+    const n1 = NQ[3]! - 0.5;
+    NQ[0] = s.x * qs * 2; NQ[1] = s.y * qs * 2; NQ[2] = s.z * qs * 2; vnoiseQ((seed ^ SALT_DETAIL) | 0);
+    const n2 = NQ[3]! - 0.5;
     const u = (isLimb ? s.along * 6 * g.scale : s.x * qs + 0.4 * (1 - s.dorsal)) + (1.3 + 1.2 * warp) * n1 + 0.35 * n2;
     const f = u - Math.floor(u);
-    const thick = vnoise(s.x * qs * 0.8 + 3.1, s.y * qs * 0.8, s.z * qs * 0.8, (seed ^ SALT_MARK) | 0);
+    NQ[0] = s.x * qs * 0.8 + 3.1; NQ[1] = s.y * qs * 0.8; NQ[2] = s.z * qs * 0.8; vnoiseQ((seed ^ SALT_MARK) | 0);
+    const thick = NQ[3]!;
     const hw = (0.1 + 0.1 * thick) * (1 + 1.2 * t);
     const e = Math.max(0.035, fp * qs * 0.5);
-    const breakup = smooth(0.22, 0.4, vnoise(s.x * qs * 1.3 - 7.7, s.y * qs * 1.3, s.z * qs * 1.3, (seed ^ SALT_BAND) | 0));
-    return (1 - smooth(hw - e, hw + e, Math.abs(f - 0.5))) * breakup * 0.9;
+    NQ[0] = s.x * qs * 1.3 - 7.7; NQ[1] = s.y * qs * 1.3; NQ[2] = s.z * qs * 1.3; vnoiseQ((seed ^ SALT_BAND) | 0);
+    h = (NQ[3]! - 0.22) / (0.4 - 0.22); h = h < 0 ? 0 : h > 1 ? 1 : h;
+    const breakup = h * h * (3 - 2 * h);
+    lo = hw - e; hi = hw + e; h = (Math.abs(f - 0.5) - lo) / (hi - lo); h = h < 0 ? 0 : h > 1 ? 1 : h;
+    PV[5] = (1 - h * h * (3 - 2 * h)) * breakup * 0.9; return;
   }
 
   // 3D cellular and noise patterns: q in cells, with domain warp.
   let qx = s.x * cpb, qy = s.y * cpb, qz = s.z * cpb;
   const warpAmp = p === 'piebald' ? 0.45 : p === 'roan' ? 0 : p === 'reticulated' ? 0.32 : p === 'rosettes' ? 0.28 : 0.22;
   if (warpAmp > 0 && warp > 0) {
-    vnoise3v(qx * 0.45 + 31.7, qy * 0.45 - 12.9, qz * 0.45 + 4.3, (seed ^ SALT_WARP) | 0);
+    NQ[0] = qx * 0.45 + 31.7; NQ[1] = qy * 0.45 - 12.9; NQ[2] = qz * 0.45 + 4.3; vnoise3vQ((seed ^ SALT_WARP) | 0);
     const a = warp * warpAmp * 2;
-    qx += a * (NX - 0.5); qy += a * (NY - 0.5); qz += a * (NZ - 0.5);
+    qx += a * (NV[0]! - 0.5); qy += a * (NV[1]! - 0.5); qz += a * (NV[2]! - 0.5);
   }
   const efp = fp * cpb * 0.5;
 
   if (p === 'spots') {
-    worleys(qx, qy, qz, seed, W);
-    const h = W[2]! * INV32, r0 = 0.35 + 0.06 * (2 * h - 1) + 0.25 * t, soft = Math.max(0.05, efp);
-    PF1 = W[0]!; PF2 = W[1]!; PR = r0;
-    return 1 - smooth(r0, r0 + soft, W[0]!);
+    NQ[0] = qx; NQ[1] = qy; NQ[2] = qz; worleysQ(seed, W);
+    const hh = W[2]! * INV32, r0 = 0.35 + 0.06 * (2 * hh - 1) + 0.25 * t, soft = Math.max(0.05, efp);
+    PV[0] = W[0]!; PV[1] = W[1]!; PV[2] = r0;
+    hi = r0 + soft; h = (W[0]! - r0) / (hi - r0); h = h < 0 ? 0 : h > 1 ? 1 : h;
+    PV[5] = 1 - h * h * (3 - 2 * h); return;
   }
   if (p === 'rosettes') {
     // Rings follow isolines of F1/F2 (rounded, Apollonius-circle-like cells), not
     // F1/r: a 3D lattice sliced by the body surface would otherwise lose about half
     // of its rosettes to cells whose feature point lies far off the surface.
-    worleys(qx, qy, qz, seed, W);
+    NQ[0] = qx; NQ[1] = qy; NQ[2] = qz; worleysQ(seed, W);
     const hc = W[2]! >>> 0, rho = W[0]! / Math.max(W[1]!, 1e-6), inv = 1 / Math.max(W[0]!, 1e-6);
-    PF1 = W[0]!; PF2 = W[1]!;
+    PV[0] = W[0]!; PV[1] = W[1]!;
     // Gaps break each ring into 3-5 irregular blotches; the gap layout differs per rosette.
     const dx = W[3]! * inv, dy = W[4]! * inv, dz = W[5]! * inv;
-    const gap = vnoise(dx * 1.6 + (hc & 1023) * 0.37, dy * 1.6 + ((hc >>> 10) & 1023) * 0.41, dz * 1.6 + ((hc >>> 20) & 1023) * 0.43, (seed ^ SALT_DETAIL) | 0);
-    const thick = vnoise(dx * 2.3 + 9.1, dy * 2.3 - 3.3, dz * 2.3 + 1.7, (seed ^ SALT_MARK) | 0);
+    NQ[0] = dx * 1.6 + (hc & 1023) * 0.37; NQ[1] = dy * 1.6 + ((hc >>> 10) & 1023) * 0.41; NQ[2] = dz * 1.6 + ((hc >>> 20) & 1023) * 0.43;
+    vnoiseQ((seed ^ SALT_DETAIL) | 0);
+    const gap = NQ[3]!;
+    NQ[0] = dx * 2.3 + 9.1; NQ[1] = dy * 2.3 - 3.3; NQ[2] = dz * 2.3 + 1.7; vnoiseQ((seed ^ SALT_MARK) | 0);
+    const thick = NQ[3]!;
     const e = Math.max(0.035, efp * 0.6);
     const outer = 0.8 - 0.04 * (hc * INV32) + 0.2 * t, inner = outer - 0.22 - 0.12 * (thick - 0.5) - 0.15 * t;
-    PR = inner; PATCH = outer;
-    const ring = smooth(inner - e, inner + e, rho) * (1 - smooth(outer - e, outer + e, rho)) * smooth(0.3, 0.44, gap);
-    const centre = 0.35 * (1 - smooth(inner - e, inner + e, rho));
-    return Math.max(ring, centre);
+    PV[2] = inner; PV[3] = outer;
+    lo = inner - e; hi = inner + e; h = (rho - lo) / (hi - lo); h = h < 0 ? 0 : h > 1 ? 1 : h;
+    const inside = h * h * (3 - 2 * h);
+    lo = outer - e; hi = outer + e; h = (rho - lo) / (hi - lo); h = h < 0 ? 0 : h > 1 ? 1 : h;
+    const ringBand = inside * (1 - h * h * (3 - 2 * h));
+    h = (gap - 0.3) / (0.44 - 0.3); h = h < 0 ? 0 : h > 1 ? 1 : h;
+    const ring = ringBand * (h * h * (3 - 2 * h));
+    const centre = 0.35 * (1 - inside);
+    PV[5] = Math.max(ring, centre); return;
   }
   if (p === 'reticulated') {
-    worleys(qx, qy, qz, seed, W);
-    const d = W[1]! - W[0]!, h = W[2]! * INV32;
-    PF1 = W[0]!; PF2 = W[1]!;
-    const wob = (vnoise(qx * 1.7, qy * 1.7, qz * 1.7, (seed ^ SALT_DETAIL) | 0) - 0.5) * 0.04;
-    const lo = 0.05 - 0.1 * t + wob, e = Math.max(0, efp - 0.025);
+    NQ[0] = qx; NQ[1] = qy; NQ[2] = qz; worleysQ(seed, W);
+    const d = W[1]! - W[0]!, hh = W[2]! * INV32;
+    PV[0] = W[0]!; PV[1] = W[1]!;
+    NQ[0] = qx * 1.7; NQ[1] = qy * 1.7; NQ[2] = qz * 1.7; vnoiseQ((seed ^ SALT_DETAIL) | 0);
+    const wob = (NQ[3]! - 0.5) * 0.04;
+    const l = 0.05 - 0.1 * t + wob, e = Math.max(0, efp - 0.025);
     // Patch shade varies per patch and darkens toward the patch centre.
-    PATCH = clamp01(0.55 + 0.3 * h + 0.18 * smooth(0.12, 0.6, d));
-    return smooth(lo - e, lo + 0.05 + e, d);
+    h = (d - 0.12) / (0.6 - 0.12); h = h < 0 ? 0 : h > 1 ? 1 : h;
+    const shade = 0.55 + 0.3 * hh + 0.18 * (h * h * (3 - 2 * h));
+    PV[3] = shade < 0 ? 0 : shade > 1 ? 1 : shade;
+    lo = l - e; hi = l + 0.05 + e; h = (d - lo) / (hi - lo); h = h < 0 ? 0 : h > 1 ? 1 : h;
+    PV[5] = h * h * (3 - 2 * h); return;
   }
   if (p === 'dapple') {
     // Rounded light dapples (F1/F2 isolines) with a darker net between them.
-    worleys(qx, qy, qz, seed, W);
-    PF1 = W[0]!; PF2 = W[1]!;
-    const rho = W[0]! / Math.max(W[1]!, 1e-6), hi = 0.86 + 0.25 * t, e = Math.max(0, efp * 0.5);
-    return 0.85 * (1 - smooth(hi - 0.45 - e, hi + 0.04 + e, rho));
+    NQ[0] = qx; NQ[1] = qy; NQ[2] = qz; worleysQ(seed, W);
+    PV[0] = W[0]!; PV[1] = W[1]!;
+    const rho = W[0]! / Math.max(W[1]!, 1e-6), top = 0.86 + 0.25 * t, e = Math.max(0, efp * 0.5);
+    lo = top - 0.45 - e; hi = top + 0.04 + e; h = (rho - lo) / (hi - lo); h = h < 0 ? 0 : h > 1 ? 1 : h;
+    PV[5] = 0.85 * (1 - h * h * (3 - 2 * h)); return;
   }
   if (p === 'piebald') {
-    let n = fbm2s(qx, qy, qz, seed);
+    NQ[0] = qx; NQ[1] = qy; NQ[2] = qz; fbm2sQ(seed);
+    let n = NQ[3]!;
     // White concentrates low on the body, on the legs and on the face.
     n += 0.16 * (-s.dorsal) + (region === 'limb-lower' || region === 'foot' ? 0.18 : region === 'muzzle' || region === 'head' ? 0.1 : 0);
     const thr = 0.56 - 0.35 * t, e = Math.max(0.008, efp * 0.15);
-    return smooth(thr - e, thr + e, n);
+    lo = thr - e; hi = thr + e; h = (n - lo) / (hi - lo); h = h < 0 ? 0 : h > 1 ? 1 : h;
+    PV[5] = h * h * (3 - 2 * h); return;
   }
   if (p === 'roan') {
     // White hairs intermixed with the base: a continuous frosting whose density
     // drifts across the body, plus fine flecks that fade out under a footprint.
-    const density = 0.32 + 0.35 * t + 0.6 * (fbm2s(s.x * 2.6, s.y * 2.6, s.z * 2.6, (seed ^ SALT_DETAIL) | 0) - 0.5);
+    NQ[0] = s.x * 2.6; NQ[1] = s.y * 2.6; NQ[2] = s.z * 2.6; fbm2sQ((seed ^ SALT_DETAIL) | 0);
+    const density = 0.32 + 0.35 * t + 0.6 * (NQ[3]! - 0.5);
     // Two rotated lattices so the flecks show no axis-aligned grid.
-    const f2 = vnoise((0.8 * qx + 0.6 * qz) * 1.73 + 5.3, qy * 1.73, (0.8 * qz - 0.6 * qx) * 1.73, (seed ^ SALT_GRAIN) | 0);
-    const fleck = (0.5 * vnoise(qx, qy, qz, seed) + 0.5 * f2 - 0.5) * 0.8 * (1 - smooth(0.4, 1.2, fp * cpb));
+    NQ[0] = (0.8 * qx + 0.6 * qz) * 1.73 + 5.3; NQ[1] = qy * 1.73; NQ[2] = (0.8 * qz - 0.6 * qx) * 1.73; vnoiseQ((seed ^ SALT_GRAIN) | 0);
+    const f2 = NQ[3]!;
+    NQ[0] = qx; NQ[1] = qy; NQ[2] = qz; vnoiseQ(seed);
+    h = (fp * cpb - 0.4) / (1.2 - 0.4); h = h < 0 ? 0 : h > 1 ? 1 : h;
+    const fleck = (0.5 * NQ[3]! + 0.5 * f2 - 0.5) * 0.8 * (1 - h * h * (3 - 2 * h));
     // White hairs never fully replace the coloured ones.
-    return 0.8 * clamp01(density + fleck);
+    const v = density + fleck;
+    PV[5] = 0.8 * (v < 0 ? 0 : v > 1 ? 1 : v); return;
   }
-  return 0;
-}
-
-/** Region strength for a pattern; varies smoothly with along at region joins. */
-function regionStrength(p: ResolvedCoatPattern, s: CoatSample): number {
-  const a = s.along;
-  switch (s.region) {
-    case 'torso': case 'neck': case 'tail': case 'tail-tip': case 'wing': return 1;
-    case 'head': return p === 'roan' ? mix(1, 0.25, smooth(0, 0.3, a)) : mix(1, 0.6, smooth(0, 0.5, a));
-    case 'muzzle': return p === 'roan' ? 0.2 : 0.45;
-    case 'ear': return 0.5;
-    case 'limb-upper': return p === 'roan' ? mix(1, 0.4, a) : p === 'dapple' ? mix(1, 0.5, a) : mix(1, 0.85, a);
-    case 'limb-lower': return p === 'roan' ? mix(0.4, 0.2, a) : p === 'dapple' ? mix(0.5, 0.2, a) : mix(0.85, 0.65, a);
-    case 'foot': return p === 'roan' || p === 'dapple' ? 0.2 : 0.6;
-    default: return 0;
-  }
+  PV[5] = 0;
 }
 
 /** How strongly each pattern fades on the belly (stripes taper on their own). */
@@ -623,23 +674,30 @@ const BELLY_FADE: Readonly<Record<ResolvedCoatPattern, number>> = {
   plain: 0, spots: 0.45, rosettes: 0.6, reticulated: 0.75, stripes: 0, bands: 0.35, saddle: 0,
   'dorsal-stripe': 0, dapple: 0.6, piebald: 0, roan: 0.3, brindle: 0.5,
 };
+/** BELLY_FADE as a Map (see CELLS_OF). */
+const BELLY_FADE_OF: ReadonlyMap<ResolvedCoatPattern, number> = new Map(Object.entries(BELLY_FADE) as [ResolvedCoatPattern, number][]);
 
 /** Linear "white" for unpigmented fur, kept inside the albedo window. */
 const WHITE_R = 0.6, WHITE_G = 0.585, WHITE_B = 0.55;
 
 // ------------------------------------------------------------------ evaluation
-let CR = 0, CG = 0, CB = 0;
-function mixTo(r: number, g: number, b: number, t: number): void {
-  CR += (r - CR) * t; CG += (g - CG) * t; CB += (b - CB) * t;
-}
+/** The colour being composed (r, g, b). */
+const CC = new Float64Array(3);
+/** evaluateCoatWithMask's mask [0] and reticulated patch shade [1], handed to coatQ. */
+const MK = new Float64Array(2);
 
-/** Evaluate the coat at one sample, writing linear RGB to out[offset..offset+2].
- * Allocates nothing. */
-export function evaluateCoat(genome: CoatGenome, sample: CoatSample, out: number[] | Float32Array | Float64Array, offset = 0): void {
+/** The coat colour at one sample: the body of evaluateCoat and of evaluateCoatWithMask. With `given` false the
+ * pattern mask comes from patternMaskQ (and the reticulated patch shade from PV[3]); with `given` true both come from
+ * MK. Allocation-free by construction (see NQ): smooth(), mix(), clamp() and the colour mix are inlined by hand,
+ * because V8 inlines a call only where it is hot relative to its caller and an out-of-line call boxes its double
+ * arguments and result. `h` is smooth's clamped ramp (`h * h * (3 - 2 * h)` is its value), `lo`/`hi` its edges and
+ * `t` the weight of a colour mix `c += (target - c) * t`. Every expression keeps the helpers' operation order. */
+function coatQ(genome: CoatGenome, sample: CoatSample, out: number[] | Float32Array | Float64Array, offset: number, given: boolean): void {
   const C = genome.colours, region = sample.region;
   if (region === 'eye') { const e = C.eye; out[offset] = e[0]; out[offset + 1] = e[1]; out[offset + 2] = e[2]; return; }
   const seed = seedMix(genome.seed);
-  const grain = 1 + 0.08 * (vnoise(sample.x * 40, sample.y * 40, sample.z * 40, (seed ^ SALT_GRAIN) | 0) - 0.5);
+  NQ[0] = sample.x * 40; NQ[1] = sample.y * 40; NQ[2] = sample.z * 40; vnoiseQ((seed ^ SALT_GRAIN) | 0);
+  const grain = 1 + 0.08 * (NQ[3]! - 0.5);
   if (region === 'horn' || region === 'armor') {
     const c = region === 'horn' ? C.horn : C.plate;
     out[offset] = c[0] * grain; out[offset + 1] = c[1] * grain; out[offset + 2] = c[2] * grain; return;
@@ -647,34 +705,59 @@ export function evaluateCoat(genome: CoatGenome, sample: CoatSample, out: number
   const base = C.base, belly = C.belly, accent = C.accent, P = genome.pattern;
   const fp = sample.footprint !== undefined && sample.footprint > 0 ? sample.footprint : 0;
   const along = sample.along, dorsal = sample.dorsal;
+  let h: number, lo: number, hi: number, t: number;
 
   // 1. Ground colour with countershading (limbs at half strength away from the root).
-  let cs = genome.countershade * smooth(genome.bellyLine + 0.3, genome.bellyLine - 0.3, dorsal);
-  if (region === 'limb-upper') cs *= mix(1, 0.5, smooth(0, 0.35, along));
+  lo = genome.bellyLine + 0.3; hi = genome.bellyLine - 0.3; h = (dorsal - lo) / (hi - lo); h = h < 0 ? 0 : h > 1 ? 1 : h;
+  let cs = genome.countershade * (h * h * (3 - 2 * h));
+  if (region === 'limb-upper') { h = along / 0.35; h = h < 0 ? 0 : h > 1 ? 1 : h; cs *= 1 + (0.5 - 1) * (h * h * (3 - 2 * h)); }
   else if (region === 'limb-lower' || region === 'foot') cs *= 0.5;
-  if (P === 'reticulated') { CR = belly[0]; CG = belly[1]; CB = belly[2]; }
-  else { CR = mix(base[0], belly[0], cs); CG = mix(base[1], belly[1], cs); CB = mix(base[2], belly[2], cs); }
+  if (P === 'reticulated') { CC[0] = belly[0]; CC[1] = belly[1]; CC[2] = belly[2]; }
+  else { CC[0] = base[0] + (belly[0] - base[0]) * cs; CC[1] = base[1] + (belly[1] - base[1]) * cs; CC[2] = base[2] + (belly[2] - base[2]) * cs; }
   // Low-frequency tonal variation (+-3%) so a plain coat is not a flat fill.
-  const tone = 1 + 0.06 * (vnoise(sample.x * 3.2, sample.y * 3.2, sample.z * 3.2, (seed ^ SALT_TONE) | 0) - 0.5);
-  CR *= tone; CG *= tone; CB *= tone;
+  NQ[0] = sample.x * 3.2; NQ[1] = sample.y * 3.2; NQ[2] = sample.z * 3.2; vnoiseQ((seed ^ SALT_TONE) | 0);
+  const tone = 1 + 0.06 * (NQ[3]! - 0.5);
+  CC[0] *= tone; CC[1] *= tone; CC[2] *= tone;
 
   // 2. Pattern.
   if (P !== 'plain') {
-    const m = patternMask(genome, sample, fp);
+    let m: number;
+    if (given) m = MK[0]!;
+    else { PV[4] = fp; patternMaskQ(genome, sample); m = PV[5]!; }
     if (m > 0) {
-      const fadeBelly = 1 - BELLY_FADE[P] * smooth(genome.bellyLine + 0.35, genome.bellyLine - 0.2, dorsal);
-      const amount = m * regionStrength(P, sample) * fadeBelly * genome.contrast;
+      lo = genome.bellyLine + 0.35; hi = genome.bellyLine - 0.2; h = (dorsal - lo) / (hi - lo); h = h < 0 ? 0 : h > 1 ? 1 : h;
+      const fadeBelly = 1 - BELLY_FADE_OF.get(P)! * (h * h * (3 - 2 * h));
+      // Region strength; varies smoothly with along at region joins.
+      let strength = 0;
+      switch (region) {
+        case 'torso': case 'neck': case 'tail': case 'tail-tip': case 'wing': strength = 1; break;
+        case 'head':
+          if (P === 'roan') { h = along / 0.3; h = h < 0 ? 0 : h > 1 ? 1 : h; strength = 1 + (0.25 - 1) * (h * h * (3 - 2 * h)); }
+          else { h = along / 0.5; h = h < 0 ? 0 : h > 1 ? 1 : h; strength = 1 + (0.6 - 1) * (h * h * (3 - 2 * h)); }
+          break;
+        case 'muzzle': strength = P === 'roan' ? 0.2 : 0.45; break;
+        case 'ear': strength = 0.5; break;
+        case 'limb-upper': strength = P === 'roan' ? 1 + (0.4 - 1) * along : P === 'dapple' ? 1 + (0.5 - 1) * along : 1 + (0.85 - 1) * along; break;
+        case 'limb-lower': strength = P === 'roan' ? 0.4 + (0.2 - 0.4) * along : P === 'dapple' ? 0.5 + (0.2 - 0.5) * along : 0.85 + (0.65 - 0.85) * along; break;
+        case 'foot': strength = P === 'roan' || P === 'dapple' ? 0.2 : 0.6; break;
+      }
+      const amount = m * strength * fadeBelly * genome.contrast;
       let mr: number, mg: number, mb: number;
-      if (P === 'reticulated') { mr = mix(base[0], accent[0], PATCH); mg = mix(base[1], accent[1], PATCH); mb = mix(base[2], accent[2], PATCH); }
-      else if (P === 'piebald') { mr = mix(belly[0], WHITE_R, 0.6); mg = mix(belly[1], WHITE_G, 0.6); mb = mix(belly[2], WHITE_B, 0.6); }
-      else if (P === 'roan') { mr = mix(belly[0], WHITE_R, 0.5); mg = mix(belly[1], WHITE_G, 0.5); mb = mix(belly[2], WHITE_B, 0.5); }
-      else if (P === 'dapple') { mr = mix(base[0], belly[0], 0.85) * 1.08; mg = mix(base[1], belly[1], 0.85) * 1.08; mb = mix(base[2], belly[2], 0.85) * 1.08; }
-      else if (genome.markRole === 'belly') { mr = mix(belly[0], WHITE_R, 0.3); mg = mix(belly[1], WHITE_G, 0.3); mb = mix(belly[2], WHITE_B, 0.3); }
+      if (P === 'reticulated') {
+        const patch = given ? MK[1]! : PV[3]!;
+        mr = base[0] + (accent[0] - base[0]) * patch; mg = base[1] + (accent[1] - base[1]) * patch; mb = base[2] + (accent[2] - base[2]) * patch;
+      }
+      else if (P === 'piebald') { mr = belly[0] + (WHITE_R - belly[0]) * 0.6; mg = belly[1] + (WHITE_G - belly[1]) * 0.6; mb = belly[2] + (WHITE_B - belly[2]) * 0.6; }
+      else if (P === 'roan') { mr = belly[0] + (WHITE_R - belly[0]) * 0.5; mg = belly[1] + (WHITE_G - belly[1]) * 0.5; mb = belly[2] + (WHITE_B - belly[2]) * 0.5; }
+      else if (P === 'dapple') {
+        mr = (base[0] + (belly[0] - base[0]) * 0.85) * 1.08; mg = (base[1] + (belly[1] - base[1]) * 0.85) * 1.08; mb = (base[2] + (belly[2] - base[2]) * 0.85) * 1.08;
+      }
+      else if (genome.markRole === 'belly') { mr = belly[0] + (WHITE_R - belly[0]) * 0.3; mg = belly[1] + (WHITE_G - belly[1]) * 0.3; mb = belly[2] + (WHITE_B - belly[2]) * 0.3; }
       else { mr = accent[0]; mg = accent[1]; mb = accent[2]; }
-      if (amount <= 1) mixTo(mr, mg, mb, amount);
+      if (amount <= 1) { CC[0] += (mr - CC[0]!) * amount; CC[1] += (mg - CC[1]!) * amount; CC[2] += (mb - CC[2]!) * amount; }
       else { // contrast > 1 pushes past the mark colour, away from the ground.
-        const k = amount - 1, gr = CR, gg = CG, gb = CB;
-        CR = mr + (mr - gr) * k; CG = mg + (mg - gg) * k; CB = mb + (mb - gb) * k;
+        const k = amount - 1, gr = CC[0]!, gg = CC[1]!, gb = CC[2]!;
+        CC[0] = mr + (mr - gr) * k; CC[1] = mg + (mg - gg) * k; CC[2] = mb + (mb - gb) * k;
       }
     }
   }
@@ -683,64 +766,111 @@ export function evaluateCoat(genome: CoatGenome, sample: CoatSample, out: number
   const marks = genome.marks | 0;
   if (marks) {
     const light = genome.markRole === 'belly';
-    const kr = light ? mix(belly[0], WHITE_R, 0.45) : accent[0], kg = light ? mix(belly[1], WHITE_G, 0.45) : accent[1], kb = light ? mix(belly[2], WHITE_B, 0.45) : accent[2];
-    const wr = mix(belly[0], WHITE_R, 0.55), wg = mix(belly[1], WHITE_G, 0.55), wb = mix(belly[2], WHITE_B, 0.55);
+    const kr = light ? belly[0] + (WHITE_R - belly[0]) * 0.45 : accent[0], kg = light ? belly[1] + (WHITE_G - belly[1]) * 0.45 : accent[1], kb = light ? belly[2] + (WHITE_B - belly[2]) * 0.45 : accent[2];
+    const wr = belly[0] + (WHITE_R - belly[0]) * 0.55, wg = belly[1] + (WHITE_G - belly[1]) * 0.55, wb = belly[2] + (WHITE_B - belly[2]) * 0.55;
     if (marks & COAT_MARK_BITS.socks) {
       if (region === 'limb-lower') {
-        const edge = 0.45 + 0.12 * (vnoise(sample.x * 30, sample.y * 30, sample.z * 30, (seed ^ SALT_MARK) | 0) - 0.5);
-        mixTo(kr, kg, kb, 0.92 * smooth(edge - 0.18, edge + 0.12, along));
-      } else if (region === 'foot') mixTo(kr, kg, kb, 0.92);
+        NQ[0] = sample.x * 30; NQ[1] = sample.y * 30; NQ[2] = sample.z * 30; vnoiseQ((seed ^ SALT_MARK) | 0);
+        const edge = 0.45 + 0.12 * (NQ[3]! - 0.5);
+        lo = edge - 0.18; hi = edge + 0.12; h = (along - lo) / (hi - lo); h = h < 0 ? 0 : h > 1 ? 1 : h;
+        t = 0.92 * (h * h * (3 - 2 * h));
+        CC[0] += (kr - CC[0]!) * t; CC[1] += (kg - CC[1]!) * t; CC[2] += (kb - CC[2]!) * t;
+      } else if (region === 'foot') { CC[0] += (kr - CC[0]!) * 0.92; CC[1] += (kg - CC[1]!) * 0.92; CC[2] += (kb - CC[2]!) * 0.92; }
     }
     if (marks & COAT_MARK_BITS.mask) {
-      if (region === 'muzzle') mixTo(accent[0], accent[1], accent[2], 0.82);
-      else if (region === 'head') mixTo(accent[0], accent[1], accent[2], 0.6 * smooth(0.15, 0.65, along) * (1 - 0.6 * smooth(0.45, 0.95, dorsal)));
+      if (region === 'muzzle') { CC[0] += (accent[0] - CC[0]!) * 0.82; CC[1] += (accent[1] - CC[1]!) * 0.82; CC[2] += (accent[2] - CC[2]!) * 0.82; }
+      else if (region === 'head') {
+        h = (along - 0.15) / (0.65 - 0.15); h = h < 0 ? 0 : h > 1 ? 1 : h;
+        const fore = 0.6 * (h * h * (3 - 2 * h));
+        h = (dorsal - 0.45) / (0.95 - 0.45); h = h < 0 ? 0 : h > 1 ? 1 : h;
+        t = fore * (1 - 0.6 * (h * h * (3 - 2 * h)));
+        CC[0] += (accent[0] - CC[0]!) * t; CC[1] += (accent[1] - CC[1]!) * t; CC[2] += (accent[2] - CC[2]!) * t;
+      }
     }
     if (marks & COAT_MARK_BITS.blaze && (region === 'head' || region === 'muzzle')) {
       const half = region === 'head' ? 0.035 + 0.015 * along : 0.045, e = Math.max(0.012, fp * 0.5);
-      const k = (1 - smooth(half - e, half + e, Math.abs(sample.z))) * smooth(-0.35, 0.05, dorsal) * (region === 'head' ? smooth(0.1, 0.4, along) : 1);
-      mixTo(wr, wg, wb, 0.92 * k);
+      lo = half - e; hi = half + e; h = (Math.abs(sample.z) - lo) / (hi - lo); h = h < 0 ? 0 : h > 1 ? 1 : h;
+      const across = 1 - h * h * (3 - 2 * h);
+      h = (dorsal - -0.35) / (0.05 - -0.35); h = h < 0 ? 0 : h > 1 ? 1 : h;
+      let k = across * (h * h * (3 - 2 * h));
+      if (region === 'head') { h = (along - 0.1) / (0.4 - 0.1); h = h < 0 ? 0 : h > 1 ? 1 : h; k *= h * h * (3 - 2 * h); }
+      t = 0.92 * k;
+      CC[0] += (wr - CC[0]!) * t; CC[1] += (wg - CC[1]!) * t; CC[2] += (wb - CC[2]!) * t;
     }
     if (marks & COAT_MARK_BITS['tail-tip']) {
-      if (region === 'tail-tip') mixTo(kr, kg, kb, 0.95 * smooth(0, 0.25, along));
+      if (region === 'tail-tip') {
+        h = along / 0.25; h = h < 0 ? 0 : h > 1 ? 1 : h; t = 0.95 * (h * h * (3 - 2 * h));
+        CC[0] += (kr - CC[0]!) * t; CC[1] += (kg - CC[1]!) * t; CC[2] += (kb - CC[2]!) * t;
+      }
     }
     if (marks & COAT_MARK_BITS['tail-rings'] && (region === 'tail' || region === 'tail-tip')) {
       const u = (region === 'tail' ? along * 7 : 7 + along * 1.5) + 0.25, f = Math.abs(u - Math.floor(u) - 0.5), e = Math.max(0.04, fp * 25);
-      mixTo(kr, kg, kb, 0.88 * (1 - smooth(0.22 - e, 0.22 + e, f)));
+      lo = 0.22 - e; hi = 0.22 + e; h = (f - lo) / (hi - lo); h = h < 0 ? 0 : h > 1 ? 1 : h; t = 0.88 * (1 - h * h * (3 - 2 * h));
+      CC[0] += (kr - CC[0]!) * t; CC[1] += (kg - CC[1]!) * t; CC[2] += (kb - CC[2]!) * t;
     }
-    if (marks & COAT_MARK_BITS['ear-tips'] && region === 'ear') mixTo(kr, kg, kb, 0.95 * smooth(0.62, 0.8, along));
+    if (marks & COAT_MARK_BITS['ear-tips'] && region === 'ear') {
+      h = (along - 0.62) / (0.8 - 0.62); h = h < 0 ? 0 : h > 1 ? 1 : h; t = 0.95 * (h * h * (3 - 2 * h));
+      CC[0] += (kr - CC[0]!) * t; CC[1] += (kg - CC[1]!) * t; CC[2] += (kb - CC[2]!) * t;
+    }
     if (marks & COAT_MARK_BITS['rump-patch']) {
       if (region === 'torso') {
-        const wob = 0.03 * (vnoise(sample.y * 14, sample.z * 14, 0.5, (seed ^ SALT_MARK) | 0) - 0.5);
-        mixTo(wr, wg, wb, 0.9 * smooth(-0.31, -0.4, sample.x + wob) * smooth(-0.3, -0.1, dorsal));
-      } else if (region === 'tail') mixTo(wr, wg, wb, 0.9 * (1 - smooth(0.1, 0.35, along)) * smooth(0.2, -0.4, dorsal));
+        NQ[0] = sample.y * 14; NQ[1] = sample.z * 14; NQ[2] = 0.5; vnoiseQ((seed ^ SALT_MARK) | 0);
+        const wob = 0.03 * (NQ[3]! - 0.5);
+        h = (sample.x + wob - -0.31) / (-0.4 - -0.31); h = h < 0 ? 0 : h > 1 ? 1 : h;
+        const rump = 0.9 * (h * h * (3 - 2 * h));
+        h = (dorsal - -0.3) / (-0.1 - -0.3); h = h < 0 ? 0 : h > 1 ? 1 : h;
+        t = rump * (h * h * (3 - 2 * h));
+        CC[0] += (wr - CC[0]!) * t; CC[1] += (wg - CC[1]!) * t; CC[2] += (wb - CC[2]!) * t;
+      } else if (region === 'tail') {
+        h = (along - 0.1) / (0.35 - 0.1); h = h < 0 ? 0 : h > 1 ? 1 : h;
+        const root = 0.9 * (1 - h * h * (3 - 2 * h));
+        h = (dorsal - 0.2) / (-0.4 - 0.2); h = h < 0 ? 0 : h > 1 ? 1 : h;
+        t = root * (h * h * (3 - 2 * h));
+        CC[0] += (wr - CC[0]!) * t; CC[1] += (wg - CC[1]!) * t; CC[2] += (wb - CC[2]!) * t;
+      }
     }
     if (marks & COAT_MARK_BITS['juvenile-spots'] && genome.juvenileSpots > 0 && region === 'torso') {
-      const k = juvenileSpotMask(sample, seed, fp);
-      if (k > 0) mixTo(wr, wg, wb, 0.85 * genome.juvenileSpots * k);
+      PV[4] = fp; juvenileSpotMaskQ(sample, seed);
+      const k = PV[5]!;
+      if (k > 0) { t = 0.85 * genome.juvenileSpots * k; CC[0] += (wr - CC[0]!) * t; CC[1] += (wg - CC[1]!) * t; CC[2] += (wb - CC[2]!) * t; }
     }
   }
 
   // 4. Greying lightens the muzzle (and the face toward it).
   if (genome.greying > 0) {
-    const gk = region === 'muzzle' ? 0.85 : region === 'head' ? 0.5 * smooth(0.45, 0.95, along) : 0;
+    let gk = 0;
+    if (region === 'muzzle') gk = 0.85;
+    else if (region === 'head') { h = (along - 0.45) / (0.95 - 0.45); h = h < 0 ? 0 : h > 1 ? 1 : h; gk = 0.5 * (h * h * (3 - 2 * h)); }
     if (gk > 0) {
-      const gr = mix(0.4, belly[0], 0.3), gg = mix(0.39, belly[1], 0.3), gb = mix(0.37, belly[2], 0.3);
-      mixTo(gr, gg, gb, genome.greying * gk);
+      const gr = 0.4 + (belly[0] - 0.4) * 0.3, gg = 0.39 + (belly[1] - 0.39) * 0.3, gb = 0.37 + (belly[2] - 0.37) * 0.3;
+      t = genome.greying * gk;
+      CC[0] += (gr - CC[0]!) * t; CC[1] += (gg - CC[1]!) * t; CC[2] += (gb - CC[2]!) * t;
     }
   }
 
-  // 5. Grain (+-4%).
-  out[offset] = clamp(CR * grain, 0.002, 1);
-  out[offset + 1] = clamp(CG * grain, 0.002, 1);
-  out[offset + 2] = clamp(CB * grain, 0.002, 1);
+  // 5. Grain (+-4%), clamped to 0.002..1.
+  h = CC[0]! * grain; out[offset] = h < 0.002 ? 0.002 : h > 1 ? 1 : h;
+  h = CC[1]! * grain; out[offset + 1] = h < 0.002 ? 0.002 : h > 1 ? 1 : h;
+  h = CC[2]! * grain; out[offset + 2] = h < 0.002 ? 0.002 : h > 1 ? 1 : h;
+}
+
+/** Evaluate the coat at one sample, writing linear RGB to out[offset..offset+2].
+ * Allocation-free (tests/fauna-coat-fields.test.mjs counts it with v8.GCProfiler against a no-op control). */
+export function evaluateCoat(genome: CoatGenome, sample: CoatSample, out: number[] | Float32Array | Float64Array, offset = 0): void {
+  coatQ(genome, sample, out, offset, false);
 }
 
 /** Fawn-style juvenile spots: two dorsolateral rows per side plus a few
- * scattered lower spots. Returns 0..1. */
-function juvenileSpotMask(s: CoatSample, seed: number, fp: number): number {
+ * scattered lower spots. Reads the footprint from PV[4] and writes 0..1 to PV[5] (call-boundary scratch, see NQ). */
+function juvenileSpotMaskQ(s: CoatSample, seed: number): void {
+  const fp = PV[4]!;
   const side = s.z >= 0 ? 1 : 2, spacing = 0.048, x = s.x;
-  const span = smooth(-0.42, -0.34, x) * (1 - smooth(0.26, 0.34, x));
-  if (span <= 0) return 0;
+  // smooth() inlined by hand as in patternMaskQ
+  let h = (x - -0.42) / (-0.34 - -0.42); h = h < 0 ? 0 : h > 1 ? 1 : h;
+  const rise = h * h * (3 - 2 * h);
+  h = (x - 0.26) / (0.34 - 0.26); h = h < 0 ? 0 : h > 1 ? 1 : h;
+  const span = rise * (1 - h * h * (3 - 2 * h));
+  if (span <= 0) { PV[5] = 0; return; }
   let best = 0;
   const e = Math.max(0.004, fp * 0.5);
   for (let row = 0; row < 3; row++) {
@@ -748,17 +878,19 @@ function juvenileSpotMask(s: CoatSample, seed: number, fp: number): number {
     const cx = x / spacing - offset, k = Math.floor(cx);
     for (let j = k - 1; j <= k + 1; j++) {
       pcg3(j, row, side, (seed ^ SALT_MARK) | 0);
-      if (row === 2 && H2 * INV32 > 0.55) continue; // the lowest row is sparse and irregular
-      if (row < 2 && H2 * INV32 > 0.9) continue;
-      const px = (j + offset + 0.5 + (H0 * INV32 - 0.5) * 0.5) * spacing;
-      const pd = rowD + (H1 * INV32 - 0.5) * (row === 2 ? 0.2 : 0.09);
+      if (row === 2 && HU[2] * INV32 > 0.55) continue; // the lowest row is sparse and irregular
+      if (row < 2 && HU[2] * INV32 > 0.9) continue;
+      const px = (j + offset + 0.5 + (HU[0] * INV32 - 0.5) * 0.5) * spacing;
+      const pd = rowD + (HU[1] * INV32 - 0.5) * (row === 2 ? 0.2 : 0.09);
       const dx = x - px, dd = (s.dorsal - pd) * 0.2;
-      const r = 0.0085 + 0.006 * ((H2 >>> 8) & 255) / 255 - (row === 2 ? 0.002 : 0);
-      const v = 1 - smooth(r - e, r + e, Math.sqrt(dx * dx + dd * dd));
+      const r = 0.0085 + 0.006 * ((HU[2] >>> 8) & 255) / 255 - (row === 2 ? 0.002 : 0);
+      const lo = r - e, hi = r + e;
+      h = (Math.sqrt(dx * dx + dd * dd) - lo) / (hi - lo); h = h < 0 ? 0 : h > 1 ? 1 : h;
+      const v = 1 - h * h * (3 - 2 * h);
       if (v > best) best = v;
     }
   }
-  return best * span;
+  PV[5] = best * span;
 }
 
 /** Debug/test probe of the raw pattern mask. Writes out[0]=m (0..1, before
@@ -767,8 +899,9 @@ function juvenileSpotMask(s: CoatSample, seed: number, fp: number): number {
  * an F1/F2 ratio (rosettes), out[4]=reticulated patch shade or the rosette ring's
  * outer edge as an F1/F2 ratio. Unused slots are 0. */
 export function coatPatternProbe(genome: CoatGenome, sample: CoatSample, out: number[] | Float64Array): void {
-  const m = genome.pattern === 'plain' ? 0 : patternMask(genome, sample, sample.footprint ?? 0);
-  out[0] = m; out[1] = PF1; out[2] = PF2; out[3] = PR; out[4] = PATCH;
+  let m = 0;
+  if (genome.pattern !== 'plain') { PV[4] = sample.footprint ?? 0; patternMaskQ(genome, sample); m = PV[5]!; }
+  out[0] = m; out[1] = PV[0]; out[2] = PV[1]; out[3] = PV[2]; out[4] = PV[3];
 }
 
 // ------------------------------------------------------------------ canonical body + mean colour
@@ -890,117 +1023,22 @@ export function normalizeCoatGenome(input: CoatGenome): CoatGenome {
 
 // ------------------------------------------------------------------ crisp coat layers (appended, fauna-coat-crisp-1)
 /** evaluateCoat with the raw pattern mask (and the reticulated patch shade) given instead of computed: a copy of
- * evaluateCoat's body in which `patternMask(genome, sample, fp)` is replaced by `mask` and the module's PATCH by
+ * evaluateCoat's body in which the pattern mask (patternMaskQ) is replaced by `mask` and the module's patch shade (PV[3]) by
  * `patch`. With mask and patch from coatPatternProbe it returns exactly what evaluateCoat returns
  * (tests/fauna-composer-coat-crisp.test.mjs). The coat colour is affine in the mask amount (both branches of the
  * pattern mix; the marks, greying and grain that follow are affine too), so the colours at mask 0 and at mask 1 (patch 0
  * and 1) are exact layers between which a fragment shader can mix with its own per-fragment mask (the crisp coat of
  * the composer skin, docs/fauna-coat-crisp-v1.md). evaluateCoat itself is unchanged (fauna-coat-1 is frozen). */
 export function evaluateCoatWithMask(genome: CoatGenome, sample: CoatSample, out: number[] | Float32Array | Float64Array, offset: number, mask: number, patch: number): void {
-  const C = genome.colours, region = sample.region;
-  if (region === 'eye') { const e = C.eye; out[offset] = e[0]; out[offset + 1] = e[1]; out[offset + 2] = e[2]; return; }
-  const seed = seedMix(genome.seed);
-  const grain = 1 + 0.08 * (vnoise(sample.x * 40, sample.y * 40, sample.z * 40, (seed ^ SALT_GRAIN) | 0) - 0.5);
-  if (region === 'horn' || region === 'armor') {
-    const c = region === 'horn' ? C.horn : C.plate;
-    out[offset] = c[0] * grain; out[offset + 1] = c[1] * grain; out[offset + 2] = c[2] * grain; return;
-  }
-  const base = C.base, belly = C.belly, accent = C.accent, P = genome.pattern;
-  const fp = sample.footprint !== undefined && sample.footprint > 0 ? sample.footprint : 0;
-  const along = sample.along, dorsal = sample.dorsal;
-
-  // 1. Ground colour with countershading (limbs at half strength away from the root).
-  let cs = genome.countershade * smooth(genome.bellyLine + 0.3, genome.bellyLine - 0.3, dorsal);
-  if (region === 'limb-upper') cs *= mix(1, 0.5, smooth(0, 0.35, along));
-  else if (region === 'limb-lower' || region === 'foot') cs *= 0.5;
-  if (P === 'reticulated') { CR = belly[0]; CG = belly[1]; CB = belly[2]; }
-  else { CR = mix(base[0], belly[0], cs); CG = mix(base[1], belly[1], cs); CB = mix(base[2], belly[2], cs); }
-  // Low-frequency tonal variation (+-3%) so a plain coat is not a flat fill.
-  const tone = 1 + 0.06 * (vnoise(sample.x * 3.2, sample.y * 3.2, sample.z * 3.2, (seed ^ SALT_TONE) | 0) - 0.5);
-  CR *= tone; CG *= tone; CB *= tone;
-
-  // 2. Pattern.
-  if (P !== 'plain') {
-    const m = mask;
-    if (m > 0) {
-      const fadeBelly = 1 - BELLY_FADE[P] * smooth(genome.bellyLine + 0.35, genome.bellyLine - 0.2, dorsal);
-      const amount = m * regionStrength(P, sample) * fadeBelly * genome.contrast;
-      let mr: number, mg: number, mb: number;
-      if (P === 'reticulated') { mr = mix(base[0], accent[0], patch); mg = mix(base[1], accent[1], patch); mb = mix(base[2], accent[2], patch); }
-      else if (P === 'piebald') { mr = mix(belly[0], WHITE_R, 0.6); mg = mix(belly[1], WHITE_G, 0.6); mb = mix(belly[2], WHITE_B, 0.6); }
-      else if (P === 'roan') { mr = mix(belly[0], WHITE_R, 0.5); mg = mix(belly[1], WHITE_G, 0.5); mb = mix(belly[2], WHITE_B, 0.5); }
-      else if (P === 'dapple') { mr = mix(base[0], belly[0], 0.85) * 1.08; mg = mix(base[1], belly[1], 0.85) * 1.08; mb = mix(base[2], belly[2], 0.85) * 1.08; }
-      else if (genome.markRole === 'belly') { mr = mix(belly[0], WHITE_R, 0.3); mg = mix(belly[1], WHITE_G, 0.3); mb = mix(belly[2], WHITE_B, 0.3); }
-      else { mr = accent[0]; mg = accent[1]; mb = accent[2]; }
-      if (amount <= 1) mixTo(mr, mg, mb, amount);
-      else { // contrast > 1 pushes past the mark colour, away from the ground.
-        const k = amount - 1, gr = CR, gg = CG, gb = CB;
-        CR = mr + (mr - gr) * k; CG = mg + (mg - gg) * k; CB = mb + (mb - gb) * k;
-      }
-    }
-  }
-
-  // 3. Region marks.
-  const marks = genome.marks | 0;
-  if (marks) {
-    const light = genome.markRole === 'belly';
-    const kr = light ? mix(belly[0], WHITE_R, 0.45) : accent[0], kg = light ? mix(belly[1], WHITE_G, 0.45) : accent[1], kb = light ? mix(belly[2], WHITE_B, 0.45) : accent[2];
-    const wr = mix(belly[0], WHITE_R, 0.55), wg = mix(belly[1], WHITE_G, 0.55), wb = mix(belly[2], WHITE_B, 0.55);
-    if (marks & COAT_MARK_BITS.socks) {
-      if (region === 'limb-lower') {
-        const edge = 0.45 + 0.12 * (vnoise(sample.x * 30, sample.y * 30, sample.z * 30, (seed ^ SALT_MARK) | 0) - 0.5);
-        mixTo(kr, kg, kb, 0.92 * smooth(edge - 0.18, edge + 0.12, along));
-      } else if (region === 'foot') mixTo(kr, kg, kb, 0.92);
-    }
-    if (marks & COAT_MARK_BITS.mask) {
-      if (region === 'muzzle') mixTo(accent[0], accent[1], accent[2], 0.82);
-      else if (region === 'head') mixTo(accent[0], accent[1], accent[2], 0.6 * smooth(0.15, 0.65, along) * (1 - 0.6 * smooth(0.45, 0.95, dorsal)));
-    }
-    if (marks & COAT_MARK_BITS.blaze && (region === 'head' || region === 'muzzle')) {
-      const half = region === 'head' ? 0.035 + 0.015 * along : 0.045, e = Math.max(0.012, fp * 0.5);
-      const k = (1 - smooth(half - e, half + e, Math.abs(sample.z))) * smooth(-0.35, 0.05, dorsal) * (region === 'head' ? smooth(0.1, 0.4, along) : 1);
-      mixTo(wr, wg, wb, 0.92 * k);
-    }
-    if (marks & COAT_MARK_BITS['tail-tip']) {
-      if (region === 'tail-tip') mixTo(kr, kg, kb, 0.95 * smooth(0, 0.25, along));
-    }
-    if (marks & COAT_MARK_BITS['tail-rings'] && (region === 'tail' || region === 'tail-tip')) {
-      const u = (region === 'tail' ? along * 7 : 7 + along * 1.5) + 0.25, f = Math.abs(u - Math.floor(u) - 0.5), e = Math.max(0.04, fp * 25);
-      mixTo(kr, kg, kb, 0.88 * (1 - smooth(0.22 - e, 0.22 + e, f)));
-    }
-    if (marks & COAT_MARK_BITS['ear-tips'] && region === 'ear') mixTo(kr, kg, kb, 0.95 * smooth(0.62, 0.8, along));
-    if (marks & COAT_MARK_BITS['rump-patch']) {
-      if (region === 'torso') {
-        const wob = 0.03 * (vnoise(sample.y * 14, sample.z * 14, 0.5, (seed ^ SALT_MARK) | 0) - 0.5);
-        mixTo(wr, wg, wb, 0.9 * smooth(-0.31, -0.4, sample.x + wob) * smooth(-0.3, -0.1, dorsal));
-      } else if (region === 'tail') mixTo(wr, wg, wb, 0.9 * (1 - smooth(0.1, 0.35, along)) * smooth(0.2, -0.4, dorsal));
-    }
-    if (marks & COAT_MARK_BITS['juvenile-spots'] && genome.juvenileSpots > 0 && region === 'torso') {
-      const k = juvenileSpotMask(sample, seed, fp);
-      if (k > 0) mixTo(wr, wg, wb, 0.85 * genome.juvenileSpots * k);
-    }
-  }
-
-  // 4. Greying lightens the muzzle (and the face toward it).
-  if (genome.greying > 0) {
-    const gk = region === 'muzzle' ? 0.85 : region === 'head' ? 0.5 * smooth(0.45, 0.95, along) : 0;
-    if (gk > 0) {
-      const gr = mix(0.4, belly[0], 0.3), gg = mix(0.39, belly[1], 0.3), gb = mix(0.37, belly[2], 0.3);
-      mixTo(gr, gg, gb, genome.greying * gk);
-    }
-  }
-
-  // 5. Grain (+-4%).
-  out[offset] = clamp(CR * grain, 0.002, 1);
-  out[offset + 1] = clamp(CG * grain, 0.002, 1);
-  out[offset + 2] = clamp(CB * grain, 0.002, 1);
+  MK[0] = mask; MK[1] = patch;
+  coatQ(genome, sample, out, offset, true);
 }
 
 /** The coat library's seed pre-mix (seedMix, unchanged) as an export, for the crisp-coat shader, which hashes with the
- * pre-mixed seed exactly as patternMask does. Returns a signed 32-bit integer (>>> 0 for the unsigned bits). */
+ * pre-mixed seed exactly as patternMaskQ does. Returns a signed 32-bit integer (>>> 0 for the unsigned bits). */
 export function coatSeedMix(seed: number): number { return seedMix(seed); }
 
-/** The pattern salts and the Worley jitter patternMask uses (the module's own constants, unchanged), as exports for the
+/** The pattern salts and the Worley jitter patternMaskQ uses (the module's own constants, unchanged), as exports for the
  * crisp-coat shader, which re-implements the crisp patterns' masks in GLSL with exactly these values. */
 export const COAT_PATTERN_SALTS = Object.freeze({warp: SALT_WARP, detail: SALT_DETAIL, mark: SALT_MARK, band: SALT_BAND});
 export const COAT_WORLEY_JITTER = WORLEY_JITTER;

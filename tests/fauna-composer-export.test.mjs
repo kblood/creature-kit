@@ -365,8 +365,8 @@ test('export v2: with no v2 option the GLB is v1 byte for byte', t => {
     assert.equal(v1.report.lods, undefined); assert.equal(v1.report.budget, undefined);
     assert.equal(readComposerGlb(v1.glb).json.extensionsUsed, undefined);
   }
-  const core = generatorSourceHash(undefined, [...CORE].map(f => `src/${f}`));
-  if (core !== V1_PINS.core) { t.diagnostic(`composer core moved (${core.slice(0, 12)} != ${V1_PINS.core.slice(0, 12)}): v1 byte pins not applicable`); return; }
+  // Source edits must still satisfy the byte pins. The historic source hash is
+  // provenance, never a reason to silently bypass these behavioural guards.
   for (const [name, pin] of Object.entries(V1_PINS.glb)) {
     const glb = exported(name).glb;
     assert.equal(sha(glb), pin, `${name}: v1 bytes`);
