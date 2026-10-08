@@ -23,7 +23,8 @@ import ts from 'typescript';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
 import {COMPOSER_EXPORT_GENERATOR, COMPOSER_EXPORT_TARGETS, COMPOSER_EXPORT_V2_VERSION, COMPOSER_EXPORT_V3_VERSION, COMPOSER_GLOSS_ATTRIBUTE, COMPOSER_EXPORT_VERSION, ComposerExportBudgetError, bakeComposerClip, bakeComposerLoopClip,
-  checkComposerExportBudget, composerClipWindow, exportCreatureGlb, readComposerGlb} from '../src/fauna-composer-export.ts';
+  COMPOSER_SKELETON_SKIN_ERROR_BOUND, COMPOSER_SKELETON_STAGES, COMPOSER_SKELETON_VERSION, checkComposerExportBudget, composerClipWindow, composerSkeletonUnits, exportCreatureGlb, planComposerSkeleton,
+  readComposerGlb} from '../src/fauna-composer-export.ts';
 import {composerPreset, encodeComposerRecipe, randomComposerRecipe} from '../src/fauna-composer-recipe.ts';
 import {coherentComposerSpecies} from '../src/fauna-composer-species.ts';
 import {COMPOSER_BUDGET, buildComposerGraph, poseComposer} from '../src/fauna-composer-rig.ts';
@@ -284,7 +285,19 @@ test('export CLI: sidecar and brief carry provenance; an existing file is never 
  * all five GLB shas regenerated on the new core were byte-identical to the pins below, so only `core` changed.
  * 2026-10-07: core re-keyed 84d9d6fd… -> a0a31556… after the midline-ocellus seamNormal package (fauna/ocellus-seam, D2/D4);
  * none of the five specimens has the midline insect ocellus: their skins (positions, index, weights, colours, gloss)
- * are identical before and after, and all five GLB shas are byte-identical to the pins below, so only `core` changed. */
+ * are identical before and after, and all five GLB shas are byte-identical to the pins below, so only `core` changed.
+ * 2026-10-07: export v3 (docs/creature-export-v3.md, task R2-KIT-EXPORT-3, owner decision A13): `asset.generator`
+ * "universe-atlas fauna-composer-export-1" -> "creature-kit fauna-composer-export-3" and `versions.export` -> "-3"; the
+ * core key is unchanged. GLB shas, old (creature-kit main 3e0d6e8) -> new:
+ *   bird              bb87f35b228bab8a… -> a9007575ad408f80…  (1007708 -> 1007704 bytes: JSON chunk padding)
+ *   centipede         709abe3ce33ccfaf… -> b3981c9365265006…  (1721324 bytes, both)
+ *   worm              86fecc903ec8f19b… -> 1395baa897fbc8a8…  (619412 -> 619408 bytes)
+ *   winged-ape-rhino  ae1784773193c049… -> c26e0d16388e289f…  (1488260 bytes, both)
+ *   coherent          01b43824c05d6733… -> a91e920cab8c5607…  (905608 bytes, both)
+ *   quest-3 bird      7a590ed3f6c2ed5d… -> d45acf82a921e081…  (the v2 specimen, `questBird` below)
+ * Proof that nothing but the two strings moved: `bin` pins each BIN chunk as exported at 3e0d6e8 (unchanged), and
+ * `json` pins the 3e0d6e8 JSON chunk text (trailing padding trimmed); the test maps the two v3 strings back to the
+ * 3e0d6e8 ones and hashes the result, so any other JSON change fails it. */
 const V1_PINS = {
   core: 'a0a315563251220cedb09cb760b07a80de3441a0c863bf981c513249f6148f5c',
   glb: {
@@ -294,6 +307,30 @@ const V1_PINS = {
     'winged-ape-rhino': 'c26e0d16388e289f3a4fc4afcde9397ebb13a8f8f6ccea4b7c259c6b25d13295',
     coherent: 'a91e920cab8c560719e8c537591f2bdcf7a1e30504c5e5c9184e5ce36144c4fd',
   },
+  bin: {
+    bird: 'eb7ce2ec796628292d8cdd168d5de42ac2e5b56dd848df80682927300210f54b',
+    centipede: '7c626dc4adfcd28e9bf8b081b1fc2693480504c35761bfe1283df45c9db5f2b3',
+    worm: 'c6f8eed868e80ba98f133175b904f67056ef2439c766606b96f9db9f49398d9d',
+    'winged-ape-rhino': '291500f1eae837146f5457913365f57392990123a7c8790cd26d746ebe31ce57',
+    coherent: 'b4d9ba3394c23e5637bfe889d9bcc7d5b20adbfb872a648e3a43733d225e563e',
+    questBird: '9912b20408e07337a9019b350bd4109f348b5049508ad9344ac591ef37fc8c14',
+  },
+  json: {
+    bird: '4222bf5a3648550d63299b6ffe4c7d7565dee13aa271a97f5a6d70d4e5b2d49f',
+    centipede: 'e62a79b79f2f8bd2781770baf1e6b8e589496eeaec9f7978e25f4a1dce28724e',
+    worm: '334820126b43be0e598f547f5b350011d56a27303343a58576a12720d8810b56',
+    'winged-ape-rhino': '291fe5b3c9b749ce2972c5558517044b4ccb760fabe987d4e157c8c9974083a4',
+    coherent: 'c6354a2bd7369c9cc17351d111b3ac67e1518af66c4b4ab411a9d7339e28024f',
+    questBird: 'e693152538be348ec5fff807765845c0781535fe29846815a1cca015793e1b20',
+  },
+  questBirdGlb: 'd45acf82a921e0819f2752ea3e2b90f86f35e0c249f6f3ab8d1d3b5d90c2a7db',
+};
+/** The JSON chunk text with the v3 strings mapped back to the strings the 3e0d6e8 export wrote (export -1 or -2). */
+const jsonAsAt3e0d6e8 = (glb, v) => {
+  const dv = new DataView(glb.buffer, glb.byteOffset);
+  return new TextDecoder().decode(glb.subarray(20, 20 + dv.getUint32(12, true))).replace(/ +$/, '')
+    .replace(`"generator":"${COMPOSER_EXPORT_GENERATOR} ${COMPOSER_EXPORT_V3_VERSION}"`, `"generator":"universe-atlas fauna-composer-export-${v}"`)
+    .replace(`"export":"${COMPOSER_EXPORT_V3_VERSION}"`, `"export":"fauna-composer-export-${v}"`);
 };
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 let questBirdCache = null;
@@ -310,27 +347,175 @@ test('export v2: with no v2 option the GLB is v1 byte for byte', t => {
   }
   const core = generatorSourceHash(undefined, [...CORE].map(f => `src/${f}`));
   if (core !== V1_PINS.core) { t.diagnostic(`composer core moved (${core.slice(0, 12)} != ${V1_PINS.core.slice(0, 12)}): v1 byte pins not applicable`); return; }
-  for (const [name, pin] of Object.entries(V1_PINS.glb)) assert.equal(sha(exported(name).glb), pin, `${name}: v1 bytes`);
+  for (const [name, pin] of Object.entries(V1_PINS.glb)) {
+    const glb = exported(name).glb;
+    assert.equal(sha(glb), pin, `${name}: v1 bytes`);
+    assert.equal(sha(readComposerGlb(glb).bin), V1_PINS.bin[name], `${name}: BIN chunk as at 3e0d6e8`);
+    assert.equal(sha(jsonAsAt3e0d6e8(glb, 1)), V1_PINS.json[name], `${name}: JSON chunk as at 3e0d6e8 but for the two version strings`);
+  }
+  const quest = questBird().glb;
+  assert.equal(sha(quest), V1_PINS.questBirdGlb, 'quest-3 bird bytes');
+  assert.equal(sha(readComposerGlb(quest).bin), V1_PINS.bin.questBird, 'quest-3 bird: BIN chunk as at 3e0d6e8');
+  assert.equal(sha(jsonAsAt3e0d6e8(quest, 2)), V1_PINS.json.questBird, 'quest-3 bird: JSON chunk as at 3e0d6e8 but for the two version strings');
 });
 
-/** REPORT-ONLY bone sweep (D4, docs/creature-export-v2.md "Budget ledger"): joint counts of the composer graph, as the
- * exporter builds it (individual-derived recipe), for 100 coherent species (the CLI's --seed/--count path) and 100 raw
- * random recipes. It prints a histogram and the number over the quest-3 limit; it asserts nothing about the limit. */
+/** Bone sweep (D4; docs/creature-export-v2.md "Budget ledger", docs/creature-export-v3.md): joint counts of the composer
+ * graph, as the exporter builds it (individual-derived recipe), for 100 coherent species (the CLI's --seed/--count path)
+ * and 100 raw random recipes, unreduced and after the fauna-composer-skeleton-1 plan under the quest-3 limit. */
 function boneSweep(recipeOf) {
-  const counts = [];
-  for (let i = 0; i < 100; i++) counts.push(buildComposerGraph(deriveComposerIndividual(recipeOf(`bone-sweep-${i}`)).recipe).bones.length);
-  const bins = new Map();
-  for (const n of counts) { const lo = Math.floor(n / 10) * 10; bins.set(lo, (bins.get(lo) ?? 0) + 1); }
   const limit = COMPOSER_EXPORT_TARGETS['quest-3'].budget.maxBones;
-  return {limit, min: Math.min(...counts), max: Math.max(...counts), over: counts.filter(n => n > limit).length,
+  const rows = [];
+  for (let i = 0; i < 100; i++) {
+    const graph = buildComposerGraph(deriveComposerIndividual(recipeOf(`bone-sweep-${i}`)).recipe);
+    rows.push({seed: `bone-sweep-${i}`, full: graph.bones.length, plan: planComposerSkeleton(graph, limit)});
+  }
+  const counts = rows.map(r => r.full), bins = new Map();
+  for (const n of counts) { const lo = Math.floor(n / 10) * 10; bins.set(lo, (bins.get(lo) ?? 0) + 1); }
+  return {limit, rows, min: Math.min(...counts), max: Math.max(...counts), over: rows.filter(r => r.full > limit).map(r => r.seed),
+    overReduced: rows.filter(r => r.plan.joints > limit).map(r => r.seed),
     histogram: [...bins.entries()].sort((a, b) => a[0] - b[0]).map(([lo, k]) => `${lo}-${lo + 9}:${k}`).join(' ')};
 }
-test('export v2: bone sweep over 100 seeds (report only, the quest-3 limit is not asserted)', t => {
-  for (const [label, recipeOf] of [['coherent species', seed => coherentComposerSpecies(seed).recipe], ['random recipes', seed => randomComposerRecipe(seed)]]) {
+/** The raw recipes over the quest-3 limit at 3e0d6e8 (all 11 failed the quest-3 export on `bones`). */
+const RAW_OVER_80 = ['bone-sweep-3', 'bone-sweep-9', 'bone-sweep-15', 'bone-sweep-20', 'bone-sweep-24', 'bone-sweep-28', 'bone-sweep-29',
+  'bone-sweep-46', 'bone-sweep-53', 'bone-sweep-70', 'bone-sweep-81'];
+test('export v3: bone sweep over 100 seeds: with the reduced skeleton no graph is over the quest-3 limit; without it the same 11 are', t => {
+  for (const [label, recipeOf, over] of [['coherent species', seed => coherentComposerSpecies(seed).recipe, []], ['random recipes', seed => randomComposerRecipe(seed), RAW_OVER_80]]) {
     const s = boneSweep(recipeOf);
-    t.diagnostic(`bone sweep, ${label} bone-sweep-0..99: joints ${s.min}..${s.max}, histogram ${s.histogram}; over the quest-3 limit of ${s.limit}: ${s.over} of 100`);
+    t.diagnostic(`bone sweep, ${label} bone-sweep-0..99: joints ${s.min}..${s.max}, histogram ${s.histogram}; over the quest-3 limit of ${s.limit}: ${s.over.length} of 100 unreduced, ${s.overReduced.length} reduced`);
     assert.ok(s.min > 0 && s.max <= COMPOSER_BUDGET.maxBones, `${label}: every graph within the composer's own cap`);
+    assert.deepEqual(s.over, over, `${label}: over the limit without the rule (negative case)`);
+    assert.deepEqual(s.overReduced, [], `${label}: none over the limit with the rule`);
+    for (const r of s.rows) {
+      assert.equal(r.plan.reached, true, r.seed);
+      assert.equal(r.plan.reduced, r.full > s.limit, `${r.seed}: reduced exactly when over`);
+      if (!r.plan.reduced) { assert.equal(r.plan.joints, r.full); assert.deepEqual(r.plan.collapsed, []); continue; }
+      t.diagnostic(`${r.seed}: ${r.full} -> ${r.plan.joints} joints (stage ${r.plan.stage}, ${r.plan.collapsed.length} collapsed)`);
+      assert.ok(r.plan.joints <= s.limit && r.plan.joints === r.full - r.plan.collapsed.length);
+    }
   }
+});
+
+test('export v3: the reduction plan follows the pre-registered unit order and never removes a knee, the root or the head', () => {
+  const graph = buildComposerGraph(deriveComposerIndividual(randomComposerRecipe('bone-sweep-20')).recipe);
+  const units = composerSkeletonUnits(graph);
+  const order = units.map(u => COMPOSER_SKELETON_STAGES.indexOf(u.stage));
+  assert.deepEqual(order, [...order].sort((a, b) => a - b), 'stages in order');
+  const removable = /^(leg_\d+_[LR]_(foot|meta)|tail_\d*[13579]|torso_\d*[13579]|neck_\d*[13579])$/;
+  for (const u of units) for (const j of u.joints) {
+    assert.match(graph.bones[j].name, removable, 'only feet, metapodials and odd tail/torso/neck joints are ever removed');
+    assert.ok(graph.bones[j].parent >= 0);
+  }
+  assert.equal(graph.bones.length, 126);
+  const plan = planComposerSkeleton(graph, 80);
+  assert.equal(plan.version, COMPOSER_SKELETON_VERSION);
+  assert.deepEqual([plan.fullJoints, plan.joints, plan.reduced, plan.reached, plan.stage], [126, 80, true, true, 'metapodials']);
+  // every joint maps to a surviving ancestor-or-self
+  plan.into.forEach((s, j) => {
+    assert.ok(plan.survivors.includes(s));
+    let a = j; while (a !== s) { a = graph.bones[a].parent; assert.ok(a >= 0, `${graph.bones[j].name}: maps to an ancestor`); }
+  });
+  // no reduction needed, and units that run out: nothing is removed
+  assert.deepEqual([planComposerSkeleton(graph, 126).reduced, planComposerSkeleton(graph, 126).joints], [false, 126]);
+  const out = planComposerSkeleton(graph, 10);
+  assert.deepEqual([out.reduced, out.reached, out.joints, out.collapsed.length], [false, false, 126, 0]);
+});
+
+/** The quest-3 exports of the 11 over-limit raw recipes, all clips, seamless (the evidence options). */
+const reducedCache = new Map();
+const reducedExport = seed => { if (!reducedCache.has(seed)) {
+  try { reducedCache.set(seed, exportCreatureGlb(randomComposerRecipe(seed), {target: 'quest-3', seamless: true})); } catch (e) { reducedCache.set(seed, e); }
+} return reducedCache.get(seed); };
+
+test('export v3: the 11 over-limit raw recipes export under quest-3 with a reduced skeleton within the skin-error bound', t => {
+  const lines = [];
+  for (const seed of RAW_OVER_80) {
+    let result = reducedExport(seed);
+    if (seed === 'bone-sweep-70') {
+      // known at 3e0d6e8 and out of scope (LOD reducer, not joints): level 2 cannot reach 1000 triangles. The joint
+      // budget is met; the failure is exactly lod-target level 2 and nothing else.
+      assert.ok(result instanceof ComposerExportBudgetError, String(result));
+      assert.deepEqual(JSON.parse(JSON.stringify(result)).reasons.map(r => [r.code, r.level, r.limit]), [['lod-target', 2, 1000]]);
+      result = exportCreatureGlb(randomComposerRecipe(seed), {target: 'quest-3', seamless: true, lods: [8000, 3000]});
+    }
+    assert.ok(!(result instanceof Error), `${seed}: ${result}`);
+    const {glb, report} = result, sk = report.skeleton, e = sk.skinError;
+    const {json, bin} = readComposerGlb(glb);
+    lines.push(`${seed}${seed === 'bone-sweep-70' ? ' (lods 8000/3000)' : ''}: ${sk.fullJoints} -> ${sk.joints} joints, stage ${sk.stage}, skin error ${(100 * e.fraction).toFixed(3)} % of ${e.diagonal.toFixed(3)} m (${e.motion} key ${e.key}, ${e.verticesChecked} vertices x ${e.keys} keys)`);
+    assert.equal(sk.reduced, true); assert.ok(sk.joints <= 80 && sk.fullJoints > 80);
+    assert.ok(e.pass && e.fraction <= COMPOSER_SKELETON_SKIN_ERROR_BOUND && e.keys > 0 && e.verticesChecked > 0, lines.at(-1));
+    assert.equal(report.mesh.bones, sk.joints); assert.equal(report.budget.actual.bones, sk.joints);
+    // the GLB: survivors only, with consistent joints, weights and channels
+    assert.equal(json.skins[0].joints.length, sk.joints);
+    assert.equal(json.accessors[json.skins[0].inverseBindMatrices].count, sk.joints);
+    assert.equal(json.nodes[1].children.length, sk.joints);
+    assert.deepEqual(json.skins[0].joints.map(n => json.nodes[n].name), sk.survivors.map(j => sk.mapping[j][0]));
+    assert.equal(json.asset.extras.composer.versions.skeleton, COMPOSER_SKELETON_VERSION);
+    assert.deepEqual(json.asset.extras.composer.skeleton, {version: COMPOSER_SKELETON_VERSION, fullJoints: sk.fullJoints, joints: sk.joints, collapsed: sk.collapsed.map(c => [c.joint, c.into])});
+    for (const mesh of json.meshes) {
+      const prim = mesh.primitives[0];
+      const jw = accessorArray(json, bin, prim.attributes.JOINTS_0), w = accessorArray(json, bin, prim.attributes.WEIGHTS_0);
+      for (let v = 0; v < w.length; v += 4) {
+        assert.ok(Math.abs(w[v] + w[v + 1] + w[v + 2] + w[v + 3] - 1) <= 1e-6);
+        for (let c = 0; c < 4; c++) assert.ok(jw[v + c] < sk.joints);
+      }
+    }
+    const lastJoint = 2 + sk.joints - 1;
+    for (const anim of json.animations) for (const ch of anim.channels) assert.ok(ch.target.node >= 2 && ch.target.node <= lastJoint);
+    assert.equal(sk.mapping.length, sk.fullJoints);
+  }
+  t.diagnostic(lines.join('\n'));
+  console.log(lines.join('\n'));
+});
+
+test('export v3: with the rule off the 11 fail on bones; the reduced GLB keeps the unreduced geometry; two runs are byte-identical', () => {
+  for (const seed of RAW_OVER_80) {
+    assert.throws(() => exportCreatureGlb(randomComposerRecipe(seed), {target: 'quest-3', clips: [], reduceSkeleton: false}), e => {
+      const r = JSON.parse(JSON.stringify(e)).reasons.find(x => x.code === 'bones');
+      assert.ok(r, `${seed}: a bones reason`); assert.equal(r.limit, 80); assert.ok(r.actual > 80);
+      return true;
+    }, seed);
+  }
+  const seed = 'bone-sweep-20', recipe = randomComposerRecipe(seed);
+  const one = reducedExport(seed), two = exportCreatureGlb(structuredClone(recipe), {target: 'quest-3', seamless: true});
+  assert.equal(sha(one.glb), sha(two.glb), 'byte-identical on a second export');
+  // desktop-web with the same LOD chain keeps all 126 joints; positions, normals, colours, gloss and indices are the same bytes
+  const desk = exportCreatureGlb(recipe, {target: 'desktop-web', seamless: true, lods: [8000, 3000, 1000]});
+  assert.equal(desk.report.skeleton.reduced, false); assert.equal(desk.report.mesh.bones, 126);
+  const r = readComposerGlb(one.glb), d = readComposerGlb(desk.glb);
+  const bytesOf = ({json, bin}, a) => { const acc = json.accessors[a], v = json.bufferViews[acc.bufferView]; return Buffer.from(bin.subarray(v.byteOffset, v.byteOffset + v.byteLength)); };
+  assert.equal(r.json.meshes.length, 3);
+  r.json.meshes.forEach((mesh, i) => {
+    const pr = mesh.primitives[0], pd = d.json.meshes[i].primitives[0];
+    for (const attr of ['POSITION', 'NORMAL', 'COLOR_0', COMPOSER_GLOSS_ATTRIBUTE]) assert.equal(Buffer.compare(bytesOf(r, pr.attributes[attr]), bytesOf(d, pd.attributes[attr])), 0, `level ${i} ${attr}`);
+    assert.equal(Buffer.compare(bytesOf(r, pr.indices), bytesOf(d, pd.indices)), 0, `level ${i} indices`);
+  });
+});
+
+test('export v3: GLTFLoader playback of a reduced GLB differs from the full skeleton by at most the reported skin error', async () => {
+  const seed = 'bone-sweep-46', recipe = randomComposerRecipe(seed);
+  const reduced = reducedExport(seed);
+  const full = exportCreatureGlb(recipe, {target: 'desktop-web', seamless: true, lods: [8000, 3000, 1000]});
+  const e = reduced.report.skeleton.skinError;
+  const a = new THREE.Vector3(), b = new THREE.Vector3();
+  const load = async glb => { const gltf = await loadGlb(glb); let mesh = null; gltf.scene.traverse(o => { if (o.isSkinnedMesh && !mesh) mesh = o; }); return {gltf, mesh, mixer: new THREE.AnimationMixer(gltf.scene)}; };
+  const R = await load(reduced.glb), F = await load(full.glb);
+  assert.equal(R.mesh.skeleton.bones.length, reduced.report.skeleton.joints); assert.equal(F.mesh.skeleton.bones.length, reduced.report.skeleton.fullJoints);
+  const clipR = R.gltf.animations.find(c => c.name === e.motion), clipF = F.gltf.animations.find(c => c.name === e.motion);
+  const times = clipR.tracks[0].times;
+  const pose = (side, clip, t) => { side.mixer.stopAllAction(); const act = side.mixer.clipAction(clip); act.setLoop(THREE.LoopOnce, 1); act.clampWhenFinished = true; act.reset().play(); act.time = t; side.mixer.update(0); side.gltf.scene.updateMatrixWorld(true); };
+  let worst = 0, atReported = 0;
+  for (const k of [0, Math.floor(times.length / 3), e.key, times.length - 1]) {
+    pose(R, clipR, times[k]); pose(F, clipF, times[k]);
+    for (let v = 0; v < R.mesh.geometry.attributes.position.count; v++) {
+      R.mesh.getVertexPosition(v, a); F.mesh.getVertexPosition(v, b);
+      const dist = a.distanceTo(b); worst = Math.max(worst, dist);
+      if (k === e.key && v === e.vertex) atReported = dist;
+    }
+  }
+  const line = `${seed} ${e.motion}: three.js skinned worst ${worst.toFixed(5)} m, at the reported vertex/key ${atReported.toFixed(5)} m, reported ${e.max.toFixed(5)} m`;
+  console.log(line);
+  assert.ok(worst <= e.max + 1e-5, line);
+  assert.ok(Math.abs(atReported - e.max) <= 1e-5, line);
 });
 
 test('export v2: quest-3 writes an MSFT_lod chain within budget and reports it', () => {
@@ -593,4 +778,29 @@ test('export v2 CLI: brief options, sidecar-2 with the LOD chain, budget failure
     console.log = log; process.exitCode = exitCode;
     rmSync(dir, {recursive: true, force: true});
   }
+});
+
+test('export v3 CLI: a reduced export records the skeleton in the sidecar and the brief; --no-reduce-skeleton keeps every joint', () => {
+  assert.equal(parseArgs(['--out', 'x', '--preset', 'ape', '--target', 'quest-3', '--no-reduce-skeleton']).reduceSkeleton, false);
+  assert.equal(parseArgs(['--out', 'x', '--preset', 'ape', '--target', 'quest-3']).reduceSkeleton, undefined);
+  const text = encodeComposerRecipe(randomComposerRecipe('bone-sweep-24'));
+  const built = buildCreatureFiles({kind: 'recipe', recipe: text}, {target: 'quest-3', seamless: true, motions: ['idle', 'walk']});
+  const sk = built.sidecar.skeleton;
+  assert.equal(built.sidecar.schema, CREATURE_EXPORT_SIDECAR_SCHEMA_V3);
+  assert.deepEqual([sk.version, sk.fullJoints, sk.joints, sk.reduced, sk.stage], [COMPOSER_SKELETON_VERSION, 82, 80, true, 'feet']);
+  assert.deepEqual(sk.collapsed.map(c => c.stage), ['feet', 'feet']);
+  assert.ok(sk.skinError.pass && sk.skinError.fraction <= COMPOSER_SKELETON_SKIN_ERROR_BOUND);
+  const report = exportCreatureGlb(text, {target: 'quest-3', seamless: true, clips: ['idle', 'walk']}).report;
+  assert.equal(sk.mappingSha256, sha(JSON.stringify(report.skeleton.mapping)));
+  assert.equal(report.skeleton.mapping.filter(([a, b]) => a !== b).length, 2);
+  assert.ok(!('mapping' in sk) && !('survivors' in sk), 'the sidecar carries the mapping hash, not the mapping');
+  const brief = JSON.parse(new TextDecoder().decode(built.files.find(([n]) => n.endsWith('.brief.json'))[1]));
+  assert.ok(brief.acceptance.technical.some(l => /^reduced skeleton fauna-composer-skeleton-1: 82 -> 80 joints, skin error \d+\.\d{3} % of the body diagonal \(bound 2 %\)$/.test(l)));
+  // an in-budget profiled export carries an unreduced skeleton block; a plain export carries none
+  const quest = buildCreatureFiles({kind: 'preset', preset: 'bird'}, {target: 'quest-3', motions: ['idle']}).sidecar.skeleton;
+  assert.deepEqual([quest.reduced, quest.stage, quest.collapsed, quest.skinError, quest.fullJoints === quest.joints], [false, null, [], null, true]);
+  assert.equal(buildCreatureFiles({kind: 'preset', preset: 'bird'}, {motions: ['idle']}).sidecar.skeleton, undefined);
+  // the rule off: the same recipe fails on bones
+  assert.throws(() => buildCreatureFiles({kind: 'recipe', recipe: text}, {target: 'quest-3', motions: ['idle'], reduceSkeleton: false}),
+    e => e instanceof ComposerExportBudgetError && e.reasons.some(r => r.code === 'bones' && r.actual === 82));
 });
