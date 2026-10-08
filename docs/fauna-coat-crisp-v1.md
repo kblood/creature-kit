@@ -246,6 +246,13 @@ PASS (every 3e0d6e8 export of both coat modules, Object.is) and its one-ulp nega
 - **Trunk tip (d3).** `TRUNK_TIP`: the bulb rolls in over two rings past the widest (1.04 r and 0.90 r) to a flat end
   face of 0.62 r at 0.56 r (was 0.86 r behind a 1.06 r ring); nostrils 0.3 r apart, half width 0.22 r, so they stay on
   the smaller face. Triangle count of the tip unchanged except one ring (+32 per trunk).
+  - Erratum (B re-key, 2026-10-08): the tip adds +32 per trunk, and the muzzle-to-16 zipper moves one ring out with
+    respaceStations (pachyderm z 5→6 at 28 segments +24, trunked-centipede z 3→4 at 22 segments +12), so trunk totals
+    move +56 / +44 (14844→14900, 28408→28452). The budget figures above already included them. Export-side LOD
+    evidence: `Assets/_assetctl/creature-kit/export-3/skin5-13c7b35/` (8 of 16 rows differ, exactly the blend-moved or
+    trunked specimens; all within quest-3; ungulate-grazer and cursorial-carnivore level-2 plane error rose, watch item).
+  - Watch items (not blockers): level-2 maxPlaneError ungulate-grazer-ce1-1 0.127 → 0.179, cursorial-carnivore-ce1-2
+    0.086 → 0.105 (`lod-table-vs-v3.txt`).
 - **Gate (pre-registered metrics c, d), tests/fauna-composer-coat-crisp.test.mjs:**
 
   | metric | result | threshold | |

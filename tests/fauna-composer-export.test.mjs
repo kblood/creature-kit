@@ -297,33 +297,50 @@ test('export CLI: sidecar and brief carry provenance; an existing file is never 
  *   quest-3 bird      7a590ed3f6c2ed5d… -> d45acf82a921e081…  (the v2 specimen, `questBird` below)
  * Proof that nothing but the two strings moved: `bin` pins each BIN chunk as exported at 3e0d6e8 (unchanged), and
  * `json` pins the 3e0d6e8 JSON chunk text (trailing padding trimmed); the test maps the two v3 strings back to the
- * 3e0d6e8 ones and hashes the result, so any other JSON change fails it. */
+ * 3e0d6e8 ones and hashes the result, so any other JSON change fails it.
+ * 2026-10-08: core re-keyed a0a31556… -> 5c941506…, as at kit main 13c7b35, skin-5 (merge of kit/coat-crisp:
+ * crisp coat, dichromatism, seam normals, trunk). Decoded accessor by accessor against the 8157b10 export: only
+ * NORMAL moved on all six (welded seam normals); coherent (debug.blendUnfolded) also moved POSITION and COLOR_0 on
+ * 212 of the 216 moved neck_4/head vertices (max colour delta 0.0073): coat re-sampled at the moved positions (sex none;
+ * the colour change is a subset of the position change); accepted as a knock-on, Opus-decided on Kasper's instruction,
+ * overrulable. The JSON differs only in versions.skin skin-4 -> skin-5; nodes, skins, animations, joints, channels and
+ * byte lengths are identical. 16x3 LOD table (Assets/_assetctl/creature-kit/export-3/skin5-13c7b35/): 8 of 16 rows
+ * differ (the blend-moved or trunked specimens), all within quest-3; watch items: level-2 maxPlaneError ungulate-grazer
+ * 0.127 -> 0.179, cursorial-carnivore 0.086 -> 0.105. GLB sha256, old -> new:
+ *   bird              a9007575ad408f80… -> 9b9edad9e835b428…  (1007704 bytes, both)
+ *   centipede         b3981c9365265006… -> 7b67645e52182d1c…  (1721324 bytes, both)
+ *   worm              1395baa897fbc8a8… -> 84d8b6b06d0c942f…  (619408 bytes, both)
+ *   winged-ape-rhino  c26e0d16388e289f… -> 102a45b16c48cab8…  (1488260 bytes, both)
+ *   coherent          a91e920cab8c5607… -> 2ac739d47b70d427…  (905608 bytes, both)
+ *   quest-3 bird      d45acf82a921e081… -> 6228c286f4768cd1…  (1027136 bytes, both)
+ * `bin` and `json` below are the skin-5 BIN chunk and the skin-5 JSON chunk with the v3 strings mapped back as before.
+ */
 const V1_PINS = {
-  core: 'a0a315563251220cedb09cb760b07a80de3441a0c863bf981c513249f6148f5c',
+  core: '5c941506731da4d7519b136835a76c4d1ef0cd1afc3d067395fafb469d43a955',
   glb: {
-    bird: 'a9007575ad408f800e1d57f0dc881a18e516af4738de2b2a569d5111633f9519',
-    centipede: 'b3981c9365265006441de6bacb1708bd5d8b7abcbb1792c9937cb6c77c317d1f',
-    worm: '1395baa897fbc8a82791fdd410df420343295f2986439e0b4b3bdc1f3e354fa5',
-    'winged-ape-rhino': 'c26e0d16388e289f3a4fc4afcde9397ebb13a8f8f6ccea4b7c259c6b25d13295',
-    coherent: 'a91e920cab8c560719e8c537591f2bdcf7a1e30504c5e5c9184e5ce36144c4fd',
+    bird: '9b9edad9e835b42814becb7ae771a1ee46f5d2f23b52c63419600ef5438508b5',
+    centipede: '7b67645e52182d1c0da6343c0bbdac4b0d851ceb0cb3c420e20abb3115cae92d',
+    worm: '84d8b6b06d0c942f67db9aa41f738c1f48a154e58474f7d492f7597be149fc9f',
+    'winged-ape-rhino': '102a45b16c48cab83020eb288d04591d3f417cad93e5ab5065a7f61264867404',
+    coherent: '2ac739d47b70d427222764d0cca525978f62f9fdcafd5f12f2c5d695f19718c7',
   },
   bin: {
-    bird: 'eb7ce2ec796628292d8cdd168d5de42ac2e5b56dd848df80682927300210f54b',
-    centipede: '7c626dc4adfcd28e9bf8b081b1fc2693480504c35761bfe1283df45c9db5f2b3',
-    worm: 'c6f8eed868e80ba98f133175b904f67056ef2439c766606b96f9db9f49398d9d',
-    'winged-ape-rhino': '291500f1eae837146f5457913365f57392990123a7c8790cd26d746ebe31ce57',
-    coherent: 'b4d9ba3394c23e5637bfe889d9bcc7d5b20adbfb872a648e3a43733d225e563e',
-    questBird: '9912b20408e07337a9019b350bd4109f348b5049508ad9344ac591ef37fc8c14',
+    bird: '4d179e77f6117a628856fe14f92462265e1a58855ff24af70b1f66c68033dc7e',
+    centipede: '82dc2570a179fd0f7fdcad74722c2e973a28e1c86d4d6f25a3ab0f9d1f190b55',
+    worm: '941278a28617368078f104a5b07ad83b4d0aa50163314c0414da2990b9621274',
+    'winged-ape-rhino': '2846994420928419ac12056c41e45b9704f10c26dcc15192b6946eb2b8d16f50',
+    coherent: '61eb2008ff4d9effb71e2df916fc702b6601c3174787721ff96febede4579650',
+    questBird: '022a3e8a5814f4dd828fd32ec1793970694628f99c61ac1313fd941126848b07',
   },
   json: {
-    bird: '4222bf5a3648550d63299b6ffe4c7d7565dee13aa271a97f5a6d70d4e5b2d49f',
-    centipede: 'e62a79b79f2f8bd2781770baf1e6b8e589496eeaec9f7978e25f4a1dce28724e',
-    worm: '334820126b43be0e598f547f5b350011d56a27303343a58576a12720d8810b56',
-    'winged-ape-rhino': '291fe5b3c9b749ce2972c5558517044b4ccb760fabe987d4e157c8c9974083a4',
-    coherent: 'c6354a2bd7369c9cc17351d111b3ac67e1518af66c4b4ab411a9d7339e28024f',
-    questBird: 'e693152538be348ec5fff807765845c0781535fe29846815a1cca015793e1b20',
+    bird: '2f6f76a815516372a472e3892a7ee4e8086e1dc3e1fdaa0650dfc409c6d8eb94',
+    centipede: '96896b6bbeeec63fe3e92807f0e7a5bd7bd8252aa0d93fc1716cf84e7d34b782',
+    worm: '4c3eb130f5a31091b9c44fedff6611fb5a58cdda0279c8ec4dca32335b65522d',
+    'winged-ape-rhino': '8546b181bbbc62f6aeb032a9d0e6fd2da0e6294aa05fa2cea07715df114d539d',
+    coherent: '3e61616c519140e410b5f1c868ccabd057f3a352a94fd2062fe2dd180970b41b',
+    questBird: '71d9b9c2916558c90e858b92e23b70ed1f4f9dbc3871c5f7082805b030420bec',
   },
-  questBirdGlb: 'd45acf82a921e0819f2752ea3e2b90f86f35e0c249f6f3ab8d1d3b5d90c2a7db',
+  questBirdGlb: '6228c286f4768cd133ed20dbc90c739046aed4d54f6c2bd30faa1a7c4b66a36f',
 };
 /** The JSON chunk text with the v3 strings mapped back to the strings the 3e0d6e8 export wrote (export -1 or -2). */
 const jsonAsAt3e0d6e8 = (glb, v) => {
