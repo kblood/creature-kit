@@ -165,3 +165,40 @@ PASS (every 3e0d6e8 export of both coat modules, Object.is) and its one-ulp nega
   crisp vertices checked, max error 5.8e-8; dinosaur 4964 / 4964, max error 4.9e-8 (<= 2e-6 and >= 95 % PASS).
   Extra coverage (not pre-registered): rosettes, dapple, stripes, bands, brindle and the trunked centipede, max error
   <= 5.8e-8; on the bird's plumage palette (accent blue = 0) 1132 / 2296 vertices are away from the 0.002 floor.
+
+### Step 3: sexual dichromatism (skin-5)
+
+- **Source.** Existing fields only: `traits.sex`, `recipe.dimorphism`, `traits.maturity` (full effect from maturity
+  0.95, none below 0.55) and `recipe.palette`. No recipe field was added; v1..v4 links decode unchanged.
+- **Map** (`dichromatic` in `fauna-composer-mesh.ts`), weighted by dimorphism x maturity x the back-and-flank weight
+  `smooth(-0.85, 0.15, dorsal)` (the belly stays as the female's):
+  - plumage: the coat mixes toward the palette accent (55 % at full weight): breeding plumage;
+  - every other palette: a pure luminance scale that lowers the palette base by 16 L* units, floored at 40 % of the
+    base L*; a coat too dark to drop that far (the ink palette) takes a wash of the palette accent for the shortfall
+    (30 % x shortfall). A first draft also raised saturation by 50 %; it pushed 1158-3147 vertices per reptile and
+    savanna male out of gamut (a channel <= 0), so saturation was dropped. No channel leaves gamut now (0 vertices
+    on all 12 presets).
+  - The map is affine in the colour, so the crisp layers stay exact on males (giraffe/spots and ape/stripes males:
+    5790 / 5790 and 1413 / 1413 checked, max error 5.5e-8 and 1.4e-8).
+- **Gate (pre-registered metric b), CIE76 dE of the mean torso colour, male vs female, individualSeed 7:**
+
+  | preset | palette | dE at dimorphism 1 (pinned) | at 0.5 | at 0 |
+  |---|---|---|---|---|
+  | dinosaur | reptile | 9.012490 | 4.943 | 0 (bitwise) |
+  | turtle | reptile | 7.824129 | 4.336 | 0 (bitwise) |
+  | giraffe | savanna | 8.176930 | 4.407 | 0 (bitwise) |
+  | bird | plumage | 35.183680 | 17.959 | 0 (bitwise) |
+  | ostrich | ink | 11.108634 | 6.118 | 0 (bitwise) |
+  | rhinoceros | slate | 9.019166 | 4.903 | 0 (bitwise) |
+  | ape | ink | 9.784565 | 5.382 | 0 (bitwise) |
+  | worm | earth | 5.959899 | 3.355 | 0 (bitwise) |
+  | centipede | ink | 6.271398 | 4.027 | 0 (bitwise) |
+  | shelled-giraffe-bird | savanna | 8.428803 | 4.491 | 0 (bitwise) |
+  | trunked-centipede | slate | 6.922974 | 3.826 | 0 (bitwise) |
+  | winged-ape-rhino | earth | 7.554235 | 4.177 | 0 (bitwise) |
+
+  PASS: plumage 35.18 >= 12; the other 11 >= 5 (minimum 5.96, worm); every dimorphism-0.5 value >= 0.4 x its
+  dimorphism-1 value (lowest ratio 0.54, giraffe); dimorphism 0 exactly 0 with bitwise-equal colour arrays. Female,
+  sexless (type specimen) and dimorphism-0 male colour arrays of all 12 presets are byte-identical to 819be67 (48
+  digests pinned); negative control: the dimorphism-1 male giraffe differs from its pinned female.
+- **Before** (section 1): 0.40 .. 1.63 at dimorphism 1, under the just-noticeable difference.

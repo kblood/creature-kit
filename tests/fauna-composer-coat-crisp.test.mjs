@@ -2,6 +2,7 @@
 // per-vertex layers and the pre-registered metrics (section 1 of the doc; thresholds are not changed here).
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import * as THREE from 'three';
 import {
@@ -23,6 +24,7 @@ const skinOf = (overrides, options = {debug: true}) => {
   return buildComposerSkin(buildComposerGraph(deriveComposerIndividual(recipe).recipe), options);
 };
 const lum = (r, g, b) => 0.2126 * r + 0.7152 * g + 0.0722 * b;
+const MALE = {sex: 'male', dimorphism: 1, individualSeed: 7, variability: 0, maturity: 1, condition: 0};
 
 // ------------------------------------------------------------------ the layer evaluator is evaluateCoat
 test('evaluateCoatWithMask with coatPatternProbe mask and patch equals evaluateCoat (Object.is, every pattern, region and mark)', () => {
@@ -120,9 +122,11 @@ test('layers are exact: the shader formula at every crisp vertex reproduces its 
     // extra coverage (not pre-registered): every crisp pattern on a full-size body. The plumage accent has a zero
     // blue channel, so about half of the bird's mask-1 layers sit on the 0.002 floor and are not checked there.
     ['giraffe', 'rosettes', 1, 0.95], ['rhinoceros', 'dapple', 1, 0.95], ['ape', 'stripes', 1, 0.95], ['turtle', 'bands', 1, 0.95], ['bird', 'brindle', 1, 0.4], ['trunked-centipede', 'spots', 1, 0.95],
+    // step 3: dichromatic males (the darkening map, and the accent wash of a dark ink coat) keep the layers exact
+    ['giraffe', 'spots', 1, 0.95, MALE], ['ape', 'stripes', 1, 0.95, MALE],
   ];
-  for (const [preset, pattern, bodyLength, share] of bodies) {
-    const skin = skinOf({...composerPreset(preset), pattern, bodyLength});
+  for (const [preset, pattern, bodyLength, share, extra = {}] of bodies) {
+    const skin = skinOf({...composerPreset(preset), pattern, bodyLength, ...extra});
     const [checked, crisp, maxErr] = vertexEquality(skin);
     assert.ok(crisp > 500, `${preset}/${pattern}: ${crisp} crisp vertices`);
     assert.ok(checked >= share * crisp, `${preset}/${pattern}: ${checked}/${crisp} away from the clamp bounds`);
@@ -246,4 +250,113 @@ test('createComposerCreature: a crisp coat gets the layer attributes and the cri
     assert.equal(plain.mesh.geometry.getAttribute('coatL0'), undefined);
     assert.equal(plain.mesh.material.customProgramCacheKey(), COMPOSER_GLOSS_CACHE_KEY);
   } finally { plain.dispose(); }
+});
+
+// ------------------------------------------------------------------ metric (b): sexual dichromatism
+/** CIE76 Lab (D65) of a linear-RGB colour. */
+const labOf = ([r, g, b]) => {
+  const X = 0.4124 * r + 0.3576 * g + 0.1805 * b, Y = 0.2126 * r + 0.7152 * g + 0.0722 * b, Z = 0.0193 * r + 0.1192 * g + 0.9505 * b;
+  const f = t => t > 216 / 24389 ? Math.cbrt(t) : (24389 / 27 * t + 16) / 116;
+  const fx = f(X / 0.95047), fy = f(Y), fz = f(Z / 1.08883);
+  return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
+};
+const TORSO = COAT_REGIONS.indexOf('torso');
+const torsoMean = skin => {
+  const m = [0, 0, 0]; let n = 0;
+  for (let v = 0; v < skin.vertexCount; v++) if (skin.regions[v] === TORSO) { for (let k = 0; k < 3; k++) m[k] += skin.colors[3 * v + k]; n++; }
+  return m.map(x => x / n);
+};
+const sexSkin = (preset, sex, dimorphism, individualSeed = 7) => {
+  const recipe = normalizeComposerRecipe({...composerPreset(preset), sex, dimorphism, individualSeed, variability: 0, maturity: 1, condition: 0}).recipe;
+  const derived = deriveComposerIndividual(recipe);
+  return {skin: buildComposerSkin(buildComposerGraph(derived.recipe)), sex: derived.traits.sex, palette: recipe.palette};
+};
+const deltaE = (a, b) => { const p = labOf(torsoMean(a)), q = labOf(torsoMean(b)); return Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]); };
+const colourDigest = skin => createHash('sha256').update(Buffer.from(skin.colors.buffer, skin.colors.byteOffset, skin.colors.byteLength)).digest('hex').slice(0, 16);
+
+/** dE (male vs female, dimorphism 1, individualSeed 7, variability 0, maturity 1, condition 0) per preset, pinned at
+ * 1e-6 (pre-registered metric b). */
+const DICHROMATISM_DE_PINS = {dinosaur: 9.01249016036704, turtle: 7.824128637621952, giraffe: 8.176930110350218, bird: 35.18368016177891, ostrich: 11.108633687985092, rhinoceros: 9.019165940473389, ape: 9.784564835309515, worm: 5.959898681917788, centipede: 6.271398108322732, 'shelled-giraffe-bird': 8.428803391822855, 'trunked-centipede': 6.9229743932803895, 'winged-ape-rhino': 7.5542351883197};
+/** `<resolved sex>:<colour digest>` of female, sexless (type specimen) and dimorphism-0 male builds as at 819be67
+ * (step 2, before dichromatism): metric (b) requires that they do not change. */
+const UNCHANGED_COLOUR_PINS = {
+  'dinosaur/female-1': 'female:b2d32bb65d6543cb',
+  'dinosaur/female-0.5': 'female:b2d32bb65d6543cb',
+  'dinosaur/none': 'none:b2d32bb65d6543cb',
+  'dinosaur/male-0': 'male:b2d32bb65d6543cb',
+  'turtle/female-1': 'female:73768b9fdebdc622',
+  'turtle/female-0.5': 'female:73768b9fdebdc622',
+  'turtle/none': 'none:73768b9fdebdc622',
+  'turtle/male-0': 'male:73768b9fdebdc622',
+  'giraffe/female-1': 'female:4c475ff4f63f4581',
+  'giraffe/female-0.5': 'female:3593f7465e4fa7ba',
+  'giraffe/none': 'none:94ebfe01f884a182',
+  'giraffe/male-0': 'male:94ebfe01f884a182',
+  'bird/female-1': 'female:923509841fb37105',
+  'bird/female-0.5': 'female:923509841fb37105',
+  'bird/none': 'none:923509841fb37105',
+  'bird/male-0': 'male:923509841fb37105',
+  'ostrich/female-1': 'female:f60416d30e536778',
+  'ostrich/female-0.5': 'female:f60416d30e536778',
+  'ostrich/none': 'none:f60416d30e536778',
+  'ostrich/male-0': 'male:f60416d30e536778',
+  'rhinoceros/female-1': 'female:bbc0a4d77f5c9fce',
+  'rhinoceros/female-0.5': 'female:a327f8147c6fb573',
+  'rhinoceros/none': 'none:fb23351b96d10b39',
+  'rhinoceros/male-0': 'male:fb23351b96d10b39',
+  'ape/female-1': 'female:91f9f64c0ed4ccf3',
+  'ape/female-0.5': 'female:91f9f64c0ed4ccf3',
+  'ape/none': 'none:91f9f64c0ed4ccf3',
+  'ape/male-0': 'male:91f9f64c0ed4ccf3',
+  'worm/female-1': 'female:b192a7e4ae2f0b11',
+  'worm/female-0.5': 'female:b192a7e4ae2f0b11',
+  'worm/none': 'none:b192a7e4ae2f0b11',
+  'worm/male-0': 'male:b192a7e4ae2f0b11',
+  'centipede/female-1': 'female:ba058bdae8bb65fd',
+  'centipede/female-0.5': 'female:ba058bdae8bb65fd',
+  'centipede/none': 'none:ba058bdae8bb65fd',
+  'centipede/male-0': 'male:ba058bdae8bb65fd',
+  'shelled-giraffe-bird/female-1': 'female:c0d118cfb3cf59b9',
+  'shelled-giraffe-bird/female-0.5': 'female:c0d118cfb3cf59b9',
+  'shelled-giraffe-bird/none': 'none:c0d118cfb3cf59b9',
+  'shelled-giraffe-bird/male-0': 'male:c0d118cfb3cf59b9',
+  'trunked-centipede/female-1': 'female:27e370cf20970ee1',
+  'trunked-centipede/female-0.5': 'female:27e370cf20970ee1',
+  'trunked-centipede/none': 'none:27e370cf20970ee1',
+  'trunked-centipede/male-0': 'male:27e370cf20970ee1',
+  'winged-ape-rhino/female-1': 'female:88fd26785bcf282f',
+  'winged-ape-rhino/female-0.5': 'female:88fd26785bcf282f',
+  'winged-ape-rhino/none': 'none:88fd26785bcf282f',
+  'winged-ape-rhino/male-0': 'male:88fd26785bcf282f',
+};
+
+test('metric (b): dichromatism dE >= 12 (plumage) / >= 5 at dimorphism 1, >= 0.4 x that at 0.5, exactly 0 and bitwise at 0', () => {
+  const report = {};
+  for (const preset of Object.keys(DICHROMATISM_DE_PINS)) {
+    const m1 = sexSkin(preset, 'male', 1), f1 = sexSkin(preset, 'female', 1);
+    const m5 = sexSkin(preset, 'male', 0.5), f5 = sexSkin(preset, 'female', 0.5);
+    const m0 = sexSkin(preset, 'male', 0), f0 = sexSkin(preset, 'female', 0);
+    assert.equal(m1.sex, 'male'); assert.equal(f1.sex, 'female');
+    const d1 = deltaE(m1.skin, f1.skin), d5 = deltaE(m5.skin, f5.skin), d0 = deltaE(m0.skin, f0.skin);
+    report[preset] = {palette: m1.palette, d1, d5, d0};
+    assert.ok(d1 >= (m1.palette === 'plumage' ? 12 : 5), `${preset} (${m1.palette}): dE ${d1} at dimorphism 1`);
+    assert.ok(d5 >= 0.4 * d1, `${preset}: dE ${d5} at dimorphism 0.5 < 0.4 x ${d1}`);
+    assert.equal(d0, 0, `${preset}: dE ${d0} at dimorphism 0`);
+    assert.deepEqual(m0.skin.colors, f0.skin.colors, `${preset}: dimorphism 0 colours bitwise equal`);
+    assert.ok(Math.abs(d1 - DICHROMATISM_DE_PINS[preset]) <= 1e-6, `${preset}: dE ${d1} != pin ${DICHROMATISM_DE_PINS[preset]}`);
+  }
+  if (process.env.COAT_CRISP_REPORT) console.log('dichromatism', JSON.stringify(report));
+});
+
+test('metric (b): female, sexless and dimorphism-0 male colours are byte-identical to before dichromatism (negative: a male differs)', () => {
+  const runs = {'female-1': ['female', 1, 7], 'female-0.5': ['female', 0.5, 7], none: ['auto', 1, 0], 'male-0': ['male', 0, 7]};
+  for (const [key, pin] of Object.entries(UNCHANGED_COLOUR_PINS)) {
+    const [preset, tag] = key.split('/');
+    const [sex, dimorphism, seed] = runs[tag];
+    const built = sexSkin(preset, sex, dimorphism, seed);
+    assert.equal(`${built.sex}:${colourDigest(built.skin)}`, pin, key);
+  }
+  // negative case: a dimorphism-1 male differs from its pinned female, so the digest check can fail
+  const male = sexSkin('giraffe', 'male', 1);
+  assert.notEqual(`female:${colourDigest(male.skin)}`, UNCHANGED_COLOUR_PINS['giraffe/female-1']);
 });

@@ -146,6 +146,25 @@ const smooth = (lo: number, hi: number, v: number) => { const t = clamp((v - lo)
 const gauss = (x: number, m: number, sigma: number) => Math.exp(-0.5 * ((x - m) / sigma) ** 2);
 const mixC = (a: RGB, b: RGB, t: number): RGB => [mix(a[0], b[0], t), mix(a[1], b[1], t), mix(a[2], b[2], t)];
 const scaleC = (a: RGB, k: number): RGB => [a[0] * k, a[1] * k, a[2] * k];
+/** CIE L* (0..100) of a relative luminance, and back. */
+const lstarOf = (y: number) => y > 216 / 24389 ? 116 * Math.cbrt(y) - 16 : y * 24389 / 27;
+const lumOfLstar = (l: number) => l > 8 ? ((l + 16) / 116) ** 3 : l * 27 / 24389;
+/** Male coat colour at dichromatism weight w (0 = unchanged, bitwise). Birds take the palette accent (breeding
+ * plumage). Other coats get a darker back: the luminance factor lowers the palette base by DICHRO.lstar perceptual
+ * lightness units at w = 1 whatever the base lightness (a savanna coat turns a deeper tan); a dark coat that cannot
+ * drop that far (floor: DICHRO.floor of its L*) takes a wash of the palette accent for the shortfall (a dark animal
+ * with a coloured male flush). A pure luminance scale and a mix toward an in-gamut colour, so the result stays in
+ * gamut; every factor depends on the palette, never on `c`, so the map is affine in `c` and the crisp coat layers
+ * stay exact. */
+const dichromatic = (c: RGB, w: number, plumage: boolean, accent: RGB, base: RGB): RGB => {
+  if (!(w > 0)) return c;
+  if (plumage) return mixC(c, accent, DICHRO.plumageMix * w);
+  const yb = Math.max(1e-6, 0.2126 * base[0] + 0.7152 * base[1] + 0.0722 * base[2]), lb = lstarOf(yb);
+  const floor = DICHRO.floor * lb, short = Math.max(0, 1 - (lb - floor) / DICHRO.lstar);
+  const out = scaleC(c, lumOfLstar(Math.max(floor, lb - DICHRO.lstar * w)) / yb);
+  return short > 0 ? mixC(out, accent, DICHRO.shortAccent * short * w) : out;
+};
+const DICHRO = {plumageMix: 0.55, lstar: 16, floor: 0.4, shortAccent: 0.3};
 const TAU = Math.PI * 2;
 const REGION = Object.fromEntries(COAT_REGIONS.map((name, i) => [name, i])) as Record<CoatRegion, number>;
 const vec = (v: THREE.Vector3): Vec3 => [v.x, v.y, v.z];
@@ -546,6 +565,9 @@ export function buildComposerSkin(graph: ComposerGraph, options: ComposerSkinOpt
   const skinMul = (1 + jv * (u9[10]! - 0.5) * 0.3) ** 2.2, eyeMul = (1 + jv * (u9[11]! - 0.5) * 0.2) ** 2.2;
   const pal = {...genome.colours, skin: scaleC(genome.colours.skin, skinMul), keratin: scaleC(genome.colours.keratin, skinMul), eye: scaleC(genome.colours.eye, eyeMul)} as Palette;
   const male = traits.sex === 'male' && r.dimorphism > 0;
+  // sexual dichromatism (skin-5, docs/fauna-coat-crisp-v1.md metric b): an adult male's back and flanks take a richer
+  // coat, from existing fields only (sex, dimorphism, maturity, palette); females and sexless animals are untouched
+  const dichro = male ? r.dimorphism * smooth(0.55, 0.95, traits.maturity) : 0;
   const SOIL: RGB = [0.155, 0.117, 0.08];
 
   // coat frame: origin at the torso centre, x along the torso (in the sagittal plane), z lateral
@@ -590,6 +612,7 @@ export function buildComposerSkin(graph: ComposerGraph, options: ComposerSkinOpt
     if (mottleAmp > 0) k *= 1 + mottleAmp * 2 * (valueNoise3(sample.x * 4.5, sample.y * 4.5, sample.z * 4.5, mottleSeed) - 0.5);
     if (male) k *= 1 - 0.06 * r.dimorphism * smooth(-0.2, 0.7, dorsal);
     if (k !== 1) c = scaleC(c, Math.pow(k, 2.2));
+    if (dichro > 0) c = dichromatic(c, dichro * smooth(-0.85, 0.15, dorsal), r.palette === 'plumage', pal.accent, pal.base);
     if (r.palette === 'plumage' && region === 'neck') c = mixC(c, pal.accent, 0.25);
     // dried mud and dust on the lower legs, varying per individual
     if (soil > 0 && (region === 'limb-lower' || region === 'foot' || region === 'limb-upper') && r.layout !== 'limbless') c = mixC(c, SOIL, soil * smooth(soilHeight * groundRef, 0.02 * groundRef, p.y));
