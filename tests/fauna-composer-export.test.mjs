@@ -314,9 +314,12 @@ test('export CLI: sidecar and brief carry provenance; an existing file is never 
  *   coherent          a91e920cab8c5607… -> 2ac739d47b70d427…  (905608 bytes, both)
  *   quest-3 bird      d45acf82a921e081… -> 6228c286f4768cd1…  (1027136 bytes, both)
  * `bin` and `json` below are the skin-5 BIN chunk and the skin-5 JSON chunk with the v3 strings mapped back as before.
+ * 2026-10-08: core re-keyed 5c941506… -> 179e31d7… after the catalogue eye-seat closest-point tie rule (kit/eye-seat-tie,
+ * R7a, docs/fauna-eye-seat-tie-2026-10-08.md); none of the five specimens nor the quest-3 bird has a catalogue-eye
+ * closest-point tie whose pick changed: GLB, BIN and JSON pins are byte-identical, so only `core` changed.
  */
 const V1_PINS = {
-  core: '5c941506731da4d7519b136835a76c4d1ef0cd1afc3d067395fafb469d43a955',
+  core: '179e31d7216220616d7da2799a087a87679df2c9312c7856aa2061772db7cd8c',
   glb: {
     bird: '9b9edad9e835b42814becb7ae771a1ee46f5d2f23b52c63419600ef5438508b5',
     centipede: '7b67645e52182d1c0da6343c0bbdac4b0d851ceb0cb3c420e20abb3115cae92d',

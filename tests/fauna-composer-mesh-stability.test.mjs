@@ -6,7 +6,8 @@
 // the composer directly, in-process, so the failure is reproducible without the golden worker's call order.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {composerPreset, COMPOSER_PRESET_IDS, normalizeComposerRecipe, randomComposerRecipe} from '../src/fauna-composer-recipe.ts';
+import {readFileSync} from 'node:fs';
+import {COMPOSER_V2_DEFAULTS, composerLegacyPresetId, composerPreset, COMPOSER_PRESET_IDS, decodeComposerRecipe, normalizeComposerRecipe, randomComposerRecipe} from '../src/fauna-composer-recipe.ts';
 import {deriveComposerIndividual} from '../src/fauna-composer-individual.ts';
 import {buildComposerGraph} from '../src/fauna-composer-rig.ts';
 import {buildComposerSkin} from '../src/fauna-composer-mesh.ts';
@@ -138,4 +139,75 @@ test('every preset and golden random seed builds finite skins when pow(1, y) is 
     const skin = withNudge(['pow'], () => s, () => build(recipe), (_n, a) => a[0] === 1);
     assert.deepEqual(nonFinite(skin), [], `${name} (pow(1, y) ${s > 0 ? 'above' : 'below'} 1)`);
   }
+});
+
+// R7a-KIT-EYE-TIE (docs/fauna-eye-seat-tie-2026-10-08.md): the ostrich's orbit vertex was seated on the closest point of a
+// shared quad edge in its neck-to-head blend; the two triangles tied exactly and WebKit 26.5 kept the other one (its
+// normal lifted the vertex 8.1e-6 m elsewhere). The "pow(1, y) one ulp below 1" mode reproduces WebKit's bytes exactly.
+// The catalogue patch now breaks closest-point ties by the lowest triangle index (closestPointOnSoupLowTie). This test
+// holds the whole pinned composer corpus to the golden grid under every nudge mode, except the specimens below.
+const fixture = name => JSON.parse(readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8'));
+const SKIN5_TEXTS = Object.keys(fixture('composer-skin5-links.json').byText);
+const CATALOGUE = fixture('composer-eye-catalogue-links.json');
+/** Specimens that still move under a nudge for a cause other than the eye seat, each with its backlog id. When a fix
+ * makes one stable, the test below fails until it is removed from this list (the golden runner's known-mismatch rule). */
+const NUDGE_UNSTABLE_KNOWN = Object.freeze({
+  'skin5-link-14': 'mouth disc on a blunt head: a midline vertex sits a hair off z = 0 and flips sign (FAUNA-NUDGE-STABLE-2)',
+  'skin5-link-22': 'mouth disc on a blunt head: midline vertices sit a hair off z = 0 and flip sign (FAUNA-NUDGE-STABLE-2)',
+  'skin5-link-23': 'mouth disc on a blunt head: midline vertices sit a hair off z = 0 and flip sign (FAUNA-NUDGE-STABLE-2)',
+  'cat:odd-earlier-rules-worm': 'mouth disc on a blunt head: a midline vertex flips sign and moves in x/y (FAUNA-NUDGE-STABLE-2)',
+  'cat:odd-cephalopod-horse': 'cephalopod eye colours (246 colour floats) move under three modes (FAUNA-NUDGE-STABLE-2)',
+});
+/** The pinned corpus: the 12 presets and GOLDEN-FAUNA-1 to 4 (the golden fauna key), the 28 skin-5 link texts (built as
+ * composer-skin4-links.test.mjs builds them) and the 30 eye-catalogue specimens. */
+const CORPUS = [
+  ...COMPOSER_PRESET_IDS.map(id => [id, () => build(composerPreset(id))]),
+  ...['GOLDEN-FAUNA-1', 'GOLDEN-FAUNA-2', 'GOLDEN-FAUNA-3', 'GOLDEN-FAUNA-4'].map(s => [s, () => build(randomComposerRecipe(s))]),
+  ...SKIN5_TEXTS.map((text, i) => [`skin5-link-${i}`, () => {
+    const decoded = decodeComposerRecipe(text).recipe, neutral = composerLegacyPresetId(decoded) ? {...decoded, ...COMPOSER_V2_DEFAULTS} : decoded;
+    return buildComposerSkin(buildComposerGraph(deriveComposerIndividual(neutral).recipe));
+  }]),
+  ...CATALOGUE.links.map(l => [`cat:${l.name}`, () => build(decodeComposerRecipe(l.text).recipe)]),
+];
+/** The modes under which a specimen's skin arrays leave the golden grid (with the first differences). */
+function nudgeMoves(make) {
+  const base = make(), moved = [];
+  for (const [mode, [names, sign, select]] of Object.entries(MODES)) {
+    const d = gridDiff(base, withNudge(names, sign, make, select));
+    if (d.length) moved.push(`${mode}: ${d.join(' | ')}`);
+  }
+  return moved;
+}
+
+test('the pinned composer corpus holds the golden grid under every 1-ULP nudge mode (eye-seat closest-point tie)', () => {
+  assert.equal(CORPUS.length, 12 + 4 + 28 + 30);
+  for (const name of Object.keys(NUDGE_UNSTABLE_KNOWN)) assert.ok(CORPUS.some(([n]) => n === name), `${name}: not in the corpus`);
+  // every mover is reported at once (specimen -> modes with their first differences)
+  const moved = {};
+  for (const [name, make] of CORPUS) {
+    if (name in NUDGE_UNSTABLE_KNOWN) continue;
+    const m = nudgeMoves(make);
+    if (m.length) moved[name] = m;
+  }
+  assert.deepEqual(moved, {}, 'skin arrays moved on the golden 1e-6 grid under a nudge');
+});
+
+test('NUDGE_UNSTABLE_KNOWN: every listed specimen still moves under a nudge (else remove it from the list)', () => {
+  for (const [name, cause] of Object.entries(NUDGE_UNSTABLE_KNOWN)) {
+    const make = CORPUS.find(([n]) => n === name)[1];
+    assert.ok(nudgeMoves(make).length > 0, `${name} is stable under every nudge mode now (${cause}): remove it from NUDGE_UNSTABLE_KNOWN`);
+  }
+});
+
+test('eye-tie repin: exactly cat-raptor-bird, cat-cephalopod-ape and odd-wild-33 carry eyeTieDrift, each a real repin', () => {
+  const drifted = CATALOGUE.links.filter(l => 'eyeTieDrift' in l || 'skinPreEyeTie' in l || 'glossPreEyeTie' in l);
+  assert.deepEqual(drifted.map(l => l.name), ['cat-raptor-bird', 'cat-cephalopod-ape', 'odd-wild-33']);
+  for (const l of drifted) {
+    assert.equal(l.eyeTieDrift, 'catalogue-closest-tie', l.name);
+    assert.ok(/^[0-9a-f]{64}$/.test(l.skinPreEyeTie), `${l.name}: the replaced skin pin`);
+    assert.notEqual(l.skinPreEyeTie, l.skin, `${l.name}: a repin must differ from the pin it replaces`);
+    if ('glossPreEyeTie' in l) assert.notEqual(l.glossPreEyeTie, l.gloss, `${l.name}: gloss repin`);
+  }
+  assert.equal(CATALOGUE.repinnedAtEyeTie.changed, drifted.length);
+  assert.equal(CATALOGUE.repinnedAtEyeTie.replacesPinsAt, 'c5b0cde');
 });

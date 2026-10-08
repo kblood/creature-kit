@@ -16,11 +16,13 @@
    "text": "v4*layout_biped*legPairs_1*bodyLength_0.22*girth_1.2*posture_0.45*torso_barrel*neckLength_0.45*head_beak*headSize_1.2*snoutLength_0.55*horns_none*legs_digitigrade*legLength_0.85*feet_claw*arms_none*armLength_0.6*hands_hand*tail_feather-fan*tailLength_0.9*armor_none*wings_feathered*wingSpan_3.2*trunk_none*trunkLength_0.8*palette_plumage*colorSeed_5*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0.6*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0*eyes_raptor*iris_auto*eyeRules_2",
    "kind": "raptor",
    "eyeRules": 2,
-   "skin": "7010df494c541bbdc8276af8ba70b80d222825e420cd63c00d7fe1ec72ae38d1",
+   "skin": "5b001069f5bddd38aceeb12bafdd5ccd7a68ddc719286dcc07079c9e7c8d827c",
    "gloss": "3c0dabad017f40468c903b07c79167f2b137c06a67a8a8c26ae143132bc880fe",
    "vertices": 6072,
    "triangles": 11900,
-   "bones": 24
+   "bones": 24,
+   "skinPreEyeTie": "7010df494c541bbdc8276af8ba70b80d222825e420cd63c00d7fe1ec72ae38d1",
+   "eyeTieDrift": "catalogue-closest-tie"
   },
   {
    "name": "cat-owl-bird",
@@ -139,7 +141,7 @@
    "text": "v4*layout_biped*legPairs_1*bodyLength_0.6*girth_1.15*posture_0.85*torso_deep-chest*neckLength_0.1*head_flat-face*headSize_1.1*snoutLength_0.35*horns_none*legs_plantigrade*legLength_1.05*feet_hand*arms_grasping*armLength_1.25*hands_hand*tail_none*tailLength_0*armor_none*wings_none*wingSpan_2*trunk_none*trunkLength_0.8*palette_ink*colorSeed_143*pattern_auto*marks_2*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0.5*variability_1*allometry_1*individualSeed_0*sex_auto*maturity_1*condition_0*eyes_cephalopod*iris_copper*eyeRules_2",
    "kind": "cephalopod",
    "eyeRules": 2,
-   "skin": "2576bc2c14404a32e21316818b7d3c1df37b3317cd5c697ff2ee15769a939eab",
+   "skin": "f6133c1a77db8e566a4041abe3a75dad73fe89438a5d519fe510a2fefb7c7539",
    "gloss": "9f106c24ff58984d5c7535220c5c67c257f9ceeb8d07ac75d1c953904c037d98",
    "vertices": 6242,
    "triangles": 12224,
@@ -148,7 +150,9 @@
    "glossPreSkin5": "9f106c24ff58984d5c7535220c5c67c257f9ceeb8d07ac75d1c953904c037d98",
    "verticesPreSkin5": 6242,
    "trianglesPreSkin5": 12224,
-   "skin5Drift": "fauna-composer-skin-5 (coat crisp v1 step 4): neck-to-head blend rings that still crossed after fanOutBends turn monotonically to the head axis (no fold at the top of the seam)"
+   "skin5Drift": "fauna-composer-skin-5 (coat crisp v1 step 4): neck-to-head blend rings that still crossed after fanOutBends turn monotonically to the head axis (no fold at the top of the seam)",
+   "skinPreEyeTie": "2576bc2c14404a32e21316818b7d3c1df37b3317cd5c697ff2ee15769a939eab",
+   "eyeTieDrift": "catalogue-closest-tie"
   },
   {
    "name": "cat-insect-centipede",
@@ -319,7 +323,7 @@
    "text": "v4*layout_biped*legPairs_1*bodyLength_0.8*girth_0.76*posture_0.58*torso_deep-chest*neckLength_0.64*head_flat-face*headSize_0.84*snoutLength_0.16*horns_none*legs_unguligrade*legLength_1.13*feet_claw*arms_none*armLength_0.7*hands_pincer*tail_club*tailLength_0.59*armor_plates*wings_none*wingSpan_1.49*trunk_none*trunkLength_0.83*palette_slate*colorSeed_3329*pattern_auto*marks_0*patternScale_1*patternContrast_1*countershade_0.8*dimorphism_0*variability_0*allometry_0*individualSeed_0*sex_auto*maturity_1*condition_0*eyes_owl*iris_auto*eyeRules_2",
    "kind": "owl",
    "eyeRules": 2,
-   "skin": "677833cd07afd9ccd11463c4e82cf18a0d739b0315795365976321368df9312e",
+   "skin": "6d1004a8e79a52690bf38654e51402f0225527819d25f3af8badc953c0fe04a1",
    "gloss": "1664a06f7a2f9616428c3434b41d64974a950c7652d3f51c74859992e5e956bd",
    "vertices": 7122,
    "triangles": 13992,
@@ -328,7 +332,9 @@
    "glossPreSkin5": "1664a06f7a2f9616428c3434b41d64974a950c7652d3f51c74859992e5e956bd",
    "verticesPreSkin5": 7122,
    "trianglesPreSkin5": 13992,
-   "skin5Drift": "fauna-composer-skin-5 (coat crisp v1 step 4): neck-to-head blend rings that still crossed after fanOutBends turn monotonically to the head axis (no fold at the top of the seam)"
+   "skin5Drift": "fauna-composer-skin-5 (coat crisp v1 step 4): neck-to-head blend rings that still crossed after fanOutBends turn monotonically to the head axis (no fold at the top of the seam)",
+   "skinPreEyeTie": "677833cd07afd9ccd11463c4e82cf18a0d739b0315795365976321368df9312e",
+   "eyeTieDrift": "catalogue-closest-tie"
   },
   {
    "name": "odd-wild-81",
@@ -477,5 +483,15 @@
   },
   "of": 30,
   "note": "Coat crisp v1 step 4 repin in place. Each drifted link records the replaced pin (skinPreSkin5, glossPreSkin5, verticesPreSkin5, trianglesPreSkin5) and the reason (skin5Drift)."
+ },
+ "repinnedAtEyeTie": {
+  "branch": "kit/eye-seat-tie",
+  "replacesPinsAt": "c5b0cde",
+  "date": "2026-10-08",
+  "skin": "fauna-composer-skin-5",
+  "changed": 3,
+  "of": 30,
+  "reason": "catalogue-closest-tie: the catalogue eye patch's surfaceZ closest-point fallback resolves candidates within 1e-9 m of the best distance by the lowest triangle index (closestPointOnSoupLowTie) instead of whichever one rounding made a few ulps closer; the three entries were the ones whose current pick was the higher index of an inexact tie; positions and normals of 2-4 eye-rim vertices move (max 5.09e-4 m), gloss, colours, weights and index unchanged",
+  "note": "Pre-ship skin-5 correction, repinned in place, no version change (Opus-decided on Kasper's instruction, overrulable). Each drifted entry records the replaced pin (skinPreEyeTie) and the reason (eyeTieDrift); gloss did not move. Ledger: docs/fauna-eye-seat-tie-2026-10-08.md."
  }
 }

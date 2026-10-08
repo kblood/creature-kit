@@ -440,3 +440,4 @@ check.
     (re-keyed in the next commit); lab suite (`tests/lab/*.test.mjs tests/lab-boundary.test.mjs`) with
     `ATLAS_DIR=C:/LLM/IWSDK/universe-atlas` 60 / 60 pass (without ATLAS_DIR 56 pass, 4 parity skips), the first run of
     lab-app's boundary and parity tests against this round's code.
+- Pre-ship skin-5 correction: catalogue closest-point tie rule (docs/fauna-eye-seat-tie-2026-10-08.md); 3 eye-catalogue entries re-pinned; no version change.
