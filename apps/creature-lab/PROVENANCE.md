@@ -1,5 +1,32 @@
 # Creature Lab app: provenance
 
+## Canonical Planet Animal Lab editor (2026-10-10)
+
+`planet-skin.html`, `src/planet-main.ts`, `src/planet-lab-state.ts` and
+`src/planet-lab.css` now provide the canonical planetary editor. They reuse the
+existing Lab shell stylesheet, grouped editor design, projected-bounds camera
+fit, and the unchanged review lighting and shadow helpers documented below.
+The composer files and their original extraction record remain preserved.
+
+The editor calls `src/planet-v1` for seeded specimens and the same planetary
+inspector used by Atlas. It has no independent anatomy generator. Creating a
+specimen records its source seed, family, individual and life stage; importing
+copies the validated complete canonical definition without rerolling or
+upgrading it. Explicit edits preserve identity and append field changes to
+the mutation history. Reset and original comparison use the untouched import.
+Export and specimen links carry the full current definition. Surface previews
+are presentation choices and do not modify genomes.
+
+The new editor and its tests were authored locally for the owner-requested UI
+restoration. No model download, image generation, external asset, or private
+upload was used. Licence remains `UNLICENSED` (private, all rights reserved).
+`tests/lab/planet-lab-state.test.mjs` covers deterministic generation, exact
+imports, bounded edits, coat effects and legacy preservation;
+`tests/browser/planet-lab-ui.browser.mjs` exercises the rendered editing,
+comparison, playback, camera and mobile workflows under the shared GPU lock.
+
+## Original composer extraction record
+
 The kit's Creature Lab app is the **composer mode** of universe-atlas's Creature Lab (`creature-lab.html?mode=composer`),
 copied into the kit so the kit is a product of its own (Kasper, 2026-10-07: "sin egen ting som dette projekt så bruger").
 Extraction plan phase 4a: `C:/LLM/IWSDK/docs/creature-kit-extraction-plan-2026-10-04.md`.

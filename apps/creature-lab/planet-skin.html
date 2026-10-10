@@ -1,14 +1,65 @@
 <!doctype html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Planet Animal Lab · creature-kit</title></head>
-<body><main id="viewport" aria-label="Canonical planetary animal inspection"></main>
-<header class="topbar"><span class="brand">◒ CREATURE KIT <em>PLANET ANIMAL LAB</em></span><nav><a href="./creature-lab.html?mode=composer">Experimental composer</a></nav></header>
-<aside class="side-panel"><span class="eyebrow">SHARED PLANETARY ANATOMY</span><h1>Planet animal</h1>
-<p>Inspect the same body and rig the planet renderer uses. Paste an existing genome or animal definition to preserve its identity and appearance.</p>
-<label>Genome / definition JSON<textarea id="definition" rows="14" spellcheck="false" aria-label="Canonical animal definition"></textarea></label>
-<button id="load">Inspect this animal</button><button id="export">Export definition</button>
-<details><summary>Demo input</summary><label>Body family<select id="demo"><option>browser</option><option>runner</option><option>low-slung</option><option>long-neck</option></select></label><button id="demo-load">Load demo genome</button><p>Demo input uses the canonical generator. It is not a new planetary species.</p></details>
-<label>Inspection pose<select id="pose"><option value="idle">Standing</option><option value="walk">Walking</option><option value="feed">Feeding</option></select></label>
-<label>Pose seconds<input id="time" type="range" min="0" max="30" step="0.01" value="0"></label>
-<label class="check"><input id="skeleton" type="checkbox">Skeleton</label><label class="check"><input id="neutral" type="checkbox">Neutral shape</label>
-<p>Pose time is an inspection clock. World dates, habitat and population remain in Atlas.</p><pre id="details"></pre><p id="status" role="status"></p></aside>
-<script type="module" src="./src/planet-main.ts"></script></body></html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Planet Animal Lab · Creature Kit</title></head>
+<body class="planet-lab">
+  <header class="topbar">
+    <a class="brand" href="./planet-skin.html">◒ CREATURE KIT <em>PLANET ANIMAL LAB</em></a>
+    <span class="lab-tag">Anatomy · coat · motion</span>
+    <div class="lab-actions"><button id="import-file" type="button">Import animal</button><button id="export" type="button">Export animal</button><button id="share" type="button">Copy link</button></div>
+    <input id="file" type="file" accept="application/json,.json" hidden>
+  </header>
+  <main id="viewport" aria-label="Interactive planetary animal preview"></main>
+  <div class="view-toolbar" aria-label="Camera controls">
+    <button id="frame" type="button">Frame animal</button>
+    <label class="sr-only" for="view">Camera view</label><select id="view"><option value="three-quarter">Three-quarter</option><option value="side">Side</option><option value="front">Front</option><option value="back">Back</option><option value="top">Top</option></select>
+    <label class="sr-only" for="focus">Camera focus</label><select id="focus"><option value="body">Whole animal</option><option value="head">Head and face</option><option value="eyes">Eye close-up</option></select>
+  </div>
+  <div id="comparison-labels" hidden><span>Original</span><span>Edited animal</span></div>
+  <aside class="side-panel" aria-label="Animal editor">
+    <span class="eyebrow">THE PLANETARY ANIMAL WORKSHOP</span><h1 id="animal-title">Hoofed browser</h1>
+    <p id="identity-summary">Create a specimen or import an animal from Atlas.</p>
+    <div class="edit-state"><span id="edit-state">Original specimen</span><button id="undo" type="button" disabled>Undo</button><button id="reset" type="button" disabled>Reset</button></div>
+    <div class="controls">
+      <details class="lab-section new-animal" open><summary>Starting animal <span>Seeded specimens</span></summary>
+        <div class="section-content">
+          <label>Body family<select id="demo"></select></label>
+          <div class="split-row"><label>Species seed<input id="seed" maxlength="160" value="PLANET-LAB-DEMO"></label><label>Life stage<select id="stage"><option value="adult">Adult</option><option value="juvenile">Young</option></select></label></div>
+          <div class="button-row"><button id="demo-load" class="primary" type="button">Create animal</button><button id="next-individual" type="button">Next individual</button></div>
+          <p class="hint">Creates a new canonical specimen. Import keeps the animal’s existing identity and genes.</p>
+        </div>
+      </details>
+      <div class="editor-tabs" role="tablist" aria-label="Animal controls"><button id="tab-shape" role="tab" aria-selected="true" aria-controls="panel-shape" data-tab="shape">Anatomy</button><button id="tab-coat" role="tab" aria-selected="false" aria-controls="panel-coat" data-tab="coat">Coat & colour</button><button id="tab-review" role="tab" aria-selected="false" aria-controls="panel-review" data-tab="review">Review</button></div>
+      <section id="panel-shape" role="tabpanel" aria-labelledby="tab-shape"><div id="shape-controls"></div></section>
+      <section id="panel-coat" role="tabpanel" aria-labelledby="tab-coat" hidden><div id="coat-controls"></div></section>
+      <section id="panel-review" role="tabpanel" aria-labelledby="tab-review" hidden>
+        <fieldset class="composer-group"><legend>Compare and inspect</legend>
+          <label class="check"><input id="compare" type="checkbox">Compare with original</label>
+          <label>Lighting<select id="lighting"></select></label>
+          <label>Body surface<select id="presentation"><option value="legacy-v4">Original planetary surface</option><option value="sculpted-v1">Sculpted anatomy · preview</option></select></label>
+          <p id="presentation-note" class="hint"></p>
+          <label class="check"><input id="skeleton" type="checkbox">Show solved skeleton</label>
+          <label class="check"><input id="neutral" type="checkbox">Neutral material</label>
+          <label class="check"><input id="wireframe" type="checkbox">Wireframe</label>
+          <label class="check"><input id="grid" type="checkbox" checked>Ground grid · 1 metre</label>
+        </fieldset>
+        <fieldset class="composer-group"><legend>Specimen information</legend><div id="details" class="detail"></div><div id="metrics" class="metrics"></div></fieldset>
+        <details class="lab-section"><summary>History & provenance</summary><div class="section-content"><p id="identity"></p><ol id="history"></ol></div></details>
+      </section>
+      <details id="advanced" class="lab-section"><summary>Advanced import / export <span>Definition JSON</span></summary><div class="section-content">
+        <p class="hint">The full canonical genome is preserved, including identity, appearance, morphology and history.</p>
+        <label>Animal definition<textarea id="definition" rows="10" spellcheck="false" aria-label="Canonical animal definition"></textarea></label>
+        <div class="button-row"><button id="load" type="button">Load definition</button><button id="refresh-json" type="button">Use current animal</button></div>
+        <label id="share-fallback" hidden>Specimen link<input id="share-link" readonly></label>
+      </div></details>
+    </div>
+  </aside>
+  <section class="caption"><span class="eyebrow" id="caption-eyebrow">CANONICAL PLANETARY ANATOMY</span><h2 id="caption-title">One animal, ready to explore</h2><p id="caption-copy">Drag to orbit · right-drag to pan · scroll to zoom</p></section>
+  <section class="playback" aria-label="Animation controls">
+    <button id="play" class="primary" type="button" aria-label="Play animation">▶ Play</button>
+    <label class="sr-only" for="pose">Inspection pose</label><select id="pose"><option value="idle">Standing</option><option value="walk">Walking</option><option value="feed">Feeding</option></select>
+    <label class="timeline">Pose time<input id="time" type="range" min="0" max="30" step="0.01" value="0"></label><output id="time-label" for="time">0.00 s</output>
+    <label class="sr-only" for="speed">Playback speed</label><select id="speed"><option value="0.25">¼×</option><option value="0.5">½×</option><option value="1" selected>1×</option><option value="2">2×</option></select>
+  </section>
+  <footer><span id="status" role="status">Preparing Planet Animal Lab…</span><span>Local specimen edits · metres</span></footer>
+  <script type="module" src="./src/planet-main.ts"></script>
+</body></html>

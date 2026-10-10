@@ -13,6 +13,7 @@ import {assertCaptureOutsideSlot} from '../helpers/gpu-lock.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url)), kit = resolve(here, '../..');
 export const BROWSER_TESTS = Object.freeze([
+  {name: 'planet-lab-ui', file: 'planet-lab-ui.browser.mjs', what: 'canonical genome editor, exact imports, anatomy/coat controls, original comparison, playback, six families and mobile', ownServer: true},
   {name: 'fauna-composer', file: 'fauna-composer.browser.mjs', what: 'panel, presets, links, motion, malformed links, herd, lighting, disposal, mode rejection'},
   {name: 'fauna-composer-ui', file: 'fauna-composer-ui.browser.mjs', what: 'independent UI review: every control, comparison, mobile, invalid-link recovery, resource residency'},
   {name: 'fauna-composer-visual', file: 'fauna-composer-visual.browser.mjs', what: 'every preset rendered in isolation and under planet-noon lighting, contact sheets'},
