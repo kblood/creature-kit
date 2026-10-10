@@ -104,9 +104,9 @@ function toTangent(frame: { x: number; z: number; yaw: number }, X: number, Z: n
   return [frame.x + X * c + Z * s, frame.z + X * s - Z * c];
 }
 
-// Scratch objects: the solver is synchronous and re-entrant per call.
-const worldQ = Array.from({ length: BONES }, () => new THREE.Quaternion());
-const worldP = Array.from({ length: BONES }, () => new THREE.Vector3());
+// Scratch for the legacy independent-output entry; solver calls are synchronous.
+const defaultWorldQ = Array.from({ length: BONES }, () => new THREE.Quaternion());
+const defaultWorldP = Array.from({ length: BONES }, () => new THREE.Vector3());
 const qa = new THREE.Quaternion(), qb = new THREE.Quaternion(), va = new THREE.Vector3(), vb = new THREE.Vector3();
 const m0 = new THREE.Matrix4(), m1 = new THREE.Matrix4();
 const Y = new THREE.Vector3(0, 1, 0), Z = new THREE.Vector3(0, 0, 1);
@@ -120,11 +120,45 @@ function frameRotation(a0: THREE.Vector3, n0: THREE.Vector3, a1: THREE.Vector3, 
 }
 const v3 = (p: Vec3) => new THREE.Vector3(p[0], p[1], p[2]);
 
+/** Opt-in exact solver workspace. Plan/rest data and member identity must remain
+ * immutable. pose and its arrays/foot records are borrowed until the next call
+ * with this workspace; callers must not modify or retain them as snapshots. */
+export interface QuadrupedPoseWorkspace {
+  readonly plan:QuadrupedPlan;readonly member:FaunaPathMember;readonly pose:QuadrupedPose;
+  readonly resources:{outputTypedBytes:number;vector3Objects:number;quaternionObjects:number;eulerObjects:number;footRecords:number;footTupleArrays:number};
+}
+interface PoseWorkspaceData {
+  plan:QuadrupedPlan;member:FaunaPathMember;memberId:string;pose:QuadrupedPose;
+  local:THREE.Quaternion[];offsets:THREE.Vector3[];restOffsets:THREE.Vector3[];
+  worldQ:THREE.Quaternion[];worldP:THREE.Vector3[];euler:THREE.Euler;
+  traits:ReturnType<typeof faunaMotionTraits>;
+}
+const poseWorkspaces=new WeakMap<QuadrupedPoseWorkspace,PoseWorkspaceData>();
+export function createQuadrupedPoseWorkspace(plan:QuadrupedPlan,member:FaunaPathMember):QuadrupedPoseWorkspace {
+  if(plan.bones.length!==BONES||plan.legs.length!==4)throw new Error('quadruped pose workspace: canonical 22-bone/four-leg plan required');
+  const restOffsets=plan.bones.map((bone,i)=>i===0?v3(bone.rest):v3(bone.rest).sub(v3(plan.bones[bone.parent]!.rest)));
+  const pose:QuadrupedPose={positions:new Float64Array(BONES*3),quaternions:new Float64Array(BONES*4),joints:new Float64Array(BONES*3),
+    feet:plan.legs.map(leg=>({id:leg.id,stance:true,contact:[0,0,0],toe:[0,0,0]})),root:{x:0,z:0,h:0,yaw:0},state:'idle',phase:0,maxPenetration:0,maxReachError:0,headClearance:0};
+  const data:PoseWorkspaceData={plan,member,memberId:member.id,pose,restOffsets,offsets:restOffsets.map(v=>v.clone()),local:Array.from({length:BONES},()=>new THREE.Quaternion()),
+    worldQ:Array.from({length:BONES},()=>new THREE.Quaternion()),worldP:Array.from({length:BONES},()=>new THREE.Vector3()),euler:new THREE.Euler(),traits:faunaMotionTraits(plan,member.id)};
+  const workspace:QuadrupedPoseWorkspace=Object.freeze({plan,member,pose,resources:Object.freeze({outputTypedBytes:pose.positions.byteLength+pose.quaternions.byteLength+pose.joints.byteLength,vector3Objects:BONES*3,quaternionObjects:BONES*2,eulerObjects:1,footRecords:4,footTupleArrays:8})});
+  poseWorkspaces.set(workspace,data);return workspace;
+}
+export function quadrupedPoseAtInto(workspace:QuadrupedPoseWorkspace,activity:FaunaMemberActivity,ground:FaunaGround,rigSeconds:number,options:FaunaPoseOptions={}):QuadrupedPose {
+  const data=poseWorkspaces.get(workspace);if(!data||data.member.id!==data.memberId)throw new Error('quadruped pose workspace: factory-created immutable member identity required');
+  return poseAtCore(data.plan,data.member,activity,ground,rigSeconds,options,data);
+}
+
 /**
  * Pose at one exact date. Pure: identical inputs give identical output
  * regardless of which dates were evaluated before.
  */
 export function quadrupedPoseAt(plan: QuadrupedPlan, member: FaunaPathMember, activity: FaunaMemberActivity, ground: FaunaGround, rigSeconds: number, options: FaunaPoseOptions = {}): QuadrupedPose {
+  return poseAtCore(plan,member,activity,ground,rigSeconds,options);
+}
+function poseAtCore(plan: QuadrupedPlan, member: FaunaPathMember, activity: FaunaMemberActivity, ground: FaunaGround, rigSeconds: number, options: FaunaPoseOptions, workspace?:PoseWorkspaceData): QuadrupedPose {
+  const worldQ=workspace?.worldQ??defaultWorldQ,worldP=workspace?.worldP??defaultWorldP;
+  if(workspace)for(let i=0;i<BONES;i++){worldQ[i]!.identity();worldP[i]!.set(0,0,0);}
   const g = plan.genome, schedule = faunaGaitSchedule(plan, member, activity.revolutionS);
   const moving = schedule.frequencyHz > 0, walking = moving && activity.pose.gait === 'walk', tau = Math.max(0, activity.stateS);
   const N = schedule.cyclesPerRevolution, phase = activity.travel * N, duty = schedule.duty;
@@ -144,21 +178,24 @@ export function quadrupedPoseAt(plan: QuadrupedPlan, member: FaunaPathMember, ac
   // --- Trunk: follow the stencil under hips and shoulders, with gait bob. ---
   const TL = g.torsoLength, hRear = groundLocal(-.3 * TL, 0), hFront = groundLocal(.3 * TL, 0);
   const pitch = Math.atan2(hFront - hRear, .6 * TL);
-  const traits = faunaMotionTraits(plan, member.id);
+  const traits = workspace?.traits??faunaMotionTraits(plan, member.id);
   const breath = Math.sin(rigSeconds * Math.PI * 2 / traits.breathPeriodS + traits.breathPhase);
   const bob = -Math.cos(phase * Math.PI * 4) * g.legLength * .012 * locomotion + breath * traits.breathM;
   const roll = Math.sin(phase * Math.PI * 2) * .025 * locomotion;
-  const positions = new Float64Array(BONES * 3), quaternions = new Float64Array(BONES * 4);
-  const local = Array.from({ length: BONES }, () => new THREE.Quaternion());
-  const offsets = plan.bones.map((bone, i) => i === 0 ? v3(bone.rest) : v3(bone.rest).sub(v3(plan.bones[bone.parent]!.rest)));
+  const positions = workspace?.pose.positions??new Float64Array(BONES * 3), quaternions = workspace?.pose.quaternions??new Float64Array(BONES * 4);
+  const local = workspace?.local??Array.from({ length: BONES }, () => new THREE.Quaternion());
+  if(workspace)for(const q of local)q.identity();
+  const offsets = workspace?.offsets??plan.bones.map((bone, i) => i === 0 ? v3(bone.rest) : v3(bone.rest).sub(v3(plan.bones[bone.parent]!.rest)));
+  if(workspace)for(let i=0;i<BONES;i++)offsets[i]!.copy(workspace.restOffsets[i]!);
+  const euler=(x:number,y:number,z:number,order?:THREE.EulerOrder)=>workspace?workspace.euler.set(x,y,z,order??THREE.Euler.DEFAULT_ORDER):new THREE.Euler(x,y,z,order);
   // Pelvis sits on the straight line through the ground under hips and shoulders.
   offsets[BONE.pelvis]!.y += (hRear + hFront) / 2 - (.2 / .6) * (hFront - hRear) + bob;
-  local[BONE.pelvis]!.setFromEuler(new THREE.Euler(roll, 0, pitch, 'XYZ'));
+  local[BONE.pelvis]!.setFromEuler(euler(roll, 0, pitch, 'XYZ'));
   local[BONE.spine]!.setFromAxisAngle(Z, breath * .006);
 
   // --- Tail: idle sway and a gait-locked swing. ---
   const sway = Math.sin(rigSeconds * Math.PI * 2 * .23 + traits.tailPhase) * traits.tailAmplitude * (1 - locomotion) + Math.sin(phase * Math.PI * 2) * .1 * locomotion;
-  for (let i = 0; i < 3; i++) local[BONE.tail1 + i]!.setFromEuler(new THREE.Euler(0, sway * (1 + i * .35) * (i ? .6 : 1), i ? -.06 : -.12));
+  for (let i = 0; i < 3; i++) local[BONE.tail1 + i]!.setFromEuler(euler(0, sway * (1 + i * .35) * (i ? .6 : 1), i ? -.06 : -.12));
 
   // Forward kinematics up to the trunk and neck root.
   const fk = (i: number) => {
@@ -194,17 +231,17 @@ export function quadrupedPoseAt(plan: QuadrupedPlan, member: FaunaPathMember, ac
   const nod = Math.sin(phase * Math.PI * 4 + .8) * .045 * locomotion;
   local[BONE.neck1]!.setFromAxisAngle(Z, -pitch * .6 * (1 - graze) + lower * .55 * graze + nod);
   const lookYaw = Math.sin(tau * Math.PI * 2 / 5.5) * .45 * look;
-  local[BONE.neck2]!.setFromEuler(new THREE.Euler(0, lookYaw * .5, lower * .45 * graze - nod * .5));
+  local[BONE.neck2]!.setFromEuler(euler(0, lookYaw * .5, lower * .45 * graze - nod * .5));
   fk(BONE.neck1); fk(BONE.neck2);
   // Head orientation is set in body terms, so grazing points the muzzle down
   // and a walking head stays near level whatever the neck and slope angles.
   qa.copy(worldQ[BONE.neck2]!).invert();
-  qb.setFromEuler(new THREE.Euler(0, lookYaw + Math.sin(rigSeconds * .7 + traits.breathPhase) * traits.headAmplitude * idleWeight * (1 - graze), headDown + Math.sin(tau * Math.PI * 2 / 3.1) * .06 * graze, 'YZX'));
+  qb.setFromEuler(euler(0, lookYaw + Math.sin(rigSeconds * .7 + traits.breathPhase) * traits.headAmplitude * idleWeight * (1 - graze), headDown + Math.sin(tau * Math.PI * 2 / 3.1) * .06 * graze, 'YZX'));
   local[BONE.head]!.multiplyQuaternions(qa, qb);
   for (const i of [BONE.head, BONE.tail1, BONE.tail2, BONE.tail3]) fk(i);
 
   // --- Legs: world-fixed footholds from the path, then two-bone IK. ---
-  const feet: QuadrupedFootState[] = [];
+  const feet: QuadrupedFootState[] = workspace?.pose.feet??[];
   let maxPenetration = 0, maxReachError = 0;
   const stanceSweep = duty * schedule.cycleM;
   plan.legs.forEach((leg, index) => {
@@ -271,10 +308,16 @@ export function quadrupedPoseAt(plan: QuadrupedPlan, member: FaunaPathMember, ac
     maxPenetration = Math.max(maxPenetration, groundLocal(sole.x, sole.z) - sole.y,
       groundLocal(worldP[leg.footBone]!.x, worldP[leg.footBone]!.z) + leg.ankleRadius * .5 - worldP[leg.footBone]!.y,
       groundLocal(worldP[leg.lowerBone]!.x, worldP[leg.lowerBone]!.z) + leg.kneeRadius * .5 - worldP[leg.lowerBone]!.y);
-    feet.push({ id: leg.id, stance, contact: [x, h - lift, z], toe: [toeActual.x, toeActual.y, toeActual.z] });
+    if(workspace){const foot=feet[index]!;foot.id=leg.id;foot.stance=stance;foot.contact[0]=x;foot.contact[1]=h-lift;foot.contact[2]=z;foot.toe[0]=toeActual.x;foot.toe[1]=toeActual.y;foot.toe[2]=toeActual.z;}
+    else feet.push({ id: leg.id, stance, contact: [x, h - lift, z], toe: [toeActual.x, toeActual.y, toeActual.z] });
   });
-  const joints = new Float64Array(BONES * 3);
+  const joints = workspace?.pose.joints??new Float64Array(BONES * 3);
   for (let i = 0; i < BONES; i++) {
+    if(workspace){
+      const p=i*3,q=i*4;positions[p]=offsets[i]!.x;positions[p+1]=offsets[i]!.y;positions[p+2]=offsets[i]!.z;
+      quaternions[q]=local[i]!.x;quaternions[q+1]=local[i]!.y;quaternions[q+2]=local[i]!.z;quaternions[q+3]=local[i]!.w;
+      joints[p]=worldP[i]!.x;joints[p+1]=worldP[i]!.y;joints[p+2]=worldP[i]!.z;continue;
+    }
     positions.set([offsets[i]!.x, offsets[i]!.y, offsets[i]!.z], i * 3);
     quaternions.set([local[i]!.x, local[i]!.y, local[i]!.z, local[i]!.w], i * 4);
     joints.set([worldP[i]!.x, worldP[i]!.y, worldP[i]!.z], i * 3);
@@ -282,5 +325,6 @@ export function quadrupedPoseAt(plan: QuadrupedPlan, member: FaunaPathMember, ac
   const headQ = worldQ[BONE.head]!, headP = worldP[BONE.head]!;
   const muzzleActual = v3(plan.muzzleTip).sub(v3(plan.neckTip)).applyQuaternion(headQ).add(headP), craniumActual = v3(plan.headCentre).sub(v3(plan.neckTip)).applyQuaternion(headQ).add(headP);
   const headClearance = Math.min(muzzleActual.y - g.headWidth * .2 - groundLocal(muzzleActual.x, muzzleActual.z), craniumActual.y - g.headWidth * .45 - groundLocal(craniumActual.x, craniumActual.z));
+  if(workspace){const out=workspace.pose;out.root.x=root.x;out.root.z=root.z;out.root.h=rootH;out.root.yaw=root.yaw;out.state=walking?'walk':'idle';out.phase=phase;out.maxPenetration=Math.max(0,maxPenetration);out.maxReachError=maxReachError;out.headClearance=headClearance;return out;}
   return { positions, quaternions, joints, feet, root: { x: root.x, z: root.z, h: rootH, yaw: root.yaw }, state: walking ? 'walk' : 'idle', phase, maxPenetration: Math.max(0, maxPenetration), maxReachError, headClearance };
 }
