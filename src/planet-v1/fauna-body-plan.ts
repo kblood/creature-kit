@@ -388,7 +388,7 @@ export function createQuadrupedBodyColourSampler(source:Readonly<QuadrupedBodyDa
   const coatV2=plan.genome.appearance?.version===FAUNA_APPEARANCE_VERSION&&!!plan.genome.appearance.coat;
   const surface:FaunaCoatSurface={dorsal:0,along:0,cellM:source.cellM};
   return {version:QUADRUPED_BODY_COLOUR_SAMPLER_VERSION,source,sampleInto(x,y,z,normalY,out){
-    if(![x,y,z,normalY].every(Number.isFinite)||!(out instanceof Float64Array)||out.length<3)throw new Error('quadruped body colour sampler: finite point/normal and Float64 RGB output required');
+    if(!Number.isFinite(x)||!Number.isFinite(y)||!Number.isFinite(z)||!Number.isFinite(normalY)||!(out instanceof Float64Array)||out.length<3)throw new Error('quadruped body colour sampler: finite point/normal and Float64 RGB output required');
     let nearest=0,dMin=Infinity;
     for(let p=0;p<plan.primitives.length;p++){const d=primitiveDistance(plan.primitives[p]!,x,y,z);if(d<dMin){dMin=d;nearest=p;}}
     const colour=connectedBodyColour(plan,nearest,x,y,z,normalY,coatV2,surface,base,accent,hoof);
