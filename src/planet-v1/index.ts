@@ -10,3 +10,5 @@ export * from './fauna-locomotion.ts';
 export * from './inspector.ts';
 export * from './definition.ts';
 export type {PlanetFaunaPathMember,PlanetFaunaActivity} from './caller-contract.ts';
+
+export {COAT_PATTERN_CRISP_GLSL, COAT_PATTERN_CRISP_GLSL_VERSION} from '../fauna-coat-crisp-glsl.ts';
