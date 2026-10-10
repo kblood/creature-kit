@@ -169,3 +169,16 @@ appearance changes interpolation compared with the original baked vertex colours
 it requires an explicit presentation version and visual/performance review. This
 API release does not enable Atlas's prototype renderer or select a new LOD method.
 The canonical inspector and definition exports remain available.
+
+
+## Exact pose workspace API 0.5
+
+The additive `createQuadrupedPoseWorkspace(plan, member)` and
+`quadrupedPoseAtInto(workspace, activity, ground, rigSeconds, options)` APIs reuse
+immutable preparation and output storage while preserving the original terrain
+sampling and canonical IK. Into output is borrowed until the next call with the
+same workspace; copy it when retaining a snapshot. Existing `quadrupedPoseAt`
+continues returning independent output objects and arrays. Each workspace owns
+1,760 typed output bytes plus explicitly counted JS scratch; temporary solver
+allocations remain. See `docs/planet-pose-workspace-prototype.md` for exactness,
+desktop Node evidence and the limits on browser/whole-game/Quest claims.
