@@ -27,6 +27,8 @@
  */
 
 export const COMPOSER_LOD_VERSION = 'fauna-composer-lod-1';
+/** Additive opt-in constraints; absent options preserve the original reducer. */
+export const COMPOSER_LOD_CONSTRAINTS_VERSION='fauna-composer-lod-constraints-1';
 
 /** Default attribute weights (dimensionless; multiplied by the body diagonal) and the largest allowed face turn. */
 export const COMPOSER_LOD_DEFAULTS = Object.freeze({colour: 0.02, gloss: 0.05, skin: 0.08, boundary: 10, minFaceCosine: 0.3});
@@ -42,6 +44,11 @@ export interface ComposerLodSource {
 export interface ComposerLodOptions {
   /** Keep the z = 0 mirror symmetry (default true). */
   symmetry?: boolean;
+  /** Hard position anchors, source-vertex indexed0/1. Welded positions inherit
+   * any protected member. Anchors may receive collapses but never move. */
+  protectedVertices?: Uint8Array;
+  /** Source-vertex importance>=1; welded positions take the maximum. */
+  vertexImportance?: Float32Array;
   colour?: number; gloss?: number; skin?: number; boundary?: number; minFaceCosine?: number;
 }
 export interface ComposerLodLevel {
@@ -98,6 +105,10 @@ export function buildComposerLodChain(source: ComposerLodSource, targets: readon
   const pos = source.positions, nV = pos.length / 3, index = source.index, nT = index.length / 3;
   if (source.colors.length !== nV * 3 || source.skinIndex.length !== nV * 4 || source.skinWeight.length !== nV * 4) throw new Error('composer lod: attribute lengths do not match the positions');
   if (index.length % 3) throw new Error('composer lod: index length is not a multiple of 3');
+  if(options.protectedVertices&&(!(options.protectedVertices instanceof Uint8Array)||options.protectedVertices.length!==nV||
+    options.protectedVertices.some(v=>v>1)))throw new Error('composer lod: protectedVertices requires source-sized0/1 bytes');
+  if(options.vertexImportance&&(!(options.vertexImportance instanceof Float32Array)||options.vertexImportance.length!==nV||
+    options.vertexImportance.some(v=>!Number.isFinite(v)||v<1||v>16384)))throw new Error('composer lod: vertexImportance requires source-sized finite1..16384 weights');
 
   // ---- weld positions by exact value (first occurrence order)
   const posOf = new Int32Array(nV);
@@ -147,6 +158,11 @@ export function buildComposerLodChain(source: ComposerLodSource, targets: readon
     edgeCount.set(key, (edgeCount.get(key) ?? 0) + 1);
   }
   const boundary = new Uint8Array(nP), locked = new Uint8Array(nP);
+  const importance=options.vertexImportance?new Float64Array(nP).fill(1):null;
+  for(let v=0;v<nV;v++){
+    const p=posOf[v];if(options.protectedVertices?.[v])locked[p]=1;
+    if(importance&&options.vertexImportance![v]>importance[p])importance[p]=options.vertexImportance![v];
+  }
   for (const [key, count] of edgeCount) {
     const a = Math.floor(key / nP), b = key - a * nP;
     if (count === 1) { boundary[a] = 1; boundary[b] = 1; }
@@ -312,7 +328,8 @@ export function buildComposerLodChain(source: ComposerLodSource, targets: readon
   };
   const costOf = (p: number, q: number) => {
     const e = quadricAt(p, q, P[q * 3]!, P[q * 3 + 1]!, P[q * 3 + 2]!);
-    return (e > 0 ? e : 0) + area[p]! * attributePenalty(p, q);
+    const cost=(e > 0 ? e : 0) + area[p]! * attributePenalty(p, q);
+    return importance?cost*Math.max(importance[p],importance[q]):cost;
   };
 
   // ---- heap of (cost, vertex, version)
