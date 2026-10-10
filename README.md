@@ -1,5 +1,13 @@
 # creature-kit
 
+Since `0.7.0`, the primary **Animal Lab** opens the advanced Composer at
+`apps/creature-lab/index.html`, with visual controls for snakes, worms, insects,
+turtles, dinosaurs and proboscis faces. Its `realism-1` presentation improves
+joined feet and protects their form in LODs. Historical `skin-5` remains selectable.
+The planet inspector is labelled archived; Atlas planets still use its separate
+quadruped compatibility core. See [current Lab and archives](docs/animal-lab-current.md)
+and [measured realism changes](docs/composer-realism-1.md).
+
 Since `0.2.0`, `creature-kit/planet` also owns Atlas's canonical planetary
 genome/phenotype, connected quadruped body and terrain-aware pose core. These
 are the original algorithms and data versions, not a composer-preset adapter.
