@@ -281,6 +281,7 @@
         "COMPOSER_EYE_CATALOGUE",
         "COMPOSER_EYE_CONTRAST",
         "COMPOSER_EYE_PITCH_DEG",
+        "COMPOSER_REALISM_SKIN_VERSION",
         "COMPOSER_SKIN_NO_REGION",
         "COMPOSER_SKIN_TESSELLATION",
         "COMPOSER_SKIN_VERSION",
@@ -313,6 +314,7 @@
         "ComposerSkinEyeDebug",
         "ComposerSkinOptions",
         "ComposerSkinPart",
+        "ComposerSkinPresentation",
         "ComposerSkinRing"
       ]
     },
@@ -372,6 +374,7 @@
         "COMPOSER_GRAPH_VERSION",
         "COMPOSER_MAX_STANCE_EXTENSION",
         "COMPOSER_MOTIONS",
+        "COMPOSER_TRUNK_MOTION_VERSION",
         "COMPOSER_TRUNK_TIP_CLEARANCE",
         "DISPLAY_ARM_RAISE",
         "buildComposerGraph",
@@ -396,6 +399,7 @@
         "ComposerMotion",
         "ComposerPart",
         "ComposerPose",
+        "ComposerPoseOptions",
         "ComposerSection",
         "Quat",
         "Vec3"
