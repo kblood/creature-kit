@@ -346,6 +346,56 @@ function coatRegionAt(plan: QuadrupedPlan, prim: QuadrupedPrimitive, x: number, 
   }
 }
 
+/** Shared connected-body paint arithmetic. The generator supplies its existing
+ * nearest primitive so its geometry/weights and paint calculations stay identical. */
+function connectedBodyColour(plan:QuadrupedPlan,nearest:number,x:number,y:number,z:number,ny0:number,coatV2:boolean,surface:FaunaCoatSurface,base:Vec3,accent:Vec3,hoof:Vec3):Vec3{
+  const region = plan.primitives[nearest]!.region;
+  let color:Vec3;
+  if (coatV2) {
+    // Socks, countershading and armour plates come from the coat itself.
+    surface.dorsal = ny0;
+    const coatRegion = coatRegionAt(plan, plan.primitives[nearest]!, x, y, z, surface);
+    color = sampleFaunaCoat(plan.genome, x, y, z, plan.torsoY, coatRegion, surface)!;
+  } else {
+    const mark = region === 'torso' || region === 'neck' || region === 'upper' || region === 'tail' ? coatMark(plan, x, y) : 0;
+    color = sampleFaunaCoat(plan.genome, x, y, z, plan.torsoY) ?? lerp3(base, accent, mark * .6);
+    if (region === 'torso' || region === 'neck' || region === 'upper') color = lerp3(color, lerp3(accent, [1, 1, 1], .15), Math.max(0, -ny0 - .15) * .45);
+    if (region === 'lower') color = scale(color, .82);
+  }
+  if (region === 'foot') {
+    const footType = plan.genome.morphology?.footType;
+    const darkening = footType === 'paw' ? .3 : footType === 'broad-pad' ? .55 : .9;
+    color = lerp3(coatV2 ? color : scale(color, .7), hoof, clamp((plan.legs[0]!.ankle[1] - y) / Math.max(plan.legs[0]!.ankle[1], 1e-3) * 1.6, 0, darkening));
+  }
+  if (region === 'armor' && !coatV2) color = scale(accent, .85);
+  return color;
+}
+export const QUADRUPED_BODY_COLOUR_SAMPLER_VERSION='quadruped-body-colour-sampler-1';
+export interface QuadrupedBodyColourSampler {
+  readonly version:typeof QUADRUPED_BODY_COLOUR_SAMPLER_VERSION;
+  /** Borrowed immutable source; no regenerated specimen or copied genome. */
+  readonly source:Readonly<QuadrupedBodyData>;
+  /** Original connected-body colour field in linear RGB before quantization.
+   * Supplemental ears/horns/structural/face colours are outside this API. */
+  sampleInto(x:number,y:number,z:number,normalY:number,out:Float64Array):Float64Array;
+}
+/** Exact same colour/context as the connected-body builder. Uses source.cellM
+ * as the canonical sampling footprint; callers do not silently change pattern
+ * filtering. Scratch context is per sampler, and sampling must be sequential. */
+export function createQuadrupedBodyColourSampler(source:Readonly<QuadrupedBodyData>):QuadrupedBodyColourSampler{
+  if(!source?.plan?.primitives?.length||!Number.isFinite(source.cellM)||source.cellM<=0)throw new Error('quadruped body colour sampler: valid loaded source required');
+  const plan=source.plan,base=linearHex(plan.genome.color),accent=linearHex(plan.genome.accentColor),hoof:Vec3=[.035,.03,.026];
+  const coatV2=plan.genome.appearance?.version===FAUNA_APPEARANCE_VERSION&&!!plan.genome.appearance.coat;
+  const surface:FaunaCoatSurface={dorsal:0,along:0,cellM:source.cellM};
+  return {version:QUADRUPED_BODY_COLOUR_SAMPLER_VERSION,source,sampleInto(x,y,z,normalY,out){
+    if(![x,y,z,normalY].every(Number.isFinite)||!(out instanceof Float64Array)||out.length<3)throw new Error('quadruped body colour sampler: finite point/normal and Float64 RGB output required');
+    let nearest=0,dMin=Infinity;
+    for(let p=0;p<plan.primitives.length;p++){const d=primitiveDistance(plan.primitives[p]!,x,y,z);if(d<dMin){dMin=d;nearest=p;}}
+    const colour=connectedBodyColour(plan,nearest,x,y,z,normalY,coatV2,surface,base,accent,hoof);
+    for(let c=0;c<3;c++)out[c]=colour[c]!;return out;
+  }};
+}
+
 // ---------------------------------------------------------------------------
 // Build.
 // ---------------------------------------------------------------------------
@@ -521,24 +571,7 @@ export function* quadrupedBodyBuildSteps(genome: CreatureGenome): Generator<void
         const w = Math.max(0, 1 - (distances[p]! - dMin) / band) ** 2;
         if (w > boneWeight[prim.bone]!) boneWeight[prim.bone] = w;
       }
-      const region = plan.primitives[nearest]!.region, ny0 = normals[v * 3 + 1]!;
-      if (coatV2) {
-        // Socks, countershading and armour plates come from the coat itself.
-        surface.dorsal = ny0;
-        const coatRegion = coatRegionAt(plan, plan.primitives[nearest]!, x, y, z, surface);
-        color = sampleFaunaCoat(plan.genome, x, y, z, plan.torsoY, coatRegion, surface)!;
-      } else {
-        const mark = region === 'torso' || region === 'neck' || region === 'upper' || region === 'tail' ? coatMark(plan, x, y) : 0;
-        color = sampleFaunaCoat(plan.genome, x, y, z, plan.torsoY) ?? lerp3(base, accent, mark * .6);
-        if (region === 'torso' || region === 'neck' || region === 'upper') color = lerp3(color, lerp3(accent, [1, 1, 1], .15), Math.max(0, -ny0 - .15) * .45);
-        if (region === 'lower') color = scale(color, .82);
-      }
-      if (region === 'foot') {
-        const footType = plan.genome.morphology?.footType;
-        const darkening = footType === 'paw' ? .3 : footType === 'broad-pad' ? .55 : .9;
-        color = lerp3(coatV2 ? color : scale(color, .7), hoof, clamp((plan.legs[0]!.ankle[1] - y) / Math.max(plan.legs[0]!.ankle[1], 1e-3) * 1.6, 0, darkening));
-      }
-      if (region === 'armor' && !coatV2) color = scale(accent, .85);
+      color = connectedBodyColour(plan, nearest, x, y, z, normals[v * 3 + 1]!, coatV2, surface, base, accent, hoof);
     }
     // Keep the four strongest bones, then quantize to an exact 255 sum.
     const top: number[] = [];
