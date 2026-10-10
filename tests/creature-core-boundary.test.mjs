@@ -1,5 +1,5 @@
 // Creature-kit phase 1: lock the composer core's package boundary without moving any file.
-// The 12 modules below (plan: C:/LLM/IWSDK/docs/creature-kit-extraction-plan-2026-10-04.md) form a closed set today: they import only each other and `three`. This test keeps it that way, and pins the exported
+// The 13 modules below (plan: C:/LLM/IWSDK/docs/creature-kit-extraction-plan-2026-10-04.md) form a closed set today: they import only each other and `three`. This test keeps it that way, and pins the exported
 // names of each module so an accidental public-API change fails with a readable diff.
 //
 // Regenerate the export snapshot after an INTENDED API change:
@@ -14,6 +14,7 @@ import ts from 'typescript';
 
 export const CREATURE_CORE_MODULES = Object.freeze([
   'fauna-coat-fields.ts',
+  'fauna-coat-crisp-glsl.ts',
   'fauna-coat-vocab.ts',
   'fauna-composer-eye-catalogue.ts',
   'fauna-composer-eye.ts',
@@ -90,7 +91,7 @@ export function exportedNames(sf) {
 
 const sources = Object.fromEntries(CREATURE_CORE_MODULES.map(name => [name, parse(name)]));
 
-test('creature core: the 12 composer modules import only each other and three', () => {
+test('creature core: the 13 composer modules import only each other and three', () => {
   const core = new Set(CREATURE_CORE_MODULES);
   const leaks = [];
   for (const [name, sf] of Object.entries(sources)) {
@@ -102,7 +103,7 @@ test('creature core: the 12 composer modules import only each other and three', 
     }
   }
   assert.equal(leaks.length, 0,
-    `Creature core boundary broken: these imports leave the 12-module composer core (allowed: each other via './<file>.ts', and 'three').\n`
+    `Creature core boundary broken: these imports leave the 13-module composer core (allowed: each other via './<file>.ts', and 'three').\n`
     + `${leaks.join('\n')}\n`
     + `Move the dependency into the core, pass the value in from the caller, or (owner decision) extend CREATURE_CORE_MODULES.`);
 });

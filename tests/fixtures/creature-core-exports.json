@@ -26,6 +26,7 @@
         "defaultCoatGenome",
         "evaluateCoat",
         "evaluateCoatWithMask",
+        "evaluateCoatWithMaskUnclamped",
         "fbm2",
         "hash3u",
         "hexToLinear",
@@ -46,6 +47,13 @@
         "CoatSample",
         "CoatWeightedSample"
       ]
+    },
+    "fauna-coat-crisp-glsl.ts": {
+      "values": [
+        "COAT_PATTERN_CRISP_GLSL",
+        "COAT_PATTERN_CRISP_GLSL_VERSION"
+      ],
+      "types": []
     },
     "fauna-coat-vocab.ts": {
       "values": [

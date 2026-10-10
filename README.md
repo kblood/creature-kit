@@ -156,3 +156,16 @@ with exact commit/version/file hashes. `npm run update:creature-kit -- --kit <ch
 preflights and builds the committed kit before updating Atlas. Composer source
 consumption remains the earlier SHA-pinned sync while definition convergence
 continues. See Atlas's `docs/creature-kit-planet-package-2026-10-10.md`.
+
+
+## Planet appearance API 0.4
+
+The additive loaded-body colour and raw pattern samplers preserve the frozen
+planetary generator, source arrays and genome. The planet entry now exports
+`COAT_PATTERN_CRISP_GLSL` from one shared module used by the composer as well.
+Consumers must supply the actual planetary rest-space context and preserve its
+clamp stages, supplemental colours and full 32-bit seed. Choosing a per-fragment
+appearance changes interpolation compared with the original baked vertex colours;
+it requires an explicit presentation version and visual/performance review. This
+API release does not enable Atlas's prototype renderer or select a new LOD method.
+The canonical inspector and definition exports remain available.
