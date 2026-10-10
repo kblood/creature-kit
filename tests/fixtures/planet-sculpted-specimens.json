@@ -1,0 +1,2189 @@
+{
+  "source": "Assets/_assetctl/animal-system-20261010/canonical-review-corpus-plus-worlds/corpus.json",
+  "sourceCommit": "9271d5b56df07c2d738c8f7cefb0006b3025a6a3",
+  "rows": [
+    {
+      "id": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/browser/adult",
+      "genome": {
+        "version": "creature-genome-1",
+        "archetype": "browser",
+        "torsoLength": 1.668,
+        "torsoHeight": 0.759,
+        "torsoWidth": 0.637,
+        "legLength": 1.049,
+        "upperLegFraction": 0.53,
+        "stanceWidth": 0.679,
+        "neckLength": 0.572,
+        "neckRise": 0.258,
+        "headLength": 0.443,
+        "headWidth": 0.284,
+        "tailLength": 0.427,
+        "footLength": 0.213,
+        "footWidth": 0.142,
+        "hornLength": 0.259,
+        "earLength": 0.174,
+        "armor": 0,
+        "walkSpeed": 1.001,
+        "runSpeed": 3.003,
+        "strideLength": 0.861,
+        "color": "#8b6c5a",
+        "accentColor": "#422921",
+        "pattern": "stripes",
+        "mutationLog": [
+          "browser founder anatomy",
+          "ungulate phenotype; adult anatomy and identity-preserving coat; male"
+        ],
+        "appearance": {
+          "version": "fauna-appearance-2",
+          "individualKey": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/browser/adult/0/appearance-v1",
+          "markingSeed": 2705867722,
+          "pattern": "stripes",
+          "palette": {
+            "base": "#8b6c5a",
+            "marking": "#422921",
+            "belly": "#bda390"
+          },
+          "roughness": 0.8251670595910788,
+          "profile": {
+            "mass": -0.1277156293223881,
+            "limb": -0.7459339545448157,
+            "neck": 0.8516683964644718,
+            "dimorphism": 0.5506535749346949,
+            "hornlessFemales": true
+          },
+          "individual": {
+            "size": -0.9711631168544207,
+            "condition": -0.5720754246162426,
+            "muzzle": -0.7853539520374857,
+            "ears": 0.10526992546051517,
+            "sex": "male",
+            "coatPhase": 0.06730969902127981,
+            "limb": 0.2351636535569941,
+            "neck": -0.2829902868911136,
+            "tail": -0.9613935346625264
+          },
+          "growth": {
+            "stage": "adult",
+            "maturity": 1,
+            "lateral": 1
+          },
+          "coat": {
+            "version": "fauna-coat-1",
+            "pattern": "bands",
+            "marks": 198,
+            "scale": 1.220086823085524,
+            "contrast": 0.840999576705508,
+            "countershade": 0.758304007165134,
+            "bellyLine": -0.45696701142005625,
+            "colours": {
+              "base": [
+                0.31119353274792083,
+                0.16453929051262225,
+                0.10305515644630239
+              ],
+              "accent": [
+                0.05485523063692214,
+                0.022369503727056754,
+                0.015020030748584254
+              ],
+              "belly": [
+                0.5114712247005438,
+                0.36673903976136357,
+                0.27950139534894275
+              ],
+              "keratin": [
+                0.02934816265589652,
+                0.019767313662924123,
+                0.016341992006004037
+              ],
+              "skin": [
+                0.23318399446564037,
+                0.12635070567990692,
+                0.09936472474550422
+              ],
+              "eye": [
+                0.0063761891981148145,
+                0.0038315048773427925,
+                0.0029703524959115457
+              ],
+              "horn": [
+                0.11082978679078645,
+                0.0768947316954672,
+                0.06750058373371792
+              ],
+              "plate": [
+                0.17874862900359667,
+                0.10610552078137928,
+                0.06457778442161248
+              ]
+            },
+            "markRole": "accent",
+            "seed": 2576916443,
+            "warp": 0.5268379471730441,
+            "threshold": 0.046896635866723956,
+            "juvenileSpots": 0,
+            "greying": 0.03979133467274736
+          },
+          "lineage": {
+            "family": "dun",
+            "pattern": "bands"
+          }
+        },
+        "morphology": {
+          "version": "fauna-morphology-1",
+          "family": "ungulate",
+          "footType": "hoof",
+          "trunkLength": 0,
+          "wingSpan": 0,
+          "wingState": "none"
+        }
+      },
+      "archetype": "browser",
+      "family": "ungulate",
+      "stage": "adult",
+      "seed": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW",
+      "sourceDigest": "5ab25486f816cd7f7022993d6412c3e17f1baa5e721f1fedee3ddf9f29dcdab8",
+      "poses": [
+        {
+          "name": "rest",
+          "phase": 0,
+          "behaviour": "alert",
+          "member": {
+            "id": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/browser/adult",
+            "anchorOffsetX": 0,
+            "anchorOffsetZ": 0,
+            "orbitRadiusM": 5,
+            "orbitAngularSpeed": 0.15,
+            "orbitPhase": 0,
+            "gaitPeriodS": 12
+          },
+          "activity": {
+            "pose": {
+              "x": 0,
+              "z": 0,
+              "yaw": 0,
+              "gait": "idle"
+            },
+            "travel": 0,
+            "stateS": 3
+          }
+        },
+        {
+          "name": "walk",
+          "phase": 0.18,
+          "behaviour": "alert",
+          "member": {
+            "id": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/browser/adult",
+            "anchorOffsetX": 0,
+            "anchorOffsetZ": 0,
+            "orbitRadiusM": 5,
+            "orbitAngularSpeed": 0.15,
+            "orbitPhase": 0,
+            "gaitPeriodS": 12
+          },
+          "activity": {
+            "pose": {
+              "x": 0,
+              "z": 0,
+              "yaw": 0,
+              "gait": "walk"
+            },
+            "travel": 0.18,
+            "stateS": 3
+          }
+        },
+        {
+          "name": "feed",
+          "phase": 0,
+          "behaviour": "feed",
+          "member": {
+            "id": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/browser/adult",
+            "anchorOffsetX": 0,
+            "anchorOffsetZ": 0,
+            "orbitRadiusM": 5,
+            "orbitAngularSpeed": 0.15,
+            "orbitPhase": 0,
+            "gaitPeriodS": 12
+          },
+          "activity": {
+            "pose": {
+              "x": 0,
+              "z": 0,
+              "yaw": 0,
+              "gait": "idle"
+            },
+            "travel": 0,
+            "stateS": 3
+          }
+        }
+      ]
+    },
+    {
+      "id": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/browser/juvenile",
+      "genome": {
+        "version": "creature-genome-1",
+        "archetype": "browser",
+        "torsoLength": 0.998,
+        "torsoHeight": 0.451,
+        "torsoWidth": 0.357,
+        "legLength": 0.835,
+        "upperLegFraction": 0.53,
+        "stanceWidth": 0.38,
+        "neckLength": 0.296,
+        "neckRise": 0.133,
+        "headLength": 0.394,
+        "headWidth": 0.255,
+        "tailLength": 0.297,
+        "footLength": 0.169,
+        "footWidth": 0.113,
+        "hornLength": 0.017,
+        "earLength": 0.156,
+        "armor": 0,
+        "walkSpeed": 0.893,
+        "runSpeed": 2.678,
+        "strideLength": 0.684,
+        "color": "#ab8a74",
+        "accentColor": "#553a2f",
+        "pattern": "stripes",
+        "mutationLog": [
+          "browser founder anatomy",
+          "ungulate phenotype; juvenile anatomy and identity-preserving coat; male"
+        ],
+        "appearance": {
+          "version": "fauna-appearance-2",
+          "individualKey": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/browser/juvenile/0/appearance-v1",
+          "markingSeed": 1252420904,
+          "pattern": "stripes",
+          "palette": {
+            "base": "#ab8a74",
+            "marking": "#553a2f",
+            "belly": "#edd1ba"
+          },
+          "roughness": 0.8251670595910788,
+          "profile": {
+            "mass": -0.1277156293223881,
+            "limb": -0.7459339545448157,
+            "neck": 0.8516683964644718,
+            "dimorphism": 0.5506535749346949,
+            "hornlessFemales": true
+          },
+          "individual": {
+            "size": -0.04074006877856795,
+            "condition": -0.6479059387109954,
+            "muzzle": -0.9321022671489283,
+            "ears": 0.4004638645333387,
+            "sex": "male",
+            "coatPhase": 0.507387112127617,
+            "limb": 0.49703197448910963,
+            "neck": -0.9123566876892831,
+            "tail": 0.5194293939320904
+          },
+          "growth": {
+            "stage": "juvenile",
+            "maturity": 0.24459604520350695,
+            "lateral": 1.060598
+          },
+          "coat": {
+            "version": "fauna-coat-1",
+            "pattern": "bands",
+            "marks": 198,
+            "scale": 1.1508634825453818,
+            "contrast": 0.9475879738572984,
+            "countershade": 0.7861581786535681,
+            "bellyLine": -0.449783192621544,
+            "colours": {
+              "base": [
+                0.5310211246764432,
+                0.31245973845675395,
+                0.1985199749448838
+              ],
+              "accent": [
+                0.09137008230380526,
+                0.042819549154451346,
+                0.028564833265840816
+              ],
+              "belly": [
+                0.8459471368678982,
+                0.6410209341560266,
+                0.491454768376943
+              ],
+              "keratin": [
+                0.02934816265589652,
+                0.019767313662924123,
+                0.016341992006004037
+              ],
+              "skin": [
+                0.306000058323924,
+                0.18227525616461931,
+                0.14230268519533978
+              ],
+              "eye": [
+                0.0063761891981148145,
+                0.0038315048773427925,
+                0.0029703524959115457
+              ],
+              "horn": [
+                0.11082978679078645,
+                0.0768947316954672,
+                0.06750058373371792
+              ],
+              "plate": [
+                0.23382046278042456,
+                0.13777462925309655,
+                0.0831238753935448
+              ]
+            },
+            "markRole": "accent",
+            "seed": 2575714883,
+            "warp": 0.4758526335004717,
+            "threshold": -0.07388634051196277,
+            "juvenileSpots": 1,
+            "greying": 0
+          },
+          "lineage": {
+            "family": "dun",
+            "pattern": "bands"
+          }
+        },
+        "morphology": {
+          "version": "fauna-morphology-1",
+          "family": "ungulate",
+          "footType": "hoof",
+          "trunkLength": 0,
+          "wingSpan": 0,
+          "wingState": "none"
+        }
+      },
+      "archetype": "browser",
+      "family": "ungulate",
+      "stage": "juvenile",
+      "seed": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW",
+      "sourceDigest": "61dac4bbd8992752fabd6fb260c2b34cefb5e70e3bd0f71874c54bba72f62234",
+      "poses": [
+        {
+          "name": "rest",
+          "phase": 0,
+          "behaviour": "alert",
+          "member": {
+            "id": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/browser/juvenile",
+            "anchorOffsetX": 0,
+            "anchorOffsetZ": 0,
+            "orbitRadiusM": 5,
+            "orbitAngularSpeed": 0.15,
+            "orbitPhase": 0,
+            "gaitPeriodS": 12
+          },
+          "activity": {
+            "pose": {
+              "x": 0,
+              "z": 0,
+              "yaw": 0,
+              "gait": "idle"
+            },
+            "travel": 0,
+            "stateS": 3
+          }
+        },
+        {
+          "name": "walk",
+          "phase": 0.18,
+          "behaviour": "alert",
+          "member": {
+            "id": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/browser/juvenile",
+            "anchorOffsetX": 0,
+            "anchorOffsetZ": 0,
+            "orbitRadiusM": 5,
+            "orbitAngularSpeed": 0.15,
+            "orbitPhase": 0,
+            "gaitPeriodS": 12
+          },
+          "activity": {
+            "pose": {
+              "x": 0,
+              "z": 0,
+              "yaw": 0,
+              "gait": "walk"
+            },
+            "travel": 0.18,
+            "stateS": 3
+          }
+        },
+        {
+          "name": "feed",
+          "phase": 0,
+          "behaviour": "feed",
+          "member": {
+            "id": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/browser/juvenile",
+            "anchorOffsetX": 0,
+            "anchorOffsetZ": 0,
+            "orbitRadiusM": 5,
+            "orbitAngularSpeed": 0.15,
+            "orbitPhase": 0,
+            "gaitPeriodS": 12
+          },
+          "activity": {
+            "pose": {
+              "x": 0,
+              "z": 0,
+              "yaw": 0,
+              "gait": "idle"
+            },
+            "travel": 0,
+            "stateS": 3
+          }
+        }
+      ]
+    },
+    {
+      "id": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/runner/adult",
+      "genome": {
+        "version": "creature-genome-1",
+        "archetype": "runner",
+        "torsoLength": 2.031,
+        "torsoHeight": 0.692,
+        "torsoWidth": 0.55,
+        "legLength": 1.627,
+        "upperLegFraction": 0.52,
+        "stanceWidth": 0.582,
+        "neckLength": 0.47,
+        "neckRise": 0.212,
+        "headLength": 0.502,
+        "headWidth": 0.284,
+        "tailLength": 1.157,
+        "footLength": 0.182,
+        "footWidth": 0.122,
+        "hornLength": 0,
+        "earLength": 0.235,
+        "armor": 0,
+        "walkSpeed": 1.582,
+        "runSpeed": 5.717,
+        "strideLength": 1.334,
+        "color": "#a28464",
+        "accentColor": "#402f1a",
+        "pattern": "stripes",
+        "mutationLog": [
+          "runner founder anatomy",
+          "cursorial phenotype; adult anatomy and identity-preserving coat; male"
+        ],
+        "appearance": {
+          "version": "fauna-appearance-2",
+          "individualKey": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/runner/adult/0/appearance-v1",
+          "markingSeed": 1858895847,
+          "pattern": "stripes",
+          "palette": {
+            "base": "#a28464",
+            "marking": "#402f1a",
+            "belly": "#ddd4b4"
+          },
+          "roughness": 0.8685064347143067,
+          "profile": {
+            "mass": -0.4799986592214551,
+            "limb": 0.4459482611729644,
+            "neck": 0.350201687158598,
+            "dimorphism": 0.6670792699791491,
+            "hornlessFemales": false
+          },
+          "individual": {
+            "size": 0.1770936327933086,
+            "condition": 0.015571801228349003,
+            "muzzle": -0.18520248150108443,
+            "ears": -0.4990267826940461,
+            "sex": "male",
+            "coatPhase": 0.7128721820190549,
+            "limb": 0.9484601090542182,
+            "neck": -0.08333382594476779,
+            "tail": 0.25064132764251923
+          },
+          "growth": {
+            "stage": "adult",
+            "maturity": 1,
+            "lateral": 1
+          },
+          "coat": {
+            "version": "fauna-coat-1",
+            "pattern": "dorsal-stripe",
+            "marks": 6,
+            "scale": 0.7040355123676264,
+            "contrast": 0.931738621648401,
+            "countershade": 0.6340024855220691,
+            "bellyLine": -0.47076124118175355,
+            "colours": {
+              "base": [
+                0.2861028329631991,
+                0.13044318764872534,
+                0.03991897845265436
+              ],
+              "accent": [
+                0.0511407786247987,
+                0.028971611705682482,
+                0.010556763605535398
+              ],
+              "belly": [
+                0.7226278875761334,
+                0.6588293482625388,
+                0.4537687809630482
+              ],
+              "keratin": [
+                0.021540267660536433,
+                0.01605312302375794,
+                0.009989805541962724
+              ],
+              "skin": [
+                0.1879163875046482,
+                0.10931344568256406,
+                0.06144008260968458
+              ],
+              "eye": [
+                0.006611532803130436,
+                0.0044074602358282625,
+                0.0024400473048990876
+              ],
+              "horn": [
+                0.06314177234906702,
+                0.05315935603727273,
+                0.03730560789059899
+              ],
+              "plate": [
+                0.1392408615959247,
+                0.06577014545005784,
+                0.017333962050371386
+              ]
+            },
+            "markRole": "belly",
+            "seed": 1482673136,
+            "warp": 0.7452220612904057,
+            "threshold": -0.08954495841171592,
+            "juvenileSpots": 0,
+            "greying": 0.01591547703164762
+          },
+          "lineage": {
+            "family": "rufous",
+            "pattern": "dorsal-stripe"
+          }
+        },
+        "morphology": {
+          "version": "fauna-morphology-1",
+          "family": "cursorial",
+          "footType": "paw",
+          "trunkLength": 0,
+          "wingSpan": 0,
+          "wingState": "none"
+        }
+      },
+      "archetype": "runner",
+      "family": "cursorial",
+      "stage": "adult",
+      "seed": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW",
+      "sourceDigest": "4a4d450819c049e596bd1f32b10b67fc766eb8ddc56f91f7db52da0864465c9d",
+      "poses": [
+        {
+          "name": "rest",
+          "phase": 0,
+          "behaviour": "alert",
+          "member": {
+            "id": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/runner/adult",
+            "anchorOffsetX": 0,
+            "anchorOffsetZ": 0,
+            "orbitRadiusM": 5,
+            "orbitAngularSpeed": 0.15,
+            "orbitPhase": 0,
+            "gaitPeriodS": 12
+          },
+          "activity": {
+            "pose": {
+              "x": 0,
+              "z": 0,
+              "yaw": 0,
+              "gait": "idle"
+            },
+            "travel": 0,
+            "stateS": 3
+          }
+        },
+        {
+          "name": "walk",
+          "phase": 0.18,
+          "behaviour": "alert",
+          "member": {
+            "id": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/runner/adult",
+            "anchorOffsetX": 0,
+            "anchorOffsetZ": 0,
+            "orbitRadiusM": 5,
+            "orbitAngularSpeed": 0.15,
+            "orbitPhase": 0,
+            "gaitPeriodS": 12
+          },
+          "activity": {
+            "pose": {
+              "x": 0,
+              "z": 0,
+              "yaw": 0,
+              "gait": "walk"
+            },
+            "travel": 0.18,
+            "stateS": 3
+          }
+        },
+        {
+          "name": "feed",
+          "phase": 0,
+          "behaviour": "feed",
+          "member": {
+            "id": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/runner/adult",
+            "anchorOffsetX": 0,
+            "anchorOffsetZ": 0,
+            "orbitRadiusM": 5,
+            "orbitAngularSpeed": 0.15,
+            "orbitPhase": 0,
+            "gaitPeriodS": 12
+          },
+          "activity": {
+            "pose": {
+              "x": 0,
+              "z": 0,
+              "yaw": 0,
+              "gait": "idle"
+            },
+            "travel": 0,
+            "stateS": 3
+          }
+        }
+      ]
+    },
+    {
+      "id": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/runner/juvenile",
+      "genome": {
+        "version": "creature-genome-1",
+        "archetype": "runner",
+        "torsoLength": 1.242,
+        "torsoHeight": 0.385,
+        "torsoWidth": 0.306,
+        "legLength": 1.071,
+        "upperLegFraction": 0.52,
+        "stanceWidth": 0.35,
+        "neckLength": 0.301,
+        "neckRise": 0.136,
+        "headLength": 0.439,
+        "headWidth": 0.241,
+        "tailLength": 0.748,
+        "footLength": 0.131,
+        "footWidth": 0.087,
+        "hornLength": 0,
+        "earLength": 0.224,
+        "armor": 0,
+        "walkSpeed": 1.284,
+        "runSpeed": 4.638,
+        "strideLength": 0.878,
+        "color": "#a38864",
+        "accentColor": "#3e2e15",
+        "pattern": "stripes",
+        "mutationLog": [
+          "runner founder anatomy",
+          "cursorial phenotype; juvenile anatomy and identity-preserving coat; male"
+        ],
+        "appearance": {
+          "version": "fauna-appearance-2",
+          "individualKey": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/runner/juvenile/0/appearance-v1",
+          "markingSeed": 2785372583,
+          "pattern": "stripes",
+          "palette": {
+            "base": "#a38864",
+            "marking": "#3e2e15",
+            "belly": "#dbd3ad"
+          },
+          "roughness": 0.8685064347143067,
+          "profile": {
+            "mass": -0.4799986592214551,
+            "limb": 0.4459482611729644,
+            "neck": 0.350201687158598,
+            "dimorphism": 0.6670792699791491,
+            "hornlessFemales": false
+          },
+          "individual": {
+            "size": -0.7332385847655215,
+            "condition": -0.9835165040529139,
+            "muzzle": 0.33856610565878587,
+            "ears": 0.958761423816616,
+            "sex": "male",
+            "coatPhase": 0.5487555591389537,
+            "limb": -0.9023666176717651,
+            "neck": 0.4207714347682827,
+            "tail": 0.8380565140019303
+          },
+          "growth": {
+            "stage": "juvenile",
+            "maturity": 0.4316167796682566,
+            "lateral": 1.000382
+          },
+          "coat": {
+            "version": "fauna-coat-1",
+            "pattern": "dorsal-stripe",
+            "marks": 6,
+            "scale": 0.8325075047889257,
+            "contrast": 1.1258721790509298,
+            "countershade": 0.7305168060353026,
+            "bellyLine": -0.41825104800518603,
+            "colours": {
+              "base": [
+                0.2660446517781404,
+                0.11954155990763048,
+                0.0243518203596712
+              ],
+              "accent": [
+                0.04826991738274219,
+                0.027450680658469843,
+                0.007507348623200508
+              ],
+              "belly": [
+                0.7073687137191327,
+                0.6528308920710504,
+                0.4153523170256551
+              ],
+              "keratin": [
+                0.021540267660536433,
+                0.01605312302375794,
+                0.009989805541962724
+              ],
+              "skin": [
+                0.16403682823756904,
+                0.0940486677531082,
+                0.044531377610448786
+              ],
+              "eye": [
+                0.006611532803130436,
+                0.0044074602358282625,
+                0.0024400473048990876
+              ],
+              "horn": [
+                0.06314177234906702,
+                0.05315935603727273,
+                0.03730560789059899
+              ],
+              "plate": [
+                0.12181115760350707,
+                0.05792843977041251,
+                0.015554794096171574
+              ]
+            },
+            "markRole": "belly",
+            "seed": 105450246,
+            "warp": 0.5876189148286358,
+            "threshold": -0.02418933905661107,
+            "juvenileSpots": 0,
+            "greying": 0
+          },
+          "lineage": {
+            "family": "rufous",
+            "pattern": "dorsal-stripe"
+          }
+        },
+        "morphology": {
+          "version": "fauna-morphology-1",
+          "family": "cursorial",
+          "footType": "paw",
+          "trunkLength": 0,
+          "wingSpan": 0,
+          "wingState": "none"
+        }
+      },
+      "archetype": "runner",
+      "family": "cursorial",
+      "stage": "juvenile",
+      "seed": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW",
+      "sourceDigest": "867abdf501ec3be11baa7d89bcd1b6449d48b894eed0c57732c6949216948cd6",
+      "poses": [
+        {
+          "name": "rest",
+          "phase": 0,
+          "behaviour": "alert",
+          "member": {
+            "id": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/runner/juvenile",
+            "anchorOffsetX": 0,
+            "anchorOffsetZ": 0,
+            "orbitRadiusM": 5,
+            "orbitAngularSpeed": 0.15,
+            "orbitPhase": 0,
+            "gaitPeriodS": 12
+          },
+          "activity": {
+            "pose": {
+              "x": 0,
+              "z": 0,
+              "yaw": 0,
+              "gait": "idle"
+            },
+            "travel": 0,
+            "stateS": 3
+          }
+        },
+        {
+          "name": "walk",
+          "phase": 0.18,
+          "behaviour": "alert",
+          "member": {
+            "id": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/runner/juvenile",
+            "anchorOffsetX": 0,
+            "anchorOffsetZ": 0,
+            "orbitRadiusM": 5,
+            "orbitAngularSpeed": 0.15,
+            "orbitPhase": 0,
+            "gaitPeriodS": 12
+          },
+          "activity": {
+            "pose": {
+              "x": 0,
+              "z": 0,
+              "yaw": 0,
+              "gait": "walk"
+            },
+            "travel": 0.18,
+            "stateS": 3
+          }
+        },
+        {
+          "name": "feed",
+          "phase": 0,
+          "behaviour": "feed",
+          "member": {
+            "id": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/runner/juvenile",
+            "anchorOffsetX": 0,
+            "anchorOffsetZ": 0,
+            "orbitRadiusM": 5,
+            "orbitAngularSpeed": 0.15,
+            "orbitPhase": 0,
+            "gaitPeriodS": 12
+          },
+          "activity": {
+            "pose": {
+              "x": 0,
+              "z": 0,
+              "yaw": 0,
+              "gait": "idle"
+            },
+            "travel": 0,
+            "stateS": 3
+          }
+        }
+      ]
+    },
+    {
+      "id": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/low-slung/adult",
+      "genome": {
+        "version": "creature-genome-1",
+        "archetype": "low-slung",
+        "torsoLength": 1.828,
+        "torsoHeight": 0.463,
+        "torsoWidth": 0.766,
+        "legLength": 0.648,
+        "upperLegFraction": 0.49,
+        "stanceWidth": 0.842,
+        "neckLength": 0.315,
+        "neckRise": 0.142,
+        "headLength": 0.544,
+        "headWidth": 0.439,
+        "tailLength": 0.287,
+        "footLength": 0.264,
+        "footWidth": 0.176,
+        "hornLength": 0,
+        "earLength": 0.108,
+        "armor": 0.4,
+        "walkSpeed": 0.712,
+        "runSpeed": 2.224,
+        "strideLength": 0.531,
+        "color": "#55542d",
+        "accentColor": "#34371a",
+        "pattern": "stripes",
+        "mutationLog": [
+          "low-slung founder anatomy",
+          "padded phenotype; adult anatomy and identity-preserving coat; female"
+        ],
+        "appearance": {
+          "version": "fauna-appearance-2",
+          "individualKey": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/low-slung/adult/0/appearance-v1",
+          "markingSeed": 3837484827,
+          "pattern": "stripes",
+          "palette": {
+            "base": "#55542d",
+            "marking": "#34371a",
+            "belly": "#ae9f76"
+          },
+          "roughness": 0.8080717237859666,
+          "profile": {
+            "mass": -0.652321743232273,
+            "limb": 0.6400815690029602,
+            "neck": -0.40013833888809625,
+            "dimorphism": 0.2933752260520123,
+            "hornlessFemales": false
+          },
+          "individual": {
+            "size": 0.39042263324149484,
+            "condition": -0.9794139116954557,
+            "muzzle": -0.6096382494106978,
+            "ears": -0.8915609447033054,
+            "sex": "female",
+            "coatPhase": 0.1913284887559712,
+            "limb": -0.24498562776599675,
+            "neck": -0.4117530233719743,
+            "tail": -0.8635102081726096
+          },
+          "growth": {
+            "stage": "adult",
+            "maturity": 1,
+            "lateral": 1
+          },
+          "coat": {
+            "version": "fauna-coat-1",
+            "pattern": "bands",
+            "marks": 32,
+            "scale": 0.8003346808745146,
+            "contrast": 1.0727605412248522,
+            "countershade": 0.2988853903021663,
+            "bellyLine": -0.56027800089214,
+            "colours": {
+              "base": [
+                0.10370977753328697,
+                0.11135660310499401,
+                0.02705376268586974
+              ],
+              "accent": [
+                0.03390330523155351,
+                0.03845844638457495,
+                0.0104462896582633
+              ],
+              "belly": [
+                0.42269704648317025,
+                0.3454014015520196,
+                0.18076528174165657
+              ],
+              "keratin": [
+                0.029917524299117933,
+                0.025060666766964803,
+                0.01079286382380711
+              ],
+              "skin": [
+                0.1389694658434571,
+                0.1373713112777501,
+                0.048756000514469336
+              ],
+              "eye": [
+                0.015558834499868833,
+                0.008052383726336411,
+                0.0014205066063817315
+              ],
+              "horn": [
+                0.1842335094304637,
+                0.13812674005643832,
+                0.0718389330446712
+              ],
+              "plate": [
+                0.12373892254834061,
+                0.08478301130953775,
+                0.02421709151571043
+              ]
+            },
+            "markRole": "accent",
+            "seed": 921309084,
+            "warp": 0.5316267401212826,
+            "threshold": 0.10521413567475975,
+            "juvenileSpots": 0,
+            "greying": 0.025428680837350285
+          },
+          "lineage": {
+            "family": "olive",
+            "pattern": "bands"
+          }
+        },
+        "morphology": {
+          "version": "fauna-morphology-1",
+          "family": "padded",
+          "footType": "broad-pad",
+          "trunkLength": 0,
+          "wingSpan": 0,
+          "wingState": "none"
+        }
+      },
+      "archetype": "low-slung",
+      "family": "padded",
+      "stage": "adult",
+      "seed": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW",
+      "sourceDigest": "e1f116e6e1e35ff6e333ab3df65d04cf80aacce8a7af6130fea10661a1c53d2d",
+      "poses": [
+        {
+          "name": "rest",
+          "phase": 0,
+          "behaviour": "alert",
+          "member": {
+            "id": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/low-slung/adult",
+            "anchorOffsetX": 0,
+            "anchorOffsetZ": 0,
+            "orbitRadiusM": 5,
+            "orbitAngularSpeed": 0.15,
+            "orbitPhase": 0,
+            "gaitPeriodS": 12
+          },
+          "activity": {
+            "pose": {
+              "x": 0,
+              "z": 0,
+              "yaw": 0,
+              "gait": "idle"
+            },
+            "travel": 0,
+            "stateS": 3
+          }
+        },
+        {
+          "name": "walk",
+          "phase": 0.18,
+          "behaviour": "alert",
+          "member": {
+            "id": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/low-slung/adult",
+            "anchorOffsetX": 0,
+            "anchorOffsetZ": 0,
+            "orbitRadiusM": 5,
+            "orbitAngularSpeed": 0.15,
+            "orbitPhase": 0,
+            "gaitPeriodS": 12
+          },
+          "activity": {
+            "pose": {
+              "x": 0,
+              "z": 0,
+              "yaw": 0,
+              "gait": "walk"
+            },
+            "travel": 0.18,
+            "stateS": 3
+          }
+        },
+        {
+          "name": "feed",
+          "phase": 0,
+          "behaviour": "feed",
+          "member": {
+            "id": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/low-slung/adult",
+            "anchorOffsetX": 0,
+            "anchorOffsetZ": 0,
+            "orbitRadiusM": 5,
+            "orbitAngularSpeed": 0.15,
+            "orbitPhase": 0,
+            "gaitPeriodS": 12
+          },
+          "activity": {
+            "pose": {
+              "x": 0,
+              "z": 0,
+              "yaw": 0,
+              "gait": "idle"
+            },
+            "travel": 0,
+            "stateS": 3
+          }
+        }
+      ]
+    },
+    {
+      "id": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/low-slung/juvenile",
+      "genome": {
+        "version": "creature-genome-1",
+        "archetype": "low-slung",
+        "torsoLength": 0.97,
+        "torsoHeight": 0.299,
+        "torsoWidth": 0.486,
+        "legLength": 0.388,
+        "upperLegFraction": 0.49,
+        "stanceWidth": 0.534,
+        "neckLength": 0.16,
+        "neckRise": 0.072,
+        "headLength": 0.427,
+        "headWidth": 0.34,
+        "tailLength": 0.166,
+        "footLength": 0.231,
+        "footWidth": 0.154,
+        "hornLength": 0,
+        "earLength": 0.088,
+        "armor": 0.24,
+        "walkSpeed": 0.551,
+        "runSpeed": 1.721,
+        "strideLength": 0.318,
+        "color": "#616337",
+        "accentColor": "#3a4120",
+        "pattern": "stripes",
+        "mutationLog": [
+          "low-slung founder anatomy",
+          "padded phenotype; juvenile anatomy and identity-preserving coat; female"
+        ],
+        "appearance": {
+          "version": "fauna-appearance-2",
+          "individualKey": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/low-slung/juvenile/0/appearance-v1",
+          "markingSeed": 1963656266,
+          "pattern": "stripes",
+          "palette": {
+            "base": "#616337",
+            "marking": "#3a4120",
+            "belly": "#d2c690"
+          },
+          "roughness": 0.8080717237859666,
+          "profile": {
+            "mass": -0.652321743232273,
+            "limb": 0.6400815690029602,
+            "neck": -0.40013833888809625,
+            "dimorphism": 0.2933752260520123,
+            "hornlessFemales": false
+          },
+          "individual": {
+            "size": -0.5411765714039041,
+            "condition": 0.4791410927379367,
+            "muzzle": -0.4414244805093446,
+            "ears": -0.1668229590092839,
+            "sex": "female",
+            "coatPhase": 0.16060040285810828,
+            "limb": -0.7619516583536639,
+            "neck": -0.2655439044501502,
+            "tail": -0.03303014138551197
+          },
+          "growth": {
+            "stage": "juvenile",
+            "maturity": 0.23918414506828412,
+            "lateral": 1.017698
+          },
+          "coat": {
+            "version": "fauna-coat-1",
+            "pattern": "bands",
+            "marks": 32,
+            "scale": 0.7540781188614114,
+            "contrast": 1.012119350163266,
+            "countershade": 0.4231519204098731,
+            "bellyLine": -0.48888533571735027,
+            "colours": {
+              "base": [
+                0.14014510782228265,
+                0.16839675548212257,
+                0.041596535767241656
+              ],
+              "accent": [
+                0.04220027904004088,
+                0.053345635623424016,
+                0.014641400626697056
+              ],
+              "belly": [
+                0.6420410355503392,
+                0.5676856157234659,
+                0.27750481680054584
+              ],
+              "keratin": [
+                0.029917524299117933,
+                0.025060666766964803,
+                0.01079286382380711
+              ],
+              "skin": [
+                0.1389034840067475,
+                0.1497068400396142,
+                0.05313533750879442
+              ],
+              "eye": [
+                0.015558834499868833,
+                0.008052383726336411,
+                0.0014205066063817315
+              ],
+              "horn": [
+                0.1842335094304637,
+                0.13812674005643832,
+                0.0718389330446712
+              ],
+              "plate": [
+                0.13323436709881845,
+                0.09112785792793808,
+                0.02581345566208649
+              ]
+            },
+            "markRole": "accent",
+            "seed": 3611652716,
+            "warp": 0.5226321839261799,
+            "threshold": 0.07248837212100626,
+            "juvenileSpots": 0,
+            "greying": 0
+          },
+          "lineage": {
+            "family": "olive",
+            "pattern": "bands"
+          }
+        },
+        "morphology": {
+          "version": "fauna-morphology-1",
+          "family": "padded",
+          "footType": "broad-pad",
+          "trunkLength": 0,
+          "wingSpan": 0,
+          "wingState": "none"
+        }
+      },
+      "archetype": "low-slung",
+      "family": "padded",
+      "stage": "juvenile",
+      "seed": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW",
+      "sourceDigest": "78706c561938c9e996df634f3a9cf2a2e436ed68b94b19d50eb6255a7b4033d8",
+      "poses": [
+        {
+          "name": "rest",
+          "phase": 0,
+          "behaviour": "alert",
+          "member": {
+            "id": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/low-slung/juvenile",
+            "anchorOffsetX": 0,
+            "anchorOffsetZ": 0,
+            "orbitRadiusM": 5,
+            "orbitAngularSpeed": 0.15,
+            "orbitPhase": 0,
+            "gaitPeriodS": 12
+          },
+          "activity": {
+            "pose": {
+              "x": 0,
+              "z": 0,
+              "yaw": 0,
+              "gait": "idle"
+            },
+            "travel": 0,
+            "stateS": 3
+          }
+        },
+        {
+          "name": "walk",
+          "phase": 0.18,
+          "behaviour": "alert",
+          "member": {
+            "id": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/low-slung/juvenile",
+            "anchorOffsetX": 0,
+            "anchorOffsetZ": 0,
+            "orbitRadiusM": 5,
+            "orbitAngularSpeed": 0.15,
+            "orbitPhase": 0,
+            "gaitPeriodS": 12
+          },
+          "activity": {
+            "pose": {
+              "x": 0,
+              "z": 0,
+              "yaw": 0,
+              "gait": "walk"
+            },
+            "travel": 0.18,
+            "stateS": 3
+          }
+        },
+        {
+          "name": "feed",
+          "phase": 0,
+          "behaviour": "feed",
+          "member": {
+            "id": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/low-slung/juvenile",
+            "anchorOffsetX": 0,
+            "anchorOffsetZ": 0,
+            "orbitRadiusM": 5,
+            "orbitAngularSpeed": 0.15,
+            "orbitPhase": 0,
+            "gaitPeriodS": 12
+          },
+          "activity": {
+            "pose": {
+              "x": 0,
+              "z": 0,
+              "yaw": 0,
+              "gait": "idle"
+            },
+            "travel": 0,
+            "stateS": 3
+          }
+        }
+      ]
+    },
+    {
+      "id": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/long-neck/adult",
+      "genome": {
+        "version": "creature-genome-1",
+        "archetype": "long-neck",
+        "torsoLength": 1.613,
+        "torsoHeight": 0.706,
+        "torsoWidth": 0.554,
+        "legLength": 1.305,
+        "upperLegFraction": 0.54,
+        "stanceWidth": 0.591,
+        "neckLength": 1.626,
+        "neckRise": 0.96,
+        "headLength": 0.424,
+        "headWidth": 0.258,
+        "tailLength": 0.663,
+        "footLength": 0.185,
+        "footWidth": 0.123,
+        "hornLength": 0,
+        "earLength": 0.174,
+        "armor": 0,
+        "walkSpeed": 1.065,
+        "runSpeed": 3.28,
+        "strideLength": 1.07,
+        "color": "#c2aa81",
+        "accentColor": "#644926",
+        "pattern": "stripes",
+        "mutationLog": [
+          "long-neck founder anatomy",
+          "long-neck phenotype; adult anatomy and identity-preserving coat; male"
+        ],
+        "appearance": {
+          "version": "fauna-appearance-2",
+          "individualKey": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/long-neck/adult/0/appearance-v1",
+          "markingSeed": 2855893348,
+          "pattern": "stripes",
+          "palette": {
+            "base": "#c2aa81",
+            "marking": "#644926",
+            "belly": "#d6c59a"
+          },
+          "roughness": 0.8309296874110423,
+          "profile": {
+            "mass": 0.7120276483967964,
+            "limb": 0.08504689649796271,
+            "neck": 0.5093278995503969,
+            "dimorphism": 0.540662900581956,
+            "hornlessFemales": false
+          },
+          "individual": {
+            "size": -0.9207923873143253,
+            "condition": -0.5444640185554661,
+            "muzzle": 0.7951151760749322,
+            "ears": -0.4795735565665117,
+            "sex": "male",
+            "coatPhase": 0.6133234361186624,
+            "limb": -0.4650074666051677,
+            "neck": 0.897614852035794,
+            "tail": -0.380685417768705
+          },
+          "growth": {
+            "stage": "adult",
+            "maturity": 1,
+            "lateral": 1
+          },
+          "coat": {
+            "version": "fauna-coat-1",
+            "pattern": "stripes",
+            "marks": 47,
+            "scale": 0.8885289974793682,
+            "contrast": 0.9526090132072569,
+            "countershade": 0.7625299958395771,
+            "bellyLine": -0.4006402019411326,
+            "colours": {
+              "base": [
+                0.4762661339308211,
+                0.2936301562756359,
+                0.1026629027511794
+              ],
+              "accent": [
+                0.12834288602712493,
+                0.06631472561457688,
+                0.019692669688134566
+              ],
+              "belly": [
+                0.6757070703975362,
+                0.5589890044411192,
+                0.32479933627123536
+              ],
+              "keratin": [
+                0.0257018738039364,
+                0.021586806731594167,
+                0.01656193531835099
+              ],
+              "skin": [
+                0.3258843267275631,
+                0.21128449573702962,
+                0.11314284278809857
+              ],
+              "eye": [
+                0.011311043488238512,
+                0.00831689951860566,
+                0.003634834587167021
+              ],
+              "horn": [
+                0.11529075422255848,
+                0.0992861530677041,
+                0.07562027619179156
+              ],
+              "plate": [
+                0.2488430873444017,
+                0.17311859964666604,
+                0.06195297004669109
+              ]
+            },
+            "markRole": "belly",
+            "seed": 3728571986,
+            "warp": 0.34612365653738375,
+            "threshold": -0.043474331805482505,
+            "juvenileSpots": 0,
+            "greying": 0.003304095329148063
+          },
+          "lineage": {
+            "family": "tawny",
+            "pattern": "stripes"
+          }
+        },
+        "morphology": {
+          "version": "fauna-morphology-1",
+          "family": "long-neck",
+          "footType": "hoof",
+          "trunkLength": 0,
+          "wingSpan": 0,
+          "wingState": "none"
+        }
+      },
+      "archetype": "long-neck",
+      "family": "long-neck",
+      "stage": "adult",
+      "seed": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW",
+      "sourceDigest": "14d052c2f67fc523714d0860e235365f7caa1318c89a5dcd4015554aefcc80b9",
+      "poses": [
+        {
+          "name": "rest",
+          "phase": 0,
+          "behaviour": "alert",
+          "member": {
+            "id": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/long-neck/adult",
+            "anchorOffsetX": 0,
+            "anchorOffsetZ": 0,
+            "orbitRadiusM": 5,
+            "orbitAngularSpeed": 0.15,
+            "orbitPhase": 0,
+            "gaitPeriodS": 12
+          },
+          "activity": {
+            "pose": {
+              "x": 0,
+              "z": 0,
+              "yaw": 0,
+              "gait": "idle"
+            },
+            "travel": 0,
+            "stateS": 3
+          }
+        },
+        {
+          "name": "walk",
+          "phase": 0.18,
+          "behaviour": "alert",
+          "member": {
+            "id": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/long-neck/adult",
+            "anchorOffsetX": 0,
+            "anchorOffsetZ": 0,
+            "orbitRadiusM": 5,
+            "orbitAngularSpeed": 0.15,
+            "orbitPhase": 0,
+            "gaitPeriodS": 12
+          },
+          "activity": {
+            "pose": {
+              "x": 0,
+              "z": 0,
+              "yaw": 0,
+              "gait": "walk"
+            },
+            "travel": 0.18,
+            "stateS": 3
+          }
+        },
+        {
+          "name": "feed",
+          "phase": 0,
+          "behaviour": "feed",
+          "member": {
+            "id": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/long-neck/adult",
+            "anchorOffsetX": 0,
+            "anchorOffsetZ": 0,
+            "orbitRadiusM": 5,
+            "orbitAngularSpeed": 0.15,
+            "orbitPhase": 0,
+            "gaitPeriodS": 12
+          },
+          "activity": {
+            "pose": {
+              "x": 0,
+              "z": 0,
+              "yaw": 0,
+              "gait": "idle"
+            },
+            "travel": 0,
+            "stateS": 3
+          }
+        }
+      ]
+    },
+    {
+      "id": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/long-neck/juvenile",
+      "genome": {
+        "version": "creature-genome-1",
+        "archetype": "long-neck",
+        "torsoLength": 0.958,
+        "torsoHeight": 0.419,
+        "torsoWidth": 0.301,
+        "legLength": 1.072,
+        "upperLegFraction": 0.54,
+        "stanceWidth": 0.35,
+        "neckLength": 0.595,
+        "neckRise": 0.351,
+        "headLength": 0.368,
+        "headWidth": 0.222,
+        "tailLength": 0.402,
+        "footLength": 0.147,
+        "footWidth": 0.098,
+        "hornLength": 0,
+        "earLength": 0.143,
+        "armor": 0,
+        "walkSpeed": 0.965,
+        "runSpeed": 2.972,
+        "strideLength": 0.879,
+        "color": "#aa9877",
+        "accentColor": "#5c4323",
+        "pattern": "stripes",
+        "mutationLog": [
+          "long-neck founder anatomy",
+          "long-neck phenotype; juvenile anatomy and identity-preserving coat; female"
+        ],
+        "appearance": {
+          "version": "fauna-appearance-2",
+          "individualKey": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/long-neck/juvenile/0/appearance-v1",
+          "markingSeed": 2835414548,
+          "pattern": "stripes",
+          "palette": {
+            "base": "#aa9877",
+            "marking": "#5c4323",
+            "belly": "#b8aa85"
+          },
+          "roughness": 0.8309296874110423,
+          "profile": {
+            "mass": 0.7120276483967964,
+            "limb": 0.08504689649796271,
+            "neck": 0.5093278995503969,
+            "dimorphism": 0.540662900581956,
+            "hornlessFemales": false
+          },
+          "individual": {
+            "size": -0.16198441133880626,
+            "condition": -0.5423327525012038,
+            "muzzle": 0.949197881377581,
+            "ears": -0.623685874422939,
+            "sex": "female",
+            "coatPhase": 0.7870930086355656,
+            "limb": 0.08728336940689085,
+            "neck": -0.06733654138337275,
+            "tail": -0.17878586314124656
+          },
+          "growth": {
+            "stage": "juvenile",
+            "maturity": 0.23758344613946974,
+            "lateral": 1.059581
+          },
+          "coat": {
+            "version": "fauna-coat-1",
+            "pattern": "stripes",
+            "marks": 47,
+            "scale": 0.9077340831904736,
+            "contrast": 1.2070484703872353,
+            "countershade": 0.7338127627852372,
+            "bellyLine": -0.468313706596382,
+            "colours": {
+              "base": [
+                0.32795668482163987,
+                0.20538590390764114,
+                0.07250100741595707
+              ],
+              "accent": [
+                0.1068791841004626,
+                0.056402829121851135,
+                0.016995298612476815
+              ],
+              "belly": [
+                0.4798546172430471,
+                0.399719440067592,
+                0.23296057614966817
+              ],
+              "keratin": [
+                0.0257018738039364,
+                0.021586806731594167,
+                0.01656193531835099
+              ],
+              "skin": [
+                0.3144972001761585,
+                0.20649069098406697,
+                0.11094425387899004
+              ],
+              "eye": [
+                0.011311043488238512,
+                0.00831689951860566,
+                0.003634834587167021
+              ],
+              "horn": [
+                0.11529075422255848,
+                0.0992861530677041,
+                0.07562027619179156
+              ],
+              "plate": [
+                0.24024081836486313,
+                0.1672332787903134,
+                0.05998218843436195
+              ]
+            },
+            "markRole": "belly",
+            "seed": 1609642594,
+            "warp": 0.3363164230249822,
+            "threshold": 0.03488701749593019,
+            "juvenileSpots": 0,
+            "greying": 0
+          },
+          "lineage": {
+            "family": "tawny",
+            "pattern": "stripes"
+          }
+        },
+        "morphology": {
+          "version": "fauna-morphology-1",
+          "family": "long-neck",
+          "footType": "hoof",
+          "trunkLength": 0,
+          "wingSpan": 0,
+          "wingState": "none"
+        }
+      },
+      "archetype": "long-neck",
+      "family": "long-neck",
+      "stage": "juvenile",
+      "seed": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW",
+      "sourceDigest": "19318e65393e82cc7ed84ef3464aa80e2d6206c5199dc08c0a0375ac8affa4fd",
+      "poses": [
+        {
+          "name": "rest",
+          "phase": 0,
+          "behaviour": "alert",
+          "member": {
+            "id": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/long-neck/juvenile",
+            "anchorOffsetX": 0,
+            "anchorOffsetZ": 0,
+            "orbitRadiusM": 5,
+            "orbitAngularSpeed": 0.15,
+            "orbitPhase": 0,
+            "gaitPeriodS": 12
+          },
+          "activity": {
+            "pose": {
+              "x": 0,
+              "z": 0,
+              "yaw": 0,
+              "gait": "idle"
+            },
+            "travel": 0,
+            "stateS": 3
+          }
+        },
+        {
+          "name": "walk",
+          "phase": 0.18,
+          "behaviour": "alert",
+          "member": {
+            "id": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/long-neck/juvenile",
+            "anchorOffsetX": 0,
+            "anchorOffsetZ": 0,
+            "orbitRadiusM": 5,
+            "orbitAngularSpeed": 0.15,
+            "orbitPhase": 0,
+            "gaitPeriodS": 12
+          },
+          "activity": {
+            "pose": {
+              "x": 0,
+              "z": 0,
+              "yaw": 0,
+              "gait": "walk"
+            },
+            "travel": 0.18,
+            "stateS": 3
+          }
+        },
+        {
+          "name": "feed",
+          "phase": 0,
+          "behaviour": "feed",
+          "member": {
+            "id": "ANIMAL-SYSTEM-20261010-CANONICAL-REVIEW/long-neck/juvenile",
+            "anchorOffsetX": 0,
+            "anchorOffsetZ": 0,
+            "orbitRadiusM": 5,
+            "orbitAngularSpeed": 0.15,
+            "orbitPhase": 0,
+            "gaitPeriodS": 12
+          },
+          "activity": {
+            "pose": {
+              "x": 0,
+              "z": 0,
+              "yaw": 0,
+              "gait": "idle"
+            },
+            "travel": 0,
+            "stateS": 3
+          }
+        }
+      ]
+    },
+    {
+      "id": "G001/C2456,274,-369/0/planet/1:fauna:22872572",
+      "genome": {
+        "version": "creature-genome-1",
+        "archetype": "runner",
+        "torsoLength": 2.18,
+        "torsoHeight": 0.724,
+        "torsoWidth": 0.778,
+        "legLength": 2.076,
+        "upperLegFraction": 0.52,
+        "stanceWidth": 0.611,
+        "neckLength": 0.406,
+        "neckRise": 0.211,
+        "headLength": 0.462,
+        "headWidth": 0.274,
+        "tailLength": 1.8,
+        "footLength": 0.324,
+        "footWidth": 0.117,
+        "hornLength": 0,
+        "earLength": 0.274,
+        "armor": 0.02,
+        "walkSpeed": 1.846,
+        "runSpeed": 6.919,
+        "strideLength": 1.9,
+        "color": "#958c6b",
+        "accentColor": "#4e422a",
+        "pattern": "spots",
+        "mutationLog": [
+          "runner founder anatomy",
+          "cursorial legs increased: 1.406m → 1.673m",
+          "balancing tail increased: 1.117m → 1.419m",
+          "narrow torso increased: 0.512m → 0.584m",
+          "stride length increased: 1.35m → 1.593m",
+          "cursorial legs increased: 1.673m → 1.991m",
+          "balancing tail increased: 1.419m → 1.8m",
+          "narrow torso increased: 0.584m → 0.666m",
+          "stride length increased: 1.593m → 1.88m",
+          "cursorial phenotype; adult anatomy and identity-preserving coat; male"
+        ],
+        "appearance": {
+          "version": "fauna-appearance-2",
+          "individualKey": "G001/C2456,274,-369/0/planet/1:fauna:22872572/0/appearance-v1",
+          "markingSeed": 3438408373,
+          "pattern": "spots",
+          "palette": {
+            "base": "#958c6b",
+            "marking": "#4e422a",
+            "belly": "#d2cba4"
+          },
+          "roughness": 0.8692836667351154,
+          "profile": {
+            "mass": -0.18771554790151201,
+            "limb": -0.5909295127705972,
+            "neck": -0.5758270359541818,
+            "dimorphism": 0.6701303816516885,
+            "hornlessFemales": true
+          },
+          "individual": {
+            "size": 0.34470300314591795,
+            "condition": 0.7773688183579055,
+            "muzzle": -0.4593201874427777,
+            "ears": 0.8343863216774505,
+            "sex": "male",
+            "coatPhase": 0.5049466211348772,
+            "limb": 0.18150414553971594,
+            "neck": 0.3876344415796069,
+            "tail": 0.24960291833840387
+          },
+          "growth": {
+            "stage": "adult",
+            "maturity": 1,
+            "lateral": 1
+          },
+          "coat": {
+            "version": "fauna-coat-1",
+            "pattern": "reticulated",
+            "marks": 2,
+            "scale": 1.155988706145949,
+            "contrast": 1.1666720425710082,
+            "countershade": 0.5167353914584965,
+            "bellyLine": -0.5411284005735069,
+            "colours": {
+              "base": [
+                0.4375220633792332,
+                0.3666329612365311,
+                0.15997108649536712
+              ],
+              "accent": [
+                0.07603542968361311,
+                0.055066210783573315,
+                0.023276972764177572
+              ],
+              "belly": [
+                0.6474844474319181,
+                0.5983243337147641,
+                0.3718435597338682
+              ],
+              "keratin": [
+                0.029836985245702278,
+                0.02555487405994183,
+                0.01701161901313638
+              ],
+              "skin": [
+                0.2726224150480612,
+                0.21663174222732504,
+                0.12479925770957533
+              ],
+              "eye": [
+                0.006454596825321811,
+                0.005299581160103006,
+                0.0031000969863767464
+              ],
+              "horn": [
+                0.11290720704302645,
+                0.09637312610550497,
+                0.07016222583877259
+              ],
+              "plate": [
+                0.2085890383706982,
+                0.1822593754076371,
+                0.07831518526743832
+              ]
+            },
+            "markRole": "accent",
+            "seed": 1378094142,
+            "warp": 0.1876846812199801,
+            "threshold": 0.06053456315770746,
+            "juvenileSpots": 0,
+            "greying": 0.13218676604386478
+          },
+          "lineage": {
+            "family": "dun",
+            "pattern": "reticulated"
+          }
+        },
+        "morphology": {
+          "version": "fauna-morphology-1",
+          "family": "cursorial",
+          "footType": "paw",
+          "trunkLength": 0,
+          "wingSpan": 0,
+          "wingState": "none"
+        }
+      },
+      "archetype": "runner",
+      "family": "cursorial",
+      "stage": "actual-planet-individual",
+      "seed": null,
+      "worldId": "G001/C2456,274,-369/0/planet/1",
+      "date": "435084631200000035882440000",
+      "sourceDigest": "1af8396dce34393831c8f47f76b91828dfbc61a5ccfef71fc2c0342104a06089",
+      "poses": [
+        {
+          "name": "rest",
+          "phase": 0,
+          "behaviour": "alert",
+          "member": {
+            "id": "G001/C2456,274,-369/0/planet/1:fauna:22872572",
+            "anchorOffsetX": 0,
+            "anchorOffsetZ": 0,
+            "orbitRadiusM": 5,
+            "orbitAngularSpeed": 0.15,
+            "orbitPhase": 0,
+            "gaitPeriodS": 12
+          },
+          "activity": {
+            "pose": {
+              "x": 0,
+              "z": 0,
+              "yaw": 0,
+              "gait": "idle"
+            },
+            "travel": 0,
+            "stateS": 3
+          }
+        },
+        {
+          "name": "walk",
+          "phase": 0.18,
+          "behaviour": "alert",
+          "member": {
+            "id": "G001/C2456,274,-369/0/planet/1:fauna:22872572",
+            "anchorOffsetX": 0,
+            "anchorOffsetZ": 0,
+            "orbitRadiusM": 5,
+            "orbitAngularSpeed": 0.15,
+            "orbitPhase": 0,
+            "gaitPeriodS": 12
+          },
+          "activity": {
+            "pose": {
+              "x": 0,
+              "z": 0,
+              "yaw": 0,
+              "gait": "walk"
+            },
+            "travel": 0.18,
+            "stateS": 3
+          }
+        },
+        {
+          "name": "feed",
+          "phase": 0,
+          "behaviour": "feed",
+          "member": {
+            "id": "G001/C2456,274,-369/0/planet/1:fauna:22872572",
+            "anchorOffsetX": 0,
+            "anchorOffsetZ": 0,
+            "orbitRadiusM": 5,
+            "orbitAngularSpeed": 0.15,
+            "orbitPhase": 0,
+            "gaitPeriodS": 12
+          },
+          "activity": {
+            "pose": {
+              "x": 0,
+              "z": 0,
+              "yaw": 0,
+              "gait": "idle"
+            },
+            "travel": 0,
+            "stateS": 3
+          }
+        }
+      ]
+    },
+    {
+      "id": "G001/C-715,-331,-495/0/planet/1:fauna:5b9e251e",
+      "genome": {
+        "version": "creature-genome-1",
+        "archetype": "low-slung",
+        "torsoLength": 2.47,
+        "torsoHeight": 0.531,
+        "torsoWidth": 1.449,
+        "legLength": 0.686,
+        "upperLegFraction": 0.49,
+        "stanceWidth": 1.286,
+        "neckLength": 0.363,
+        "neckRise": 0.113,
+        "headLength": 0.54,
+        "headWidth": 0.471,
+        "tailLength": 0.34,
+        "footLength": 0.289,
+        "footWidth": 0.361,
+        "hornLength": 0,
+        "earLength": 0.137,
+        "armor": 1,
+        "walkSpeed": 0.887,
+        "runSpeed": 2.876,
+        "strideLength": 0.648,
+        "color": "#948e62",
+        "accentColor": "#423a24",
+        "pattern": "plain",
+        "mutationLog": [
+          "low-slung founder anatomy",
+          "long low torso increased: 1.722m → 1.998m",
+          "broad low torso increased: 0.84m → 1.025m",
+          "wide stance increased: 0.92m → 1.067m",
+          "armor plates increased: 0.58 coverage → 0.777 coverage",
+          "broad feet increased: 0.23m → 0.281m",
+          "long low torso increased: 1.998m → 2.318m",
+          "broad low torso increased: 1.025m → 1.251m",
+          "wide stance increased: 1.067m → 1.238m",
+          "armor plates increased: 0.777 coverage → 1 coverage",
+          "broad feet increased: 0.281m → 0.343m",
+          "padded face: horns not grown (only hoofed browsers carry horns)",
+          "padded phenotype; adult anatomy and identity-preserving coat; male"
+        ],
+        "appearance": {
+          "version": "fauna-appearance-2",
+          "individualKey": "G001/C-715,-331,-495/0/planet/1:fauna:5b9e251e/3/appearance-v1",
+          "markingSeed": 4090591683,
+          "pattern": "plain",
+          "palette": {
+            "base": "#948e62",
+            "marking": "#423a24",
+            "belly": "#bab792"
+          },
+          "roughness": 0.84849734583951,
+          "profile": {
+            "mass": -0.8007784699557299,
+            "limb": 0.008468631424118911,
+            "neck": 0.5700569854979536,
+            "dimorphism": 0.45129141224315394,
+            "hornlessFemales": false
+          },
+          "individual": {
+            "size": 0.9629916064355037,
+            "condition": 0.7330895768788386,
+            "muzzle": -0.17392752440039239,
+            "ears": -0.18965455032644196,
+            "sex": "male",
+            "coatPhase": 0.982970321783796,
+            "limb": -0.034203836469492876,
+            "neck": -0.16821866044034683,
+            "tail": 0.9693084522078999
+          },
+          "growth": {
+            "stage": "adult",
+            "maturity": 1,
+            "lateral": 1
+          },
+          "coat": {
+            "version": "fauna-coat-1",
+            "pattern": "dorsal-stripe",
+            "marks": 2,
+            "scale": 0.7924444036207621,
+            "contrast": 0.7262650636490434,
+            "countershade": 0.39802850215928626,
+            "bellyLine": -0.337121555628255,
+            "colours": {
+              "base": [
+                0.3710467564876635,
+                0.33334032100070243,
+                0.1425361061026072
+              ],
+              "accent": [
+                0.05428197904883314,
+                0.04295817287894287,
+                0.017660103737917078
+              ],
+              "belly": [
+                0.49033578999092486,
+                0.47136524162669513,
+                0.28870882121063796
+              ],
+              "keratin": [
+                0.03252721526712699,
+                0.028402303766912867,
+                0.019784585066102978
+              ],
+              "skin": [
+                0.2700121193429781,
+                0.22813693572102503,
+                0.1282197134953969
+              ],
+              "eye": [
+                0.006882755397194074,
+                0.005783286864464712,
+                0.003581882578896592
+              ],
+              "horn": [
+                0.12438282731183976,
+                0.10830517517215729,
+                0.08173604096093554
+              ],
+              "plate": [
+                0.20661497818199415,
+                0.18419099707244146,
+                0.08861101235435652
+              ]
+            },
+            "markRole": "accent",
+            "seed": 2607677225,
+            "warp": 0.6450166922295467,
+            "threshold": 0.08379021378234029,
+            "juvenileSpots": 0,
+            "greying": 0.0044266916571702964
+          },
+          "lineage": {
+            "family": "dun",
+            "pattern": "dorsal-stripe"
+          }
+        },
+        "morphology": {
+          "version": "fauna-morphology-1",
+          "family": "padded",
+          "footType": "broad-pad",
+          "trunkLength": 0,
+          "wingSpan": 0,
+          "wingState": "none"
+        }
+      },
+      "archetype": "low-slung",
+      "family": "padded",
+      "stage": "actual-planet-individual",
+      "seed": null,
+      "worldId": "G001/C-715,-331,-495/0/planet/1",
+      "date": "435084631200000034098550000",
+      "sourceDigest": "adc2574e4f61d817ca015d1133347e1ac303508d82e44de460d0ebbdf895bda8",
+      "poses": [
+        {
+          "name": "rest",
+          "phase": 0,
+          "behaviour": "alert",
+          "member": {
+            "id": "G001/C-715,-331,-495/0/planet/1:fauna:5b9e251e",
+            "anchorOffsetX": 0,
+            "anchorOffsetZ": 0,
+            "orbitRadiusM": 5,
+            "orbitAngularSpeed": 0.15,
+            "orbitPhase": 0,
+            "gaitPeriodS": 12
+          },
+          "activity": {
+            "pose": {
+              "x": 0,
+              "z": 0,
+              "yaw": 0,
+              "gait": "idle"
+            },
+            "travel": 0,
+            "stateS": 3
+          }
+        },
+        {
+          "name": "walk",
+          "phase": 0.18,
+          "behaviour": "alert",
+          "member": {
+            "id": "G001/C-715,-331,-495/0/planet/1:fauna:5b9e251e",
+            "anchorOffsetX": 0,
+            "anchorOffsetZ": 0,
+            "orbitRadiusM": 5,
+            "orbitAngularSpeed": 0.15,
+            "orbitPhase": 0,
+            "gaitPeriodS": 12
+          },
+          "activity": {
+            "pose": {
+              "x": 0,
+              "z": 0,
+              "yaw": 0,
+              "gait": "walk"
+            },
+            "travel": 0.18,
+            "stateS": 3
+          }
+        },
+        {
+          "name": "feed",
+          "phase": 0,
+          "behaviour": "feed",
+          "member": {
+            "id": "G001/C-715,-331,-495/0/planet/1:fauna:5b9e251e",
+            "anchorOffsetX": 0,
+            "anchorOffsetZ": 0,
+            "orbitRadiusM": 5,
+            "orbitAngularSpeed": 0.15,
+            "orbitPhase": 0,
+            "gaitPeriodS": 12
+          },
+          "activity": {
+            "pose": {
+              "x": 0,
+              "z": 0,
+              "yaw": 0,
+              "gait": "idle"
+            },
+            "travel": 0,
+            "stateS": 3
+          }
+        }
+      ]
+    }
+  ]
+}

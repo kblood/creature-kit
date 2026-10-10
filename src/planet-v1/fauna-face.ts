@@ -1,4 +1,5 @@
 import type { QuadrupedPlan, Vec3 } from './fauna-body-plan.ts';
+import {QUADRUPED_SCULPTED_BODY_VERSION} from './fauna-sculpted-plan.ts';
 
 /** Small surface details share the body's draw, material and skinning. All
  * landmarks are projected onto the actual polygonised skin, so coarse grids
@@ -16,6 +17,7 @@ export interface FaunaFaceAttachment { vertices: [number, number, number]; weigh
 export function* quadrupedFaceBuildSteps(plan: QuadrupedPlan, positions: number[], indices: number[],
   bodyTriangleCount: number, colors: Vec3[], attachments: FaunaFaceAttachment[]): Generator<void, FaunaFaceFeature[], void> {
   const { headWidth: hw, headLength: hl } = plan.genome;
+  const sculpted = plan.version === QUADRUPED_SCULPTED_BODY_VERSION;
   const [nx, ny] = plan.neckTip;
   const triangles: Triangle[] = [];
   // Only the skull/muzzle portion of the closed body skin is relevant. Ears
@@ -51,7 +53,8 @@ export function* quadrupedFaceBuildSteps(plan: QuadrupedPlan, positions: number[
   const rim = skin.map(c => c * .48) as Vec3;
   // Dark brown iris without white human-like sclera. Colour is a bounded
   // expression of the inherited coat, rather than a new random identity.
-  const iris: Vec3 = [Math.min(.075, .022 + skin[0] * .12), Math.min(.045, .014 + skin[1] * .08), .008];
+  const iris: Vec3 = sculpted ? [Math.min(.14, .065 + skin[0] * .18), Math.min(.09, .035 + skin[1] * .12), .014]
+    : [Math.min(.075, .022 + skin[0] * .12), Math.min(.045, .014 + skin[1] * .08), .008];
   const vertex = (x: number, y: number, side: -1 | 1, lift: number, color: Vec3) => {
     const index = positions.length / 3;
     const hit = surface(x, y, side);
@@ -81,7 +84,7 @@ export function* quadrupedFaceBuildSteps(plan: QuadrupedPlan, positions: number[
         }
       } else {
         const eye = kind === 'eye', cx = nx + hl * (eye ? .28 : .64), cy = ny + hw * (eye ? .20 : -.10);
-        const rx = hw * (eye ? .10 : .060), ry = hw * (eye ? .054 : .036), segments = 16;
+        const rx = hw * (eye ? (sculpted ? .135 : .10) : .060), ry = hw * (eye ? (sculpted ? .078 : .054) : .036), segments = 16;
         const radii = eye ? [.27, .44, .72, .87, 1] : [.55, .82, 1];
         const palette = eye ? [dark, dark, iris, iris, rim, skin] : [dark, dark, rim, skin];
         const lift = (r: number) => hw * (.008 + (eye ? .022 : .012) * (1 - r * r));
@@ -100,6 +103,17 @@ export function* quadrupedFaceBuildSteps(plan: QuadrupedPlan, positions: number[
               tri(start - segments + s, start + n, start - segments + n, side);
             }
           }
+        }
+        if (eye && sculpted) {
+          // Small corneal sheen, on the same projected/weighted surface and
+          // in the same draw. It makes the iris readable without white sclera.
+          const first = positions.length / 3, sx = cx - hw * .028, sy = cy + hw * .019;
+          vertex(sx, sy, side, lift(.25) + hw * .002, [.48, .50, .44]);
+          for (let s = 0; s < 8; s++) {
+            const a = s / 8 * Math.PI * 2;
+            vertex(sx + hw * .012 * Math.cos(a), sy + hw * .008 * Math.sin(a), side, lift(.25) + hw * .002, iris);
+          }
+          for(let s = 0; s < 8; s++) tri(first, first + 1 + s, first + 1 + (s + 1) % 8, side);
         }
       }
       features.push({ kind, side, firstVertex, vertexCount: positions.length / 3 - firstVertex,

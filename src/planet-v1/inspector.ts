@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {buildQuadrupedBody,QUADRUPED_BONE_NAMES,QUADRUPED_BONE_PARENTS,type QuadrupedBodyData} from './fauna-body-plan.ts';
+import {buildQuadrupedBody,QUADRUPED_BONE_NAMES,QUADRUPED_BONE_PARENTS,type QuadrupedBodyData,type QuadrupedBodyPresentation} from './fauna-body-plan.ts';
 import {quadrupedPoseAt,type FaunaGround,type FaunaPoseOptions} from './fauna-locomotion.ts';
 import type {CreatureGenome} from './creature-model.ts';
 import type {PlanetFaunaPathMember,PlanetFaunaActivity} from './caller-contract.ts';
@@ -11,6 +11,8 @@ export interface PlanetInspectorDiagnostics {
 export interface PlanetInspectorOptions {
   member:PlanetFaunaPathMember;sample:(time:number)=>PlanetInspectionSample;ground?:FaunaGround;
   material?:THREE.MeshStandardMaterial;ownsMaterial?:boolean;
+  /** Explicit surface revision; omitted retains the frozen body-4 contract. */
+  presentation?:QuadrupedBodyPresentation;
   /** Presentation extension point; source position/colour/weight buffers stay
    * owned by this body. A rest-space coat can add separate attributes here. */
   prepareGeometry?:(geometry:THREE.BufferGeometry,body:QuadrupedBodyData)=>void;
@@ -24,7 +26,7 @@ export interface PlanetAnimalInspector {
  * callback; a standalone Lab supplies explicit demo activity. No world lookup,
  * reseeding, alternate anatomy or new species is performed here. */
 export function createPlanetAnimalInspector(genome:CreatureGenome,options:PlanetInspectorOptions):PlanetAnimalInspector {
-  const body=buildQuadrupedBody(genome),geometry=new THREE.BufferGeometry();
+  const body=buildQuadrupedBody(genome,{presentation:options.presentation}),geometry=new THREE.BufferGeometry();
   geometry.setAttribute('position',new THREE.BufferAttribute(body.positions,3));
   geometry.setAttribute('normal',new THREE.BufferAttribute(body.normals,3));
   geometry.setAttribute('color',new THREE.BufferAttribute(body.colors,3,true));
