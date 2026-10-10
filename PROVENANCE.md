@@ -1,5 +1,25 @@
 # Provenance
 
+## Canonical planetary core extraction (2026-10-10)
+
+`src/planet-v1/{creature-model,fauna-appearance,fauna-body-plan,fauna-face,
+fauna-structural-appendages,fauna-locomotion}.ts` comes from the same six Atlas
+files at `f96a8c1`. Geometry, phenotype and locomotion arithmetic are copied
+unchanged. Only coat import paths and the locomotion's Atlas-only type dependency
+change: `caller-contract.ts` owns the structural member/activity input shape.
+Atlas remains the owner of dates, population, membership, habitat and ground.
+
+`tests/fixtures/planet-core-f96a8c1.json` records the pre-extraction genotypes,
+inherited genomes, twelve adult/juvenile body-buffer digests, coat samples and
+terrain-aware walking/feeding pose digests. Existing genotype/body/appearance
+versions stay unchanged. This release moves actual planetary core ownership;
+it does not replace those animals with composer presets or claim the two
+generator formats have already converged. No composer generator source moved.
+
+Library release `0.2.0` adds public `creature-kit/planet`, built from
+`src/planet-v1/index.ts`. All source arrays, source identity and private
+`UNLICENSED` provenance are retained.
+
 ## Source
 
 - **Source repository:** `C:/LLM/IWSDK/universe-atlas` (local, no remote).

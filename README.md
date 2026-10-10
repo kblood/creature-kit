@@ -1,5 +1,12 @@
 # creature-kit
 
+Since `0.2.0`, `creature-kit/planet` also owns Atlas's canonical planetary
+genome/phenotype, connected quadruped body and terrain-aware pose core. These
+are the original algorithms and data versions, not a composer-preset adapter.
+World population/date/habitat controllers stay in Atlas. The experimental
+composer remains a distinct authoring format while the single-definition
+convergence contract is developed; extraction is not full consolidation.
+
 The procedural fauna composer, extracted from `universe-atlas`: a recipe link (`v1`..`v4` text) becomes a species, an
 individual, a rig graph and a skinned, vertex-coloured mesh, deterministically. A headless exporter writes the creature
 as a GLB with baked clips, an optional LOD chain (`MSFT_lod`) and a provenance sidecar.

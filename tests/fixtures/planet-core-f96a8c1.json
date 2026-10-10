@@ -1,0 +1,399 @@
+{
+  "schema": "planet-core-migration-parity-1",
+  "sourceAtlasCommit": "f96a8c1",
+  "capturedBeforeExtraction": true,
+  "outputs": {
+    "versions": {
+      "genome": "creature-genome-1",
+      "appearance": "fauna-appearance-2",
+      "body": "quadruped-body-4"
+    },
+    "founders": {
+      "browser": {
+        "version": "creature-genome-1",
+        "archetype": "browser",
+        "torsoLength": 1.806,
+        "torsoHeight": 0.828,
+        "torsoWidth": 0.672,
+        "legLength": 1.148,
+        "upperLegFraction": 0.53,
+        "stanceWidth": 0.76,
+        "neckLength": 0.558,
+        "neckRise": 0.34,
+        "headLength": 0.462,
+        "headWidth": 0.32,
+        "tailLength": 0.479,
+        "footLength": 0.264,
+        "footWidth": 0.15,
+        "hornLength": 0.22,
+        "earLength": 0.182,
+        "armor": 0.08,
+        "walkSpeed": 1.05,
+        "runSpeed": 3.15,
+        "strideLength": 0.9,
+        "color": "#657a4b",
+        "accentColor": "#d1d6c8",
+        "pattern": "plain",
+        "mutationLog": [
+          "browser founder anatomy"
+        ]
+      },
+      "runner": {
+        "version": "creature-genome-1",
+        "archetype": "runner",
+        "torsoLength": 1.876,
+        "torsoHeight": 0.686,
+        "torsoWidth": 0.485,
+        "legLength": 1.543,
+        "upperLegFraction": 0.52,
+        "stanceWidth": 0.58,
+        "neckLength": 0.405,
+        "neckRise": 0.2,
+        "headLength": 0.412,
+        "headWidth": 0.25,
+        "tailLength": 0.982,
+        "footLength": 0.317,
+        "footWidth": 0.11,
+        "hornLength": 0,
+        "earLength": 0.232,
+        "armor": 0.02,
+        "walkSpeed": 1.55,
+        "runSpeed": 5.6,
+        "strideLength": 1.35,
+        "color": "#596f65",
+        "accentColor": "#e1c58a",
+        "pattern": "plain",
+        "mutationLog": [
+          "runner founder anatomy"
+        ]
+      },
+      "low-slung": {
+        "version": "creature-genome-1",
+        "archetype": "low-slung",
+        "torsoLength": 1.679,
+        "torsoHeight": 0.472,
+        "torsoWidth": 0.831,
+        "legLength": 0.618,
+        "upperLegFraction": 0.49,
+        "stanceWidth": 0.92,
+        "neckLength": 0.318,
+        "neckRise": 0.1,
+        "headLength": 0.551,
+        "headWidth": 0.42,
+        "tailLength": 0.315,
+        "footLength": 0.298,
+        "footWidth": 0.23,
+        "hornLength": 0.08,
+        "earLength": 0.126,
+        "armor": 0.58,
+        "walkSpeed": 0.72,
+        "runSpeed": 2.25,
+        "strideLength": 0.58,
+        "color": "#596f65",
+        "accentColor": "#b9a675",
+        "pattern": "plain",
+        "mutationLog": [
+          "low-slung founder anatomy"
+        ]
+      },
+      "long-neck": {
+        "version": "creature-genome-1",
+        "archetype": "long-neck",
+        "torsoLength": 1.587,
+        "torsoHeight": 0.727,
+        "torsoWidth": 0.536,
+        "legLength": 1.286,
+        "upperLegFraction": 0.54,
+        "stanceWidth": 0.68,
+        "neckLength": 1.331,
+        "neckRise": 0.82,
+        "headLength": 0.421,
+        "headWidth": 0.27,
+        "tailLength": 0.755,
+        "footLength": 0.265,
+        "footWidth": 0.14,
+        "hornLength": 0,
+        "earLength": 0.212,
+        "armor": 0.05,
+        "walkSpeed": 1.12,
+        "runSpeed": 3.45,
+        "strideLength": 1.08,
+        "color": "#9a7650",
+        "accentColor": "#e1c58a",
+        "pattern": "plain",
+        "mutationLog": [
+          "long-neck founder anatomy"
+        ]
+      }
+    },
+    "inherited": {
+      "browser": {
+        "version": "creature-genome-1",
+        "archetype": "browser",
+        "torsoLength": 1.806,
+        "torsoHeight": 0.828,
+        "torsoWidth": 0.578,
+        "legLength": 1.148,
+        "upperLegFraction": 0.53,
+        "stanceWidth": 0.76,
+        "neckLength": 0.424,
+        "neckRise": 0.34,
+        "headLength": 0.379,
+        "headWidth": 0.32,
+        "tailLength": 0.479,
+        "footLength": 0.264,
+        "footWidth": 0.15,
+        "hornLength": 0.128,
+        "earLength": 0.182,
+        "armor": 0.08,
+        "walkSpeed": 0.966,
+        "runSpeed": 2.835,
+        "strideLength": 0.9,
+        "color": "#657a4b",
+        "accentColor": "#d1d6c8",
+        "pattern": "plain",
+        "mutationLog": [
+          "browser founder anatomy",
+          "browsing neck decreased: 0.558m → 0.424m",
+          "muzzle decreased: 0.462m → 0.379m",
+          "horn development decreased: 0.22m → 0.128m",
+          "barrel torso decreased: 0.672m → 0.578m"
+        ]
+      },
+      "runner": {
+        "version": "creature-genome-1",
+        "archetype": "runner",
+        "torsoLength": 1.876,
+        "torsoHeight": 0.686,
+        "torsoWidth": 0.417,
+        "legLength": 1.25,
+        "upperLegFraction": 0.52,
+        "stanceWidth": 0.58,
+        "neckLength": 0.405,
+        "neckRise": 0.2,
+        "headLength": 0.412,
+        "headWidth": 0.25,
+        "tailLength": 0.717,
+        "footLength": 0.317,
+        "footWidth": 0.11,
+        "hornLength": 0,
+        "earLength": 0.232,
+        "armor": 0.02,
+        "walkSpeed": 1.426,
+        "runSpeed": 5.04,
+        "strideLength": 1.107,
+        "color": "#596f65",
+        "accentColor": "#e1c58a",
+        "pattern": "plain",
+        "mutationLog": [
+          "runner founder anatomy",
+          "cursorial legs decreased: 1.543m → 1.25m",
+          "balancing tail decreased: 0.982m → 0.717m",
+          "narrow torso decreased: 0.485m → 0.417m",
+          "stride length decreased: 1.35m → 1.107m"
+        ]
+      },
+      "low-slung": {
+        "version": "creature-genome-1",
+        "archetype": "low-slung",
+        "torsoLength": 1.41,
+        "torsoHeight": 0.472,
+        "torsoWidth": 0.648,
+        "legLength": 0.618,
+        "upperLegFraction": 0.49,
+        "stanceWidth": 0.773,
+        "neckLength": 0.318,
+        "neckRise": 0.1,
+        "headLength": 0.551,
+        "headWidth": 0.42,
+        "tailLength": 0.315,
+        "footLength": 0.298,
+        "footWidth": 0.179,
+        "hornLength": 0.08,
+        "earLength": 0.126,
+        "armor": 0.383,
+        "walkSpeed": 0.662,
+        "runSpeed": 2.025,
+        "strideLength": 0.58,
+        "color": "#596f65",
+        "accentColor": "#b9a675",
+        "pattern": "plain",
+        "mutationLog": [
+          "low-slung founder anatomy",
+          "long low torso decreased: 1.679m → 1.41m",
+          "broad low torso decreased: 0.831m → 0.648m",
+          "wide stance decreased: 0.92m → 0.773m",
+          "armor plates decreased: 0.58 coverage → 0.383 coverage",
+          "broad feet decreased: 0.23m → 0.179m"
+        ]
+      },
+      "long-neck": {
+        "version": "creature-genome-1",
+        "archetype": "long-neck",
+        "torsoLength": 1.587,
+        "torsoHeight": 0.727,
+        "torsoWidth": 0.536,
+        "legLength": 1.08,
+        "upperLegFraction": 0.54,
+        "stanceWidth": 0.68,
+        "neckLength": 0.958,
+        "neckRise": 0.615,
+        "headLength": 0.354,
+        "headWidth": 0.27,
+        "tailLength": 0.755,
+        "footLength": 0.265,
+        "footWidth": 0.14,
+        "hornLength": 0,
+        "earLength": 0.212,
+        "armor": 0.05,
+        "walkSpeed": 1.03,
+        "runSpeed": 3.105,
+        "strideLength": 1.08,
+        "color": "#9a7650",
+        "accentColor": "#e1c58a",
+        "pattern": "plain",
+        "mutationLog": [
+          "long-neck founder anatomy",
+          "towering neck decreased: 1.331m → 0.958m",
+          "upright neck decreased: 0.82m → 0.615m",
+          "stilt legs decreased: 1.286m → 1.08m",
+          "reaching head decreased: 0.421m → 0.354m"
+        ]
+      }
+    },
+    "bodies": {
+      "parity/ungulate/adult": {
+        "genome": "e58087aa0a6691214de0f4251ecfdaf8e28500b4e6c4bd5e69892251ad477335",
+        "plan": "1a0a46823d50297f731f5a5d338afec074fd733e64a9667f7d43c0e904aab359",
+        "geometry": "ee900870f6ab6accf9c7805fbd99ceb5494a43ced28891f88092297586358daf",
+        "details": "2a1c858d8f7766fc46d56d47911c8011f50b59f0b86bcdeb8b397b2cf18c0a12",
+        "coat": "6a04e98c84f23636d54957f1682ff657cb89ffe6fc77eaea70ab8c07515107a5",
+        "poses": {
+          "alert": "c438b2015d620be165cf09358e559b772fab0d1808220354b419cd0bb00e14a5",
+          "feed": "4bdbbbe562c60d899c7d2c4691a37306440f8eb110f86580850a7654962499d4"
+        }
+      },
+      "parity/ungulate/juvenile": {
+        "genome": "370dbba8765795e7d637fa1f1c79b4d2e0a897990812116870507b860f7d3c7b",
+        "plan": "d223ea14dab5adbdfa69ba47c120ef71c5f662c14025a697b047fdf15f3c2f87",
+        "geometry": "9e5789d52a53186bddfaef303ecd8246783e87b4f6a10fea19ef47a804ed5300",
+        "details": "26e9f54fc6530a78eb7ad7ce38bcbdd95371f894106cdf452a0ff83fb4e24829",
+        "coat": "c3b054a5b92b3f92ac28581af969024847dcc8ec71816c28695d096aad019e8e",
+        "poses": {
+          "alert": "9a644d08aaf5716cca0a8b8448ad9ef07ebe9412fcced9d0d2b5656e1b249aef",
+          "feed": "4e92d23c4eb725d7105042df88853df4ba77aeeda8b13610e098157814b12a55"
+        }
+      },
+      "parity/cursorial/adult": {
+        "genome": "45e3421bb430c5ca2340ff549608a36faf217a7f74ec88a71284cb28f620ad3c",
+        "plan": "0f5b7fceb1f6f5d05b767ee9b2a1597171489d9f8addb8b3d4a058689ab6a074",
+        "geometry": "c9ad7def3cd0ca1879778f4dcb2d2013bb0f1c56dca77eb1b625f9e0a9b7c3ef",
+        "details": "86f31267ca938edf035fafe6cfeb26f8147d6493a9e4d5bedd78463c04f7d0aa",
+        "coat": "b7b3267d63eceff778c241423501285de7b916fb3d6578535d6563427397e2bb",
+        "poses": {
+          "alert": "fe4700055c5f70d1c9f88e606f7dedd7704ba0ff246a98f5a9aa82be24769278",
+          "feed": "6366c4e308a4954b7d5f5229b6ed7d83593c43c588243a2c83a5c2d3b84433ac"
+        }
+      },
+      "parity/cursorial/juvenile": {
+        "genome": "432769ed171e649d13c8bdd9b55e65b09154cc48a9655d2f30da4ae9abbfe60e",
+        "plan": "c7e5dbb75583bcda2de0d69ed3cba8d13f917ae44e925eab06a783a5c660615d",
+        "geometry": "6b805de7a39042283a5e90d64bfb912c87c279d84b8a3b1084e537d8f8dc65b2",
+        "details": "8868fa5db1a68cf8119209553e3ae8387240eae1a8f7922841f313956994745d",
+        "coat": "1b5aeee67e99eb5f98105e12268d7eda3da77fb7ce22481814181908c3fca495",
+        "poses": {
+          "alert": "f15c2c8bb7ee95d9dbe84d97839d5a12519430db83508af9283dd4c7db9a4754",
+          "feed": "a407f70150c50d0ffd09690dd4d7fc024ad1d172a83a7a269280a6e89d199e5b"
+        }
+      },
+      "parity/padded/adult": {
+        "genome": "967d0876a752d5e2a643d2ecbb6b350414a114dad58f134c03bb4f8338227e75",
+        "plan": "c40c2077f2d4338b308f65a1fdc560983eec5133e8635995cf85f404c71f5edf",
+        "geometry": "029819be892937816475d401951f53bdfcdc4464bc691ae3ef65a5122f093821",
+        "details": "ac2c3283e51489ce31be5737faa1481aff619068c42194e8f42357a02703a052",
+        "coat": "b51b3b1e533dd6f9277b39040213e74477d20b20c0827b6af780cf604be1b137",
+        "poses": {
+          "alert": "f00c322cb0d8fe6b62e848d665a6da052b186192ef42360fdbdf0bd0dfc4056c",
+          "feed": "c1707a0c9a10d0a18ab01649ff5877aee2ba170d2e20512de1941dc226d9e703"
+        }
+      },
+      "parity/padded/juvenile": {
+        "genome": "603baa1021618db7afe0f9e148a3d35c34e217118292654e675fb1a78741be84",
+        "plan": "62f8b5e3688df8d44394a92e7d029c961f79c8eb46cd16dc7b9d5b1f6fc4b97b",
+        "geometry": "b1a6053be7cdec244583249fbdc47f8e66fcff529f980af03238bfd22bc2bcb3",
+        "details": "292a7f585e1ac3085facb5888cd4b30fe8bb31dc66d003f0cd67bf43f93febda",
+        "coat": "fa2a9263a1792d17f805890ff4e80a72b69ed5d23279bf32c085913b82d9147c",
+        "poses": {
+          "alert": "c00a8770fdae2949833e7c0204cbae8eee3bd6ab72087418402875a5b61a9d1b",
+          "feed": "f5afd7f8d11d0f3e520bcdbaeb85015d1635fc94f6ee27e4614c959574734d94"
+        }
+      },
+      "parity/long-neck/adult": {
+        "genome": "3fceccfa1e2218b79020a54f52aca7c87813e8f8c21ccf1d0c46a7321c224321",
+        "plan": "5d65ffb797d69d18e8670f509f36f995b12e54122ed950263f2a354bbcec3562",
+        "geometry": "1058fc642469e7f410db24e5ae7d5c00c13f09045007620bda72926daa974716",
+        "details": "7c030ef308538f412e4d7781d5b672c59847847d6bd0bc9a683adeea6149556e",
+        "coat": "2baf8b2a0f5ad9e8e594ac63bb3d5f8a022636a7cc779882ecf797141b763b7c",
+        "poses": {
+          "alert": "bfcc4ea7aa51e2b55974fa1e4ff3d6c9622166502448b1667ee913337f865333",
+          "feed": "b9b457d47873530b128acb741694022d929047b3aa65080bd6103c9c03bdd7b5"
+        }
+      },
+      "parity/long-neck/juvenile": {
+        "genome": "49da5f80a09bc9f0e93a0fd1bad93eb7312146614b82776102848c28eda4814c",
+        "plan": "fc27d5c87b09decd5651578004f7520b3efb2a8c519e6334d112053e93186598",
+        "geometry": "60ecd24c5941eb6e92bca8e601124429c3d9e078bf8aaf799d3bfa3c480517a4",
+        "details": "e3c7aa1d86a7a05ff5e59e586f8045dd3a49609e88ab1fd596c54f9494ca3b06",
+        "coat": "121aa198696e921e1bb2feae190528fc174094e0d9ed2fe19cbe941f0d4f106c",
+        "poses": {
+          "alert": "8d0a07bbe8ddc72046b470d4d050d0c60990c8709b198c70551fbbf9c22eccac",
+          "feed": "c56f0479266978d9daf0c17161ab1ef0c6bdb8e377de0ea1e43b32d709079970"
+        }
+      },
+      "parity/proboscidean/adult": {
+        "genome": "e3fc85b2e180c83ee7ae58ec52bd0c5477c449a140f0c803604daff72d4a6010",
+        "plan": "9ac89ef10bae958093a9a795507eb8e30b367f53b7d3949d1795dcf34fb7c335",
+        "geometry": "846e6b23f20dd9a2112ff4be52c82b4859e3e17ace775da77e90c30d7b1472b2",
+        "details": "d5bcf48830d77a40dfe553578044c0de7f8a9e50a5e7ea4b8233b3343e5225e4",
+        "coat": "adee79783e9653e639407afa8c16abc8429cce33d705ddd990494815891fe9e0",
+        "poses": {
+          "alert": "de60e1d5cb757affa71ee3f9ca141e702b082e3d45376a9a6903a715acc2be07",
+          "feed": "71329eea1d668daf3222ec2c9f10378c6ba66629bd478394102201a41b640ba3"
+        }
+      },
+      "parity/proboscidean/juvenile": {
+        "genome": "c0dfc2f3a26c307c0f8707e414d8e8bf394967a2206470901b60a6c11bebf03b",
+        "plan": "dda9dbc2a703277f1cbeb02d3e09759232e5c8cbb3480bdb60c942e0a387854a",
+        "geometry": "33d8748c003f99d4ef6a23762c327ac8989182d59e2a23a1275ed601761eaa40",
+        "details": "dfec590b7b58e189c4cc5f76d99fd8e212b1f28b8103e3dc67a42946f5af9f76",
+        "coat": "7b3f3546afdd0bd58c7391e4b01593418c0d007174080fbd99f61d7a01ac0687",
+        "poses": {
+          "alert": "df7ae80f472c7610b9380e82509f9444a22605f6b3fa008068fb37c8d73693df",
+          "feed": "c53d32f76ce3bf0bb75fcf4b488500d00de2de5a734dd2fcae4e6a67fb3e5379"
+        }
+      },
+      "parity/winged/adult": {
+        "genome": "ef0690838ede44bb4a19a9e94320e90030e54a49631bef5cb4892e0c3c615f4c",
+        "plan": "4bad0c87d49c9996e0fb067908adc4f971585245de0fcb67c9b0f569126a3dbb",
+        "geometry": "c4dc3054c9ce5098486c09e488d4b6c1aaba26c158e9bb944844b7b6cae569cc",
+        "details": "48fa8c089c92c2e7e607ff31fbe3e69db44af28bb940d9849f57df98c30d5f6b",
+        "coat": "cd65233491e3fe1f55ecf2c5db011b82a3b53b957659e6376c336fb81c123f82",
+        "poses": {
+          "alert": "9e7226e0364a651d7f1103fb525d3006cf5edf0e5e3854dc73ab8a64a622bdb2",
+          "feed": "8f9937b82d95f5abbbbbec6bf202c2275cf6be98ad0cfa84dbbbe0a607223237"
+        }
+      },
+      "parity/winged/juvenile": {
+        "genome": "7b7a14798764e702f24a8f79b0849ff8001582a9a2c6a684ec8921e8b4a7785f",
+        "plan": "bc754f3f66354e7a7ac770af3f014cd1d5a86e0fd4bca1004b39fa5d1ac38363",
+        "geometry": "c6db70b4e4d283634461b168e9bf74b61c0ade7ba04e3b13f4a860e36712c73a",
+        "details": "fd94456b2d54034723d3c0ff35d9efae8449cca60f0dc70c944b661b7f2f21be",
+        "coat": "694a3587e414576832620b5bc0dd67b455ce172f98fbbdd77913d44b920c35fb",
+        "poses": {
+          "alert": "9384bb8932c89ce5a1a5340348a6646be406dbc37c8979b22676f09b82ac002f",
+          "feed": "65955189078df95ee26551f61693a1188ec1dfee4c5bb2bd23f9b568fce6abdf"
+        }
+      }
+    }
+  }
+}
