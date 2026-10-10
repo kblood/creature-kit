@@ -5,7 +5,7 @@ import {
 } from '../fauna-coat-vocab.ts';
 import {
   applyCoatDrift, COAT_CELLS_PER_BODY, COAT_GENOME_RANGES, coatCanonicalSamples, coatIndividualDrift, coatMinFeature, coatPatternProbe, coatRandom,
-  defaultCoatGenome, evaluateCoat, hash3u, linearToSrgb,
+  defaultCoatGenome, evaluateCoat, evaluateCoatWithMask, hash3u, linearToSrgb,
   type CoatGenome, type CoatRGB, type CoatSample,
 } from '../fauna-coat-fields.ts';
 
@@ -652,6 +652,12 @@ function prepare(genome: CreatureGenome, x: number, y: number, z: number, torsoY
   return cell > 0 ? clampedCoat(a.coat, cell) : a.coat;
 }
 
+/** Exact prepared planetary pattern coordinates and the source-density-clamped
+ * coat. Caller scratch receives a copy; no global sampler scratch is exposed. */
+export function faunaPreparedCoatContextInto(genome:CreatureGenome,x:number,y:number,z:number,torsoY:number,region:FaunaBodyRegion|CoatRegion,surface:FaunaCoatSurface,out:CoatSample):Readonly<CoatGenome>|undefined{
+  if(genome.appearance?.version!==FAUNA_APPEARANCE_VERSION||!genome.appearance.coat)return undefined;
+  const coat=prepare(genome,x,y,z,torsoY,region,surface);Object.assign(out,SAMPLE);return coat;
+}
 /** Fawn spots sized for the near mesh. The coat library's juvenile spots
  * (0.0085-0.0145 torso lengths) are finer than the 0.019-0.028 TL vertex
  * cells of a juvenile body and render as single-vertex triangles and bars, so
@@ -722,19 +728,29 @@ function fawnSpotMask(seed: number, x: number, dy: number, z: number, cell: numb
  * differ. No maps, GPU resources, random state or added draw calls. The
  * undefined branch preserves legacy coats; a v1 appearance keeps its v1 coat. */
 export function sampleFaunaCoat(genome: CreatureGenome, x: number, y: number, z: number, torsoY: number, region?: FaunaBodyRegion | CoatRegion, surface?: FaunaCoatSurface): CoatColor | undefined {
+  return sampleFaunaCoatInternal(genome,x,y,z,torsoY,region,surface);
+}
+/** Existing planetary colour arithmetic with only the library's raw main
+ * pattern/patch mask overridden. Juvenile fawn/stocking and region rules remain.
+ * Used to test whether a source point is affine enough for a shared GLSL mask. */
+export function sampleFaunaCoatWithPatternMask(genome:CreatureGenome,x:number,y:number,z:number,torsoY:number,region:FaunaBodyRegion|CoatRegion,surface:FaunaCoatSurface,mask:number,patch:number):CoatColor|undefined{
+  if(!Number.isFinite(mask)||mask<0||mask>1||!Number.isFinite(patch)||patch<0||patch>1)throw new Error('planet coat mask: mask/patch0..1 required');
+  return sampleFaunaCoatInternal(genome,x,y,z,torsoY,region,surface,mask,patch);
+}
+function sampleFaunaCoatInternal(genome:CreatureGenome,x:number,y:number,z:number,torsoY:number,region:FaunaBodyRegion|CoatRegion|undefined,surface:FaunaCoatSurface|undefined,forcedMask?:number,forcedPatch=0):CoatColor|undefined {
   const a = genome.appearance;
   if (!a) return undefined;
   if (a.version !== FAUNA_APPEARANCE_VERSION || !a.coat) return sampleLegacyCoat(genome, x, y, z, torsoY);
   const coat = prepare(genome, x, y, z, torsoY, region, surface);
   const stockings = a.growth.stage === 'juvenile' && (coat.marks & COAT_MARK_BITS.socks) !== 0 && (SAMPLE.region === 'limb-lower' || SAMPLE.region === 'foot');
   if (!(coat.marks & COAT_MARK_BITS['juvenile-spots']) || !(coat.juvenileSpots > 0)) {
-    evaluateCoat(coat, SAMPLE, OUT, 0);
-    if (stockings) developingStockings(coat, a.growth.maturity);
+    if(forcedMask===undefined)evaluateCoat(coat,SAMPLE,OUT,0);else evaluateCoatWithMask(coat,SAMPLE,OUT,0,forcedMask,forcedPatch);
+    if(stockings)developingStockings(coat,a.growth.maturity,forcedMask,forcedPatch);
     return [OUT[0]!, OUT[1]!, OUT[2]!];
   }
   const unspotted = withoutLibrarySpots(coat);
-  evaluateCoat(unspotted, SAMPLE, OUT, 0);
-  if (stockings) developingStockings(unspotted, a.growth.maturity);
+  if(forcedMask===undefined)evaluateCoat(unspotted,SAMPLE,OUT,0);else evaluateCoatWithMask(unspotted,SAMPLE,OUT,0,forcedMask,forcedPatch);
+  if(stockings)developingStockings(unspotted,a.growth.maturity,forcedMask,forcedPatch);
   // The thigh continues the flank, so spots cut by the torso/limb region seam
   // stay whole discs; the neck is excluded (its surface leaves the torso axis).
   if (SAMPLE.region === 'torso' || SAMPLE.region === 'limb-upper') {
@@ -762,11 +778,11 @@ let sockSource: CoatGenome | undefined, sockResult: CoatGenome | undefined;
 const SOCK_OUT = new Float64Array(3);
 /** Blends OUT (the stockinged lower leg) toward the same point without
  * stockings, by the juvenile's undeveloped share. */
-function developingStockings(coat: CoatGenome, maturity: number): void {
+function developingStockings(coat: CoatGenome, maturity: number, forcedMask?:number,forcedPatch=0): void {
   const k = faunaJuvenileStockingStrength(maturity);
   if (k >= 1) return;
   if (coat !== sockSource) { sockSource = coat; sockResult = { ...coat, marks: coat.marks & ~COAT_MARK_BITS.socks }; }
-  evaluateCoat(sockResult!, SAMPLE, SOCK_OUT, 0);
+  if(forcedMask===undefined)evaluateCoat(sockResult!,SAMPLE,SOCK_OUT,0);else evaluateCoatWithMask(sockResult!,SAMPLE,SOCK_OUT,0,forcedMask,forcedPatch);
   for (let c = 0; c < 3; c++) OUT[c] = mix(SOCK_OUT[c]!, OUT[c]!, k);
 }
 

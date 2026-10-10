@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {generateCreatureGenome,realisticIndividualCreatureGenome,buildQuadrupedBody,createQuadrupedBodyColourSampler} from '../src/planet-v1/index.ts';
+import {generateCreatureGenome,realisticIndividualCreatureGenome,buildQuadrupedBody,createQuadrupedBodyColourSampler,createQuadrupedBodyPatternSampler} from '../src/planet-v1/index.ts';
 const hash=source=>{const h=createHash('sha256');for(const k of ['positions','normals','colors','skinIndex','skinWeight','index'])h.update(new Uint8Array(source[k].buffer,source[k].byteOffset,source[k].byteLength));return h.digest('hex');};
 test('exact shared connected-body paint matches all original quantized samples and never changes source',()=>{
   for(const [archetype,family] of [['browser','ungulate'],['runner','cursorial'],['low-slung','padded'],['long-neck','long-neck']])for(const stage of ['adult','juvenile']){
@@ -20,4 +20,18 @@ test('legacy spot/stripe/solid paint retains original body samples; callback val
     for(let v=0;v<source.bodyVertexCount;v+=7){sampler.sampleInto(...source.positions.subarray(v*3,v*3+3),source.normals[v*3+1],out);for(let c=0;c<3;c++)assert.equal(Math.round(Math.min(1,Math.max(0,out[c]))*255),source.colors[v*3+c]);}
     assert.throws(()=>sampler.sampleInto(NaN,0,0,0,out),/colour sampler/);assert.throws(()=>sampler.sampleInto(0,0,0,0,new Float32Array(3)),/colour sampler/);
   }
+});
+
+test('planetary forced-mask layers reconstruct exact existing colour or report nonlinear overlay',()=>{
+ let eligible=0,nonlinear=0;
+ for(const [archetype,family] of [['browser','ungulate'],['runner','cursorial'],['low-slung','padded'],['long-neck','long-neck']])for(const stage of ['adult','juvenile']){
+  const source=buildQuadrupedBody(realisticIndividualCreatureGenome(generateCreatureGenome('PATTERN-SAMPLER',archetype),`${archetype}/${stage}`,1,stage,family)),before=hash(source),sampler=createQuadrupedBodyPatternSampler(source),layers=new Float64Array(9),rgb=new Float64Array(3),context={x:0,y:0,z:0,dorsal:0,region:'torso',along:0,footprint:0};
+  for(let v=0;v<source.bodyVertexCount;v+=97){
+   const args=[...source.positions.subarray(v*3,v*3+3),source.normals[v*3+1]],info=sampler.sampleInto(...args,layers,context);sampler.oracle.sampleInto(...args,rgb);
+   assert.ok(Number.isFinite(info.affineError)&&info.affineError>=0);assert.ok(info.coat);assert.ok(context.footprint>0);assert.ok(context.dorsal>=-1&&context.dorsal<=1);assert.ok(context.along>=0&&context.along<=1);
+   if(info.affineError<1e-10){eligible++;for(let c=0;c<3;c++)assert.ok(Math.abs(rgb[c]-(layers[c]+info.mask*(layers[c+3]-layers[c])+info.mask*info.patch*(layers[c+6]-layers[c+3])))<1e-10);}else nonlinear++;
+  }
+  assert.equal(hash(source),before);
+ }
+ assert.ok(eligible>0);console.log({eligible,nonlinear});
 });
