@@ -17,6 +17,7 @@ const input=(id:string)=>$<HTMLInputElement>(id),select=(id:string)=>$<HTMLSelec
 const editor=$<HTMLTextAreaElement>('definition'),status=$('status');
 const sculptedAvailable='QUADRUPED_SCULPTED_BODY_VERSION' in planet;
 select('presentation').options[1]!.disabled=!sculptedAvailable;
+select('presentation').value=sculptedAvailable?'sculpted-v1':'legacy-v4';
 $('presentation-note').textContent=sculptedAvailable?'Surface style changes the preview; the canonical animal genes stay intact.':'The original planetary surface is available in this build.';
 const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(47,1,.05,160);
 const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));
