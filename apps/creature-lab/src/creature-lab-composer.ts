@@ -6,6 +6,7 @@ import {coherentComposerSpecies, type ComposerArchetype} from "../../../src/faun
 import {COAT_MARK_BITS, COAT_MARK_NAMES, resolveCoatPattern, type CoatMarkName} from "../../../src/fauna-coat-vocab.ts";
 import {COMPOSER_MOTIONS, type ComposerMotion} from "../../../src/fauna-composer-rig.ts";
 import {createComposerCreature, type ComposerCreature} from "../../../src/fauna-composer.ts";
+import type {ComposerSkinPresentation} from "../../../src/fauna-composer-mesh.ts";
 import {FACE_EYE_PROFILE, FACE_HEADGEAR, COMPOSER_IRIS_RGB, composerEyeProfileId, composerIrisBands, composerIrisKind, resolveComposerEyes, type ComposerEyeKind, type BuiltIrisId, type ComposerHorn} from "../../../src/fauna-composer-face.ts";
 import {COMPOSER_EYE_KINDS, EYE_PRESETS, composerEyeNative, isFaceRoundEyeKind, type EyeCatalogueFace, type EyeGroup} from "../../../src/fauna-composer-eye-catalogue.ts";
 import {COAT_REGIONS} from "../../../src/fauna-coat-vocab.ts";
@@ -24,6 +25,8 @@ type Side="first"|"second";
 type View=CreatureLabState["view"];
 export interface ComposerLabHost{
  group:THREE.Group;initial:CreatureLabState;inputError:string|null;
+ /** App-only surface choice. Omitting it preserves the factory's skin-5 default. */
+ getPresentation?():ComposerSkinPresentation;
  /** Link values that were replaced by defaults (shown with the link adjustments). */
  notices?:string[];
  getTime():number;setTime(time:number):void;
@@ -439,6 +442,7 @@ export interface ComposerLab{
  /** Number of shadow-casting meshes (each costs one shadow-pass draw call). */
  shadowCasters():number;
  details():unknown;
+ exportSpecimen():{recipe:ComposerRecipe;presentation:ComposerSkinPresentation;skinVersion:string;graphVersion:string}|null;
 }
 
 export function createComposerLab(host:ComposerLabHost):ComposerLab{
@@ -585,7 +589,7 @@ export function createComposerLab(host:ComposerLabHost):ComposerLab{
   return box;
  }
  function makeActor(side:Side,index:number,recipe:ComposerRecipe,options:{skeleton:boolean;neutral:boolean},track:boolean):Actor{
-  const creature=createComposerCreature(recipe),envelope=sampleEnvelope(creature);
+  const creature=createComposerCreature(recipe,{presentation:host.getPresentation?.()}),envelope=sampleEnvelope(creature);
   creature.setSkeletonVisible(options.skeleton);creature.setNeutral(options.neutral);
   const actor:Actor={side,index,recipe,creature,offset:new THREE.Vector3(),envelope,track:track?makeTrack(envelope):null,skinDigest:digest(creature.skin.positions),colorDigest:digest(creature.skin.colors)};
   if(actor.track)host.group.add(actor.track.group);host.group.add(creature.group);
@@ -753,15 +757,16 @@ export function createComposerLab(host:ComposerLabHost):ComposerLab{
    const t=totals();return `${base} | ${thousands(t.triangles)} triangles · ${thousands(t.vertices)} vertices${drawCalls?` · ${drawCalls} draw calls`:""} | desktop preview`;
   },
   shadowCasters:()=>actors.filter(a=>a.creature.mesh.castShadow&&a.creature.group.visible).length,
+  exportSpecimen(){if(error||building)return null;const a=actors.find(a=>a.side===editing());return a?{recipe:{...a.recipe},presentation:host.getPresentation?.()??'skin-5',skinVersion:a.creature.skin.version,graphVersion:a.creature.graph.version}:null;},
   details(){
    // the eye frame only in the eye close-up (it skins every visible-eye vertex)
    const box=envelope(),head=headEnvelope(),t=totals(),eye=focus()==="eyes"?eyeFrame():null;
-   return {version:"creature-lab-composer-6",error,focus:focus(),builds,hintRenders,headEnvelope:head.isEmpty()?null:{min:v3(head.min),max:v3(head.max)},
+   return {version:"creature-lab-composer-6",presentation:host.getPresentation?.()??'skin-5',error,focus:focus(),builds,hintRenders,headEnvelope:head.isEmpty()?null:{min:v3(head.min),max:v3(head.max)},
     eyeFrame:eye?{min:v3(eye.box.min),max:v3(eye.box.max),centre:v3(eye.centre),eyeRadius:eye.eyeRadius,vertices:eye.vertices,side:eye.side,direction:v3(eye.direction),yawed:eye.yawed,yawDeg:eye.yawDeg,half:{...eye.half},fill:{...eye.fill},pairSeparation:eye.pairSeparation,midZ:eye.midZ}:null,issues:[...issues],playing,motion:motion(),time:host.getTime(),view:viewSelect.value,compare:compareBox.checked,editTarget:editing(),seed:seedInput.value,
     herd:herd(),building,herdBuilt:actors.length,generator,species:speciesLabel(recipes.first),
     herdStats:{animals:actors.length,vertices:t.vertices,triangles:t.triangles,buildMs:t.buildMs,maxBuildMs:t.maxBuildMs,wallMs:buildFinished?buildFinished-buildStarted:null},
     envelope:box.isEmpty()?null:{min:v3(box.min),max:v3(box.max)},
-    actors:actors.map(a=>{const p=a.creature.lastPose,b=a.creature.bounds(),ind=a.creature.individual;return {side:a.side,index:a.index,encoded:encodeComposerRecipe(a.recipe),recipe:{...a.recipe},preset:composerPresetOf(a.recipe),offset:v3(a.offset),envelope:{min:v3(a.envelope.min),max:v3(a.envelope.max)},skinDigest:a.skinDigest,colorDigest:a.colorDigest,details:a.creature.details(),
+    actors:actors.map(a=>{const p=a.creature.lastPose,b=a.creature.bounds(),ind=a.creature.individual;return {side:a.side,index:a.index,encoded:encodeComposerRecipe(a.recipe),recipe:{...a.recipe},preset:composerPresetOf(a.recipe),offset:v3(a.offset),envelope:{min:v3(a.envelope.min),max:v3(a.envelope.max)},skinDigest:a.skinDigest,colorDigest:a.colorDigest,skinVersion:a.creature.skin.version,graphVersion:a.creature.graph.version,details:a.creature.details(),
      individual:{seed:ind.traits.individualSeed,sex:ind.traits.sex,maturity:ind.traits.maturity,condition:ind.traits.condition,neutral:ind.traits.neutral,deltas:ind.deltas,effectiveBodyLength:ind.effectiveRecipe.bodyLength,effectiveHeadSize:ind.effectiveRecipe.headSize,phrase:individualPhrase(a)},
      pose:p?{time:p.time,travel:p.travel,positions:Array.from(p.positions),contacts:structuredClone(p.contacts),diagnostics:{...p.diagnostics}}:null,bounds:{min:v3(b.min),max:v3(b.max)}};})};
   },

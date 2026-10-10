@@ -2,11 +2,12 @@
 // universe-atlas tree; otherwise every test is skipped (like tests/atlas-parity.test.mjs).
 //   ATLAS_DIR=C:/LLM/IWSDK/universe-atlas node --test tests/lab/creature-lab-atlas-parity.test.mjs
 // 1. URL contract: a fixed corpus of Atlas composer links (mode=composer) parses to the same state with Atlas's
-//    creature-lab-state.ts and with the app's composer slice; input errors, notices and the re-shared link are identical.
+//    creature-lab-state.ts and with the app's composer slice; the legacy fields, errors and notices stay identical.
+//    The app-only presentation field is tested separately and excluded from the preserved shared slice.
 // 2. REVIEW_SKY_COLOR / REVIEW_GROUND_ALBEDO equal Atlas's SURFACE_SKY_COLOR / SURFACE_GROUND_ALBEDO, the presets are
 //    equal, and planet-noon's ground bounce still equals Atlas's SurfaceLighting (moved here from
 //    fauna-review-environment.test, the only part of it that needs Atlas).
-// 3. The copied panel and lighting modules have not drifted from Atlas (import paths aside).
+// 3. The panel differs only by its enumerated app surface adapter; the lighting modules remain unchanged.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -25,7 +26,8 @@ const lf = path => readFileSync(path, 'utf8').replace(/\r\n/g, '\n');
 const fixture = name => JSON.parse(readFileSync(resolve(KIT, 'tests/fixtures', name), 'utf8'));
 
 /** The keys of the app's state, which are the keys an Atlas composer link writes. */
-const SLICE_KEYS = Object.keys(app.DEFAULT_LAB_STATE);
+// Presentation is an intentional standalone-Lab extension; Atlas's preserved composer parser has no such field.
+const SLICE_KEYS = Object.keys(app.DEFAULT_LAB_STATE).filter(k=>k!=='presentation');
 const pick = state => Object.fromEntries(SLICE_KEYS.map(k => [k, state[k]]));
 
 /** Fixed corpus of Atlas composer links (every one names mode=composer). */
@@ -65,17 +67,18 @@ test('creature lab parity: Atlas composer links parse, reject, notice and re-sha
       const theirs = atlas.parseCreatureLabState(search), ours = app.parseCreatureLabState(search);
       assert.equal(theirs.mode, 'composer', link);
       try {
-        assert.deepEqual(ours, pick(theirs));
+        assert.deepEqual(pick(ours), pick(theirs));
+        assert.equal(ours.presentation,'realism-1','the Lab-only default does not alter recipe identity');
         assert.equal(app.creatureLabComposerInputError(search), atlas.creatureLabComposerInputError(search));
         assert.equal(app.creatureLabLightInputError(search), atlas.creatureLabLightInputError(search));
         assert.deepEqual(app.creatureLabInputNotices(search), atlas.creatureLabInputNotices(search));
-        assert.equal(app.creatureLabUrl(base, ours), atlas.creatureLabUrl(base, theirs), 're-shared link');
+        assert.equal(app.creatureLabUrl(base, pick(ours)), atlas.creatureLabUrl(base, theirs), 'legacy portion of re-shared link');
       } catch (error) { diff.push(`${link.slice(0, 160)}: ${error.message.split('\n')[0]}`); }
     }
   }
   assert.deepEqual(diff, [], `the app and Atlas differ on ${diff.length} link(s):\n${diff.slice(0, 20).join('\n')}`);
   // the app's default state is Atlas's composer link with nothing else set
-  assert.deepEqual(app.DEFAULT_LAB_STATE, pick(atlas.parseCreatureLabState('?mode=composer')));
+  assert.deepEqual(pick(app.DEFAULT_LAB_STATE), pick(atlas.parseCreatureLabState('?mode=composer')));
 });
 
 test('creature lab parity: REVIEW_* colours and presets equal Atlas surface lighting and review presets', {skip}, async () => {
@@ -108,7 +111,16 @@ test('creature lab parity: planet-noon ground bounce equals Atlas SurfaceLightin
 
 test('creature lab parity: the copied panel and lighting modules match ATLAS_DIR (import paths aside)', {skip}, () => {
   const kitImports = text => text.replace(/from "\.\.\/\.\.\/\.\.\/src\/(fauna-[a-z-]+\.ts)"/g, 'from "./$1"');
-  assert.equal(kitImports(lf(resolve(KIT, 'apps/creature-lab/src/creature-lab-composer.ts'))), lf(resolve(ATLAS, 'src/creature-lab-composer.ts')), 'creature-lab-composer.ts drifted from Atlas');
+  // Enumerate the app-owned surface adapter/export metadata explicitly. Everything else in the copied panel stays checked.
+  const withoutPresentation = text => text
+    .replace('import type {ComposerSkinPresentation} from "../../../src/fauna-composer-mesh.ts";\n','')
+    .replace(" /** App-only surface choice. Omitting it preserves the factory's skin-5 default. */\n getPresentation?():ComposerSkinPresentation;\n",'')
+    .replace(' exportSpecimen():{recipe:ComposerRecipe;presentation:ComposerSkinPresentation;skinVersion:string;graphVersion:string}|null;\n','')
+    .replace('createComposerCreature(recipe,{presentation:host.getPresentation?.()})','createComposerCreature(recipe)')
+    .replace(/^  exportSpecimen\(\)\{.*\n/m,'')
+    .replace("presentation:host.getPresentation?.()??'skin-5',",'')
+    .replace('skinVersion:a.creature.skin.version,graphVersion:a.creature.graph.version,','');
+  assert.equal(kitImports(withoutPresentation(lf(resolve(KIT, 'apps/creature-lab/src/creature-lab-composer.ts')))), lf(resolve(ATLAS, 'src/creature-lab-composer.ts')), 'creature-lab-composer.ts drifted beyond the documented presentation adapter');
   assert.equal(lf(resolve(KIT, 'apps/creature-lab/src/fauna-review-lighting.ts')), lf(resolve(ATLAS, 'src/fauna-review-lighting.ts')), 'fauna-review-lighting.ts drifted from Atlas');
   assert.equal(lf(resolve(KIT, 'apps/creature-lab/src/creature-lab.css')), lf(resolve(ATLAS, 'src/creature-lab.css')), 'creature-lab.css drifted from Atlas');
   const inlined = text => text.replace(/\/\*\* The planet surface's sky-dome[\s\S]*?export const REVIEW_GROUND_ALBEDO = [^\n]*\n\n/, '')

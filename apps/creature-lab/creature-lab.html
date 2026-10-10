@@ -24,6 +24,8 @@
         <div id="composer-controls" hidden>
           <p id="composer-limitations" class="composer-limitations">Experimental procedural creatures: simple smooth shapes without fur, scales or feather detail. Motion stays on the ground; wings fold and spread but flight is not simulated. Checked on desktop browsers only.</p>
           <label>Starting animal <select id="composer-preset"></select></label>
+          <label>Body surface <select id="composer-presentation"><option value="realism-1">Improved feet and ankles</option><option value="skin-5">Preserved surface (skin 5)</option></select></label>
+          <p id="composer-presentation-status" class="composer-hint" role="status"></p>
           <details id="animal-body-guide" class="animal-body-guide" open>
             <summary>Find a body plan</summary>
             <p>Dinosaur, Turtle, Worm and Centipede are starting animals. Use Limbless for worms or snakes; for insects use Many legs with 3 walking leg pairs. A trunk is the Proboscis face under Head and neck.</p>
@@ -55,6 +57,9 @@
       <section><h2>Live diagnostics</h2><div id="metrics" class="metrics"></div></section>
       <button id="share-specimen" class="wide">Copy specimen link</button><p id="share-status" role="status"></p><label id="share-fallback" hidden>Specimen link <input id="share-link" readonly aria-label="Specimen link"></label>
       <button id="export-json" class="wide">Export complete lab JSON</button>
+      <button id="export-glb" class="wide">Export animal GLB</button>
+      <p class="composer-hint">Exports the edited animal, or the first herd member, for desktop use. Fine shader coat detail uses the stored vertex colours.</p>
+      <p id="export-status" role="status"></p><button id="export-report" type="button" hidden>Download export report</button>
     </aside>
     <section class="caption"><span id="caption-eyebrow" class="eyebrow">ANIMAL LAB · COMMON METRE SCALE</span><h2 id="caption-title">Animal Lab</h2><p id="caption-copy"></p></section>
     <footer><span id="status" role="status">Preparing Animal Lab…</span><span>Orbit drag · Pan right drag · Zoom wheel/pinch</span></footer>

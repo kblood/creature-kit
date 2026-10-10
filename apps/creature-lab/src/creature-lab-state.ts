@@ -1,5 +1,6 @@
 import {COMPOSER_RECIPE_MAX_TEXT} from '../../../src/fauna-composer-recipe.ts';
 import {FAUNA_REVIEW_PRESET_IDS, type FaunaReviewPresetId} from './fauna-review-environment.ts';
+import type {ComposerSkinPresentation} from '../../../src/fauna-composer-mesh.ts';
 /** Composer slice of universe-atlas src/creature-lab-state.ts (universe-atlas 7419733; see apps/creature-lab/PROVENANCE.md).
  * The kit's Creature Lab app is the composer mode only, so this keeps exactly the keys a composer link writes and parses
  * them exactly as Atlas does (tests/lab/creature-lab-atlas-parity.test.mjs compares both parsers on a link corpus).
@@ -8,6 +9,8 @@ import {FAUNA_REVIEW_PRESET_IDS, type FaunaReviewPresetId} from './fauna-review-
  *   checks (repeated keys, unknown motion, herd and light notices) also apply when `mode` is absent. A link naming any
  *   other mode (an Atlas planetary mode, or junk) is rejected visibly by creatureLabComposerInputError instead of being
  *   shown as something else.
+ * - `presentation` is an app-only surface selection (modern by default), separately validated and shared; it never
+ *   changes either recipe. The legacy portion of parser/URL behavior remains covered by Atlas parity tests.
  * - The planetary-mode keys (seed, profile, species, variant, growth, frame, family, pose, date, compareVariant,
  *   compareGrowth, source, assetHash, sidecarHash, replayVersion, templateRecipe, morphLocks and the six morph values)
  *   are neither parsed nor written: Atlas never writes them into a composer link either.
@@ -18,6 +21,9 @@ export type ComposerLabMotion = typeof COMPOSER_LAB_MOTIONS[number];
 /** Composer herd sizes: one animal, or a herd of individuals of the same species. */
 export const COMPOSER_HERD_SIZES = [1, 6, 9, 12] as const;
 export type ComposerHerdSize = typeof COMPOSER_HERD_SIZES[number];
+/** App presentation is independent of the encoded species/individual recipe. */
+export const COMPOSER_LAB_PRESENTATIONS = ['realism-1', 'skin-5'] as const satisfies readonly ComposerSkinPresentation[];
+export const isComposerLabPresentation = (value:unknown):value is ComposerSkinPresentation => (COMPOSER_LAB_PRESENTATIONS as readonly unknown[]).includes(value);
 /** Key order is Atlas's (creature-lab.ts specimenState), so a re-shared link lists its parameters in the same order. */
 export interface CreatureLabState {
   mode: LabMode;
@@ -29,13 +35,14 @@ export interface CreatureLabState {
   herd: ComposerHerdSize;
   /** Review lighting preset. */
   light: FaunaReviewPresetId;
+  presentation: ComposerSkinPresentation;
 }
 export const DEFAULT_LAB_STATE: Readonly<CreatureLabState> = Object.freeze({
   mode: 'composer', view: 'three-quarter', time: 0, compare: false, neutral: false, skeleton: false,
-  recipe: '', compareRecipe: '', composerSeed: 'composer-1', motion: 'walk', herd: 1, light: 'studio',
+  recipe: '', compareRecipe: '', composerSeed: 'composer-1', motion: 'walk', herd: 1, light: 'studio', presentation: 'realism-1',
 });
 /** Composer-only keys: repeated values reject a composer link. */
-const COMPOSER_KEYS = ['recipe', 'compareRecipe', 'composerSeed', 'motion', 'herd'] as const;
+const COMPOSER_KEYS = ['recipe', 'compareRecipe', 'composerSeed', 'motion', 'herd', 'presentation'] as const;
 /** Keys a composer link writes. */
 const COMPOSER_URL_KEYS = ['mode', ...COMPOSER_KEYS, 'compare', 'time', 'view', 'neutral', 'skeleton', 'light'] as const;
 const isHerdSize = (value: string | null) => (COMPOSER_HERD_SIZES as readonly number[]).some(n => String(n) === value);
@@ -65,6 +72,7 @@ export function parseCreatureLabState(search: string | URLSearchParams): Creatur
     motion: choice('motion', COMPOSER_LAB_MOTIONS, 'walk'),
     herd: isHerdSize(q.get('herd')) ? Number(q.get('herd')) as ComposerHerdSize : 1,
     light: choice('light', FAUNA_REVIEW_PRESET_IDS, 'studio'),
+    presentation: choice('presentation', COMPOSER_LAB_PRESENTATIONS, 'realism-1'),
   };
 }
 /** Visible notices for link values that were replaced by a default rather than rejected
@@ -90,6 +98,7 @@ export function creatureLabComposerInputError(search: string | URLSearchParams):
   if (!isComposerLink(q)) return `Unsupported link: mode "${q.get('mode')!.slice(0, 24)}" is not part of the Creature Lab app (composer mode only); the planetary modes are in Universe Atlas's Creature Lab`;
   for (const key of [...COMPOSER_KEYS, 'light']) if (q.getAll(key).length > 1) return `Invalid composer link: repeated ${key}`;
   if (q.has('motion') && !(COMPOSER_LAB_MOTIONS as readonly string[]).includes(q.get('motion')!)) return `Invalid composer link: unknown motion "${q.get('motion')!.slice(0, 24)}"`;
+  if (q.has('presentation') && !isComposerLabPresentation(q.get('presentation'))) return `Invalid composer link: unknown presentation "${q.get('presentation')!.slice(0, 32)}"`;
   return null;
 }
 export function creatureLabUrl(base: string, state: CreatureLabState): string {

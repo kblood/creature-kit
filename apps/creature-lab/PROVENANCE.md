@@ -1,5 +1,22 @@
 # Creature Lab app: provenance
 
+## Explicit composer surface selection (2026-10-11)
+
+The Animal Lab now selects `realism-1` (composer skin 6) by default and retains
+`skin-5` as the preserved choice. The core factory still defaults to skin 5.
+`presentation` is an app URL/state extension, independent of recipe identity;
+unknown or repeated values are rejected visibly. The panel's new optional host
+getter supplies that choice when building each actor, and its diagnostics and
+export selection expose the actual graph and skin versions. These bounded app
+changes are enumerated in the Atlas panel parity test rather than hiding drift.
+
+JSON and shared links include the presentation. GLB export uses the selected
+visible actor's recipe and presentation with the existing desktop exporter,
+reports budget failures visibly, and offers its report separately. The GLB
+keeps the exporter's stored vertex-colour coat fallback; the app's shader-only
+fine coat detail is not claimed to be identical in other viewers. No generator
+math or animation rules are changed by this UI adapter.
+
 ## Primary Animal Lab and archived inspector (2026-10-11)
 
 The primary app is the existing full composer at `creature-lab.html?mode=composer`.
