@@ -1,10 +1,10 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Planet Animal Lab · Creature Kit</title></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Archived planet inspector · quadrupeds · Creature Kit</title></head>
 <body class="planet-lab">
   <header class="topbar">
-    <a class="brand" href="./planet-skin.html">◒ CREATURE KIT <em>PLANET ANIMAL LAB</em></a>
-    <span class="lab-tag">Anatomy · coat · motion</span>
+    <a class="brand" href="./">◒ CREATURE KIT <em>ARCHIVED PLANET INSPECTOR</em></a>
+    <span class="lab-tag">Quadruped genomes</span>
     <div class="lab-actions"><button id="import-file" type="button">Import animal</button><button id="export" type="button">Export animal</button><button id="share" type="button">Copy link</button></div>
     <input id="file" type="file" accept="application/json,.json" hidden>
   </header>
@@ -16,7 +16,9 @@
   </div>
   <div id="comparison-labels" hidden><span>Original</span><span>Edited animal</span></div>
   <aside class="side-panel" aria-label="Animal editor">
-    <span class="eyebrow">THE PLANETARY ANIMAL WORKSHOP</span><h1 id="animal-title">Hoofed browser</h1>
+    <a class="full-animal-lab" href="./">← Full Animal Lab</a>
+    <p class="inspector-archive-note">Archived quadruped inspector. This view uses the planetary genome pipeline still used by Atlas. The full Animal Lab has a separate composer for dinosaurs, turtles, limbless animals, insects and hybrids.</p>
+    <span class="eyebrow">ARCHIVED · PLANETARY QUADRUPEDS</span><h1 id="animal-title">Hoofed browser</h1>
     <p id="identity-summary">Create a specimen or import an animal from Atlas.</p>
     <div class="edit-state"><span id="edit-state">Original specimen</span><button id="undo" type="button" disabled>Undo</button><button id="reset" type="button" disabled>Reset</button></div>
     <div class="controls">
@@ -53,13 +55,13 @@
       </div></details>
     </div>
   </aside>
-  <section class="caption"><span class="eyebrow" id="caption-eyebrow">CANONICAL PLANETARY ANATOMY</span><h2 id="caption-title">One animal, ready to explore</h2><p id="caption-copy">Drag to orbit · right-drag to pan · scroll to zoom</p></section>
+  <section class="caption"><span class="eyebrow" id="caption-eyebrow">ARCHIVED · PLANETARY QUADRUPEDS</span><h2 id="caption-title">Planet animal inspector</h2><p id="caption-copy">Drag to orbit · right-drag to pan · scroll to zoom</p></section>
   <section class="playback" aria-label="Animation controls">
     <button id="play" class="primary" type="button" aria-label="Play animation">▶ Play</button>
     <label class="sr-only" for="pose">Inspection pose</label><select id="pose"><option value="idle">Standing</option><option value="walk">Walking</option><option value="feed">Feeding</option></select>
     <label class="timeline">Pose time<input id="time" type="range" min="0" max="30" step="0.01" value="0"></label><output id="time-label" for="time">0.00 s</output>
     <label class="sr-only" for="speed">Playback speed</label><select id="speed"><option value="0.25">¼×</option><option value="0.5">½×</option><option value="1" selected>1×</option><option value="2">2×</option></select>
   </section>
-  <footer><span id="status" role="status">Preparing Planet Animal Lab…</span><span>Local specimen edits · metres</span></footer>
+  <footer><span id="status" role="status">Preparing archived planet inspector…</span><span>Planetary quadrupeds · metres</span></footer>
   <script type="module" src="./src/planet-main.ts"></script>
 </body></html>

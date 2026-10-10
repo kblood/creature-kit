@@ -1,5 +1,25 @@
 # Creature Lab app: provenance
 
+## Primary Animal Lab and archived inspector (2026-10-11)
+
+The primary app is the existing full composer at `creature-lab.html?mode=composer`.
+`index.html` forwards to it, preserving every query parameter and hash; no recipe
+or specimen is converted. This is the Animal Lab with limbless, two-legged,
+four-legged, sprawled and many-legged body plans, the existing eye catalogue,
+the Proboscis face, individual variation and herd preview.
+
+`planet-skin.html` remains at its compatible URL as the **archived planetary
+quadruped inspector**, with a prominent link to the full Animal Lab. Its genome
+pipeline is still used by Atlas planetary fauna and remains distinct from the
+composer. Archiving this inspection view does not migrate planetary fauna or
+remove its source, saved animals, or assets. The 2026-10-10 editor restoration
+below expanded that narrower inspector; it did not unify the two generators.
+
+This entry/label cleanup changes app navigation and control discoverability
+only. The composer panel, generator, recipes, presets, eyes and trunk geometry
+are preserved. The body-plan guide focuses the existing controls without
+changing a loaded recipe. Licence remains `UNLICENSED`.
+
 ## Canonical Planet Animal Lab editor (2026-10-10)
 
 `planet-skin.html`, `src/planet-main.ts`, `src/planet-lab-state.ts` and

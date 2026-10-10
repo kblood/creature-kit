@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#08131a" />
-    <title>Creature Lab · creature-kit</title>
+    <title>Animal Lab · Creature Kit</title>
     <style>
       .composer-random-row{display:grid;grid-template-columns:1fr 1.4fr 1fr;gap:6px}.composer-random-row button{white-space:normal;line-height:1.2}
       .composer-marks{display:grid;grid-template-columns:1fr 1fr;gap:3px 8px;font-size:11px}.composer-marks>span{grid-column:1/-1;color:#cfe2dc}.composer-marks label.check{margin:0}.composer-marks .composer-why{grid-column:1/-1}
@@ -15,15 +15,20 @@
   <body>
     <main id="viewport" aria-label="Inspectable procedural creature composer"></main>
     <header class="topbar">
-      <span class="brand">◒ CREATURE KIT <em>CREATURE LAB</em></span>
-      <nav><a href="./planet-skin.html">Planet animal inspection</a></nav>
+      <a class="brand" href="./">◒ CREATURE KIT <em>ANIMAL LAB</em></a>
+      <nav><a href="./planet-skin.html">Archived planet inspector · quadrupeds</a></nav>
     </header>
     <aside class="side-panel">
-      <span class="eyebrow">MODULAR CREATURE EXPERIMENT</span><h1 id="title">Modular creature composer</h1><p id="description"></p>
+      <span class="eyebrow">THE FULL BODY-PLAN COMPOSER</span><h1 id="title">Animal Lab</h1><p id="description"></p>
       <div class="controls">
         <div id="composer-controls" hidden>
           <p id="composer-limitations" class="composer-limitations">Experimental procedural creatures: simple smooth shapes without fur, scales or feather detail. Motion stays on the ground; wings fold and spread but flight is not simulated. Checked on desktop browsers only.</p>
           <label>Starting animal <select id="composer-preset"></select></label>
+          <details id="animal-body-guide" class="animal-body-guide" open>
+            <summary>Find a body plan</summary>
+            <p>Dinosaur, Turtle, Worm and Centipede are starting animals. Use Limbless for worms or snakes; for insects use Many legs with 3 walking leg pairs. A trunk is the Proboscis face under Head and neck.</p>
+            <div class="animal-guide-links"><a href="#composer-preset">Animal presets</a><a href="#composer-layout">Body layout</a><a href="#composer-legPairs">Leg pairs</a><a href="#composer-head">Face & trunk</a></div>
+          </details>
           <label>Random seed <input id="composer-seed" maxlength="160" value="composer-1"></label>
           <div class="composer-random-row"><button id="composer-randomize" type="button" title="Every part drawn independently: anything can combine with anything.">Wild hybrid</button><button id="composer-random-species" type="button" title="A plausible animal drawn from real body plans (hoofed animals, carnivores, birds, lizards ...).">Random plausible species</button><button id="composer-next-seed" type="button" title="Next seed with the random kind used last.">New seed</button></div>
           <label class="check"><input id="composer-compare" type="checkbox"> Compare two animals</label>
@@ -51,8 +56,8 @@
       <button id="share-specimen" class="wide">Copy specimen link</button><p id="share-status" role="status"></p><label id="share-fallback" hidden>Specimen link <input id="share-link" readonly aria-label="Specimen link"></label>
       <button id="export-json" class="wide">Export complete lab JSON</button>
     </aside>
-    <section class="caption"><span id="caption-eyebrow" class="eyebrow">EXPERIMENTAL · COMMON METRE SCALE</span><h2 id="caption-title">Modular creature composer</h2><p id="caption-copy"></p></section>
-    <footer><span id="status" role="status">Preparing creature lab…</span><span>Orbit drag · Pan right drag · Zoom wheel/pinch</span></footer>
+    <section class="caption"><span id="caption-eyebrow" class="eyebrow">ANIMAL LAB · COMMON METRE SCALE</span><h2 id="caption-title">Animal Lab</h2><p id="caption-copy"></p></section>
+    <footer><span id="status" role="status">Preparing Animal Lab…</span><span>Orbit drag · Pan right drag · Zoom wheel/pinch</span></footer>
     <script type="module" src="./src/main.ts"></script>
   </body>
 </html>

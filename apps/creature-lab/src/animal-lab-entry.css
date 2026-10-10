@@ -1,0 +1,6 @@
+.animal-body-guide{padding:9px 10px;border:1px solid #365d63;border-radius:5px;background:#10242b}
+.animal-body-guide summary{font-size:11px;color:#cfe5db;cursor:pointer}
+.side-panel .animal-body-guide p{margin:7px 0;font-size:10px;line-height:1.5}
+.animal-guide-links{display:flex;flex-wrap:wrap;gap:6px 10px}
+.animal-guide-links a{font-size:10px;color:#8dd7ba;text-underline-offset:3px}
+.animal-guide-links a:focus-visible{outline:2px solid #8dd7ba;outline-offset:3px}

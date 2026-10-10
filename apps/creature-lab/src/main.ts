@@ -5,6 +5,7 @@ import {createComposerLab, type ComposerEyeFrame} from "./creature-lab-composer.
 import {fitFaunaReviewShadow, FAUNA_REVIEW_SHADOWS} from "./fauna-review-lighting.ts";
 import {applyFaunaReviewLighting, FAUNA_REVIEW_PRESETS, FAUNA_REVIEW_PRESET_IDS, faunaReviewFillKeyRatio, isFaunaReviewPresetId, type FaunaReviewPresetId} from "./fauna-review-environment.ts";
 import "./creature-lab.css";
+import "./animal-lab-entry.css";
 
 /** The kit's Creature Lab app: the composer mode of universe-atlas's Creature Lab as a page of its own. This host is the
  * composer branch of universe-atlas src/creature-lab.ts (7419733): renderer, camera, orbit controls, review lighting and
@@ -82,7 +83,7 @@ function fitCamera(){eyeFollow=null;setNear(CAMERA_NEAR);const eye=composer.focu
 function buildActors(){disposeActors();key.castShadow=true;composer.build({skeleton:skeleton.checked,neutral:neutral.checked});buildTerrain();updateRigs();fitCamera();}
 function applyComposerText(){
  composer.setActive(true);
- const t=composer.text();$("title").textContent=t.title;$("description").textContent=t.description;$("caption-title").textContent=t.captionTitle;$("caption-copy").textContent=t.captionCopy;$("species-detail").innerHTML=t.detail;
+ const t=composer.text();$("title").textContent="Animal Lab";$("description").textContent=t.description;$("caption-title").textContent=t.captionTitle;$("caption-copy").textContent=t.captionCopy;$("species-detail").innerHTML=t.detail;
  $("notice").hidden=true;
 }
 function updateMetrics(){const calls=renderer.info.render.calls,shadow=key.castShadow?composer.shadowCasters():0;$("metrics").innerHTML=`${composer.metrics()}<div><b>Draw calls</b> ${calls}${shadow?` (${calls-shadow} scene + ${shadow} shadow)`:""}</div><div><b>Triangles drawn</b> ${renderer.info.render.triangles}${shadow?" (scene and shadow passes)":""}</div><div><b>Lighting</b> ${esc(lighting.preset.label)} · fill/key ${faunaReviewFillKeyRatio(lighting.preset).toFixed(2)}</div><div><b>CPU</b> ${cpuMs.toFixed(2)} ms · ${fps.toFixed(0)} fps</div>`;if(ready&&!error)$("status").textContent=composer.status(calls);}
@@ -91,7 +92,7 @@ function rebuild(){
  try{
   error="";ready=false;
   buildActors();applyComposerText();metricsPending=true;ready=true;$("status").textContent=composer.status();
- }catch(e){error=e instanceof Error?e.message:String(e);disposeActors();$("status").textContent=`Creature lab error: ${error}`;$("notice").hidden=false;$("notice").textContent=`Could not load or display the requested specimen: ${error}`;}
+ }catch(e){error=e instanceof Error?e.message:String(e);disposeActors();$("status").textContent=`Animal Lab error: ${error}`;$("notice").hidden=false;$("notice").textContent=`Could not load or display the requested specimen: ${error}`;}
 }
 function updateRigs(){composer.update(time);followEye();fitLabShadow();}
 /** Keeps the eye in the close-up whenever the pose changes (playing, Pose time, Phase): the camera and its target move
@@ -114,3 +115,8 @@ function layout(){const vp=$("viewport"),panel=document.querySelector<HTMLElemen
 Object.defineProperty(window,"__creatureLab",{configurable:false,writable:false,value:{get ready(){return ready;},get error(){return error||null;},get mode(){return "composer";},get time(){return time;},get specimenState(){return specimenState();},get specimenUrl(){return creatureLabUrl(location.href,specimenState());},get renderer(){return {calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,memory:{...renderer.info.memory}};},get cpuMs(){return cpuMs;},get fps(){return fps;},get composer(){return composer.details();},get eyeView(){return composer.focus()==="eyes"?composer.eyeView(camera):null;},get camera(){camera.updateMatrixWorld();return {position:camera.position.toArray(),target:controls.target.toArray(),fov:camera.fov,aspect:camera.aspect,near:camera.near,projectionMatrix:camera.projectionMatrix.toArray(),matrixWorldInverse:camera.matrixWorldInverse.toArray()};},get lighting(){return lightingDetails();}}});
 function frame(now:number){const start=performance.now(),dt=Math.min(.1,(now-lastFrame)/1000);lastFrame=now;if(composer.playing){time=(time+dt)%120;composer.syncTime(time);}updateRigs();controls.update();renderer.render(scene,camera);cpuMs=performance.now()-start;if(metricsPending){metricsPending=false;updateMetrics();}frameN++;if(now-lastFps>500){fps=frameN*1000/(now-lastFps);frameN=0;lastFps=now;updateMetrics();}requestAnimationFrame(frame);}
 layout();rebuild();layout();requestAnimationFrame(frame);
+// The guide only locates existing controls. Following it never changes a loaded recipe.
+for(const link of document.querySelectorAll<HTMLAnchorElement>('.animal-guide-links a'))link.onclick=event=>{
+ event.preventDefault();const target=document.querySelector<HTMLElement>(link.hash);if(!target)return;
+ target.closest('label')?.scrollIntoView({block:'center'});target.focus({preventScroll:true});
+};
