@@ -7,4 +7,6 @@ export * from './fauna-body-plan.ts';
 export * from './fauna-face.ts';
 export * from './fauna-structural-appendages.ts';
 export * from './fauna-locomotion.ts';
+export * from './inspector.ts';
+export * from './definition.ts';
 export type {PlanetFaunaPathMember,PlanetFaunaActivity} from './caller-contract.ts';

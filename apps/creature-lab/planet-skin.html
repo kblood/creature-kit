@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Planet Animal Lab · creature-kit</title></head>
+<body><main id="viewport" aria-label="Canonical planetary animal inspection"></main>
+<header class="topbar"><span class="brand">◒ CREATURE KIT <em>PLANET ANIMAL LAB</em></span><nav><a href="./creature-lab.html?mode=composer">Experimental composer</a></nav></header>
+<aside class="side-panel"><span class="eyebrow">SHARED PLANETARY ANATOMY</span><h1>Planet animal</h1>
+<p>Inspect the same body and rig the planet renderer uses. Paste an existing genome or animal definition to preserve its identity and appearance.</p>
+<label>Genome / definition JSON<textarea id="definition" rows="14" spellcheck="false" aria-label="Canonical animal definition"></textarea></label>
+<button id="load">Inspect this animal</button><button id="export">Export definition</button>
+<details><summary>Demo input</summary><label>Body family<select id="demo"><option>browser</option><option>runner</option><option>low-slung</option><option>long-neck</option></select></label><button id="demo-load">Load demo genome</button><p>Demo input uses the canonical generator. It is not a new planetary species.</p></details>
+<label>Inspection pose<select id="pose"><option value="idle">Standing</option><option value="walk">Walking</option><option value="feed">Feeding</option></select></label>
+<label>Pose seconds<input id="time" type="range" min="0" max="30" step="0.01" value="0"></label>
+<label class="check"><input id="skeleton" type="checkbox">Skeleton</label><label class="check"><input id="neutral" type="checkbox">Neutral shape</label>
+<p>Pose time is an inspection clock. World dates, habitat and population remain in Atlas.</p><pre id="details"></pre><p id="status" role="status"></p></aside>
+<script type="module" src="./src/planet-main.ts"></script></body></html>

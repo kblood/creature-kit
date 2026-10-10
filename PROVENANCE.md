@@ -94,6 +94,13 @@ line endings. `last Atlas commit` is the most recent universe-atlas commit touch
 
 ## Changes made in the kit after the import
 
+The `0.3.0` shared planetary inspector and `planet-animal-definition-1` adapter
+retain the existing loaded genome, body arrays and exact solved local bone
+transforms. The standalone planetary Lab is new UI over that core, not another
+animal generator. World/date interpretation and authored reference assets stay
+in Atlas; caller material/geometry hooks allow presentation updates separately.
+The canonical data versions and extraction corpus are unchanged.
+
 | Path | Change | Why |
 |---|---|---|
 | `tests/creature-core-boundary.test.mjs` | Adds the test "every src/** module imports only other src/** modules and three". The 12-module core test and the export-name snapshot are unchanged. | The kit's package boundary (plan phase 2). |

@@ -7,6 +7,12 @@ World population/date/habitat controllers stay in Atlas. The experimental
 composer remains a distinct authoring format while the single-definition
 convergence contract is developed; extraction is not full consolidation.
 
+Since `0.3.0`, `creature-kit/planet` exports `planetAnimalDefinition` and
+`createPlanetAnimalInspector`. The standalone Lab's `planet-skin.html` accepts
+an existing planetary genome/definition without reseeding it and uses the same
+body and 22-bone pose implementation as Atlas. Atlas supplies dated activity
+and its material through callbacks; the kit imports no Atlas controller.
+
 The procedural fauna composer, extracted from `universe-atlas`: a recipe link (`v1`..`v4` text) becomes a species, an
 individual, a rig graph and a skinned, vertex-coloured mesh, deterministically. A headless exporter writes the creature
 as a GLB with baked clips, an optional LOD chain (`MSFT_lod`) and a provenance sidecar.
@@ -24,12 +30,12 @@ Where it came from, file by file: `PROVENANCE.md`. Extraction plan: `C:/LLM/IWSD
 | `scripts/export-creature.mjs` | Headless export CLI: `node scripts/export-creature.mjs --out <dir> --preset all [--target quest-3 --seamless]`. Never overwrites a different file. Exit 3 = budget exceeded, nothing written. |
 | `scripts/composer-identity.mjs` | One digest over everything the composer produces for the pinned corpora; used to prove two trees behave identically. |
 | `assets/briefs/creature-export-quest-3.json` | Asset-brief template for the quest-3 export. |
-| `apps/creature-lab/` | The Creature Lab app: the composer page (see below). Not part of the library build or the npm `files`. |
+| `apps/creature-lab/` | Independent planetary inspection and experimental composer pages. Not part of the library build or npm `files`. |
 | `tests/` | The Atlas-free composer tests, their fixtures, the boundary test and the Atlas parity test; `tests/lab/` and `tests/lab-boundary.test.mjs` for the app, `tests/browser/` for its browser tests. |
 | `docs/` | Export v1 and v2 design notes, copied from Atlas (they still name Atlas paths and commits). |
 
 Entry points (`package.json` `exports`, built into `dist/` by `npm run build`): `creature-kit/three`
-(`createComposerCreature`), `creature-kit/gltf` (`exportCreatureGlb`), `creature-kit/lod`, and `creature-kit/<module>`
+(`createComposerCreature`), `creature-kit/planet` (canonical body, pose and inspector), `creature-kit/gltf` (`exportCreatureGlb`), `creature-kit/lod`, and `creature-kit/<module>`
 for any single module. Node refuses to type-strip `.ts` inside `node_modules`, so a package consumer uses `dist/`;
 `creature-kit/src/*` exposes the sources for bundlers.
 
@@ -63,7 +69,14 @@ On this machine, run CPU-heavy tests through Atlas's shared test slot:
 
 ## Creature Lab app
 
-`apps/creature-lab/` is the kit's own review page: the composer mode of Universe Atlas's Creature Lab
+`apps/creature-lab/planet-skin.html` is the canonical animal inspection page.
+Paste an Atlas-exported `planet-animal-definition-1` record (or raw current
+`CreatureGenome`) and inspect it with idle/walk/feed poses, skeleton and neutral
+material. Demo animals are explicitly inspection inputs, not planetary members.
+Definition identity and genome versions are preserved; incompatible versions
+require an explicit migration. Export returns the same definition.
+
+`apps/creature-lab/creature-lab.html` retains the experimental composer mode of Universe Atlas's Creature Lab
 (`creature-lab.html?mode=composer`), copied from universe-atlas `7419733` (file by file, with blob ids and hashes, in
 `apps/creature-lab/PROVENANCE.md`). Atlas keeps its own Creature Lab, all modes, unchanged.
 
@@ -87,8 +100,8 @@ node C:/LLM/IWSDK/universe-atlas/tests/helpers/test-slot.mjs --shared 4 -- npm r
   or light falls back with a notice. A link from Atlas's composer mode opens the same animal here and the other way round;
   `tests/lab/creature-lab-atlas-parity.test.mjs` parses a fixed corpus with both parsers (skips without `ATLAS_DIR`).
 - **One mode.** `mode=composer` is accepted and is the default (a link without `mode` opens the composer). A link naming
-  any other mode (Atlas's gallery, anatomy, arena, ancestry or skin) is rejected with a visible message; those modes need
-  the planet and stay in Universe Atlas.
+  any other mode on this composer page is rejected with a visible message. Canonical
+  inspection has its own `planet-skin.html`; world/date browsing remains in Atlas.
 - **Lighting.** The review presets are Atlas's. The planet surface colours are inlined as `REVIEW_SKY_COLOR` (`#b5cce3`)
   and `REVIEW_GROUND_ALBEDO` (`#697451`); the parity test checks them against Atlas's `SURFACE_SKY_COLOR` /
   `SURFACE_GROUND_ALBEDO`.
@@ -138,6 +151,8 @@ node C:/LLM/IWSDK/universe-atlas/tests/helpers/test-slot.mjs --shared 4 -- npm r
 
 ## Consumers
 
-`universe-atlas` consumes the kit as a sha-pinned vendored copy of these files at their original `src/` paths, checked
-by a drift test and refreshed by a sync script; see `docs/creature-kit-consumption.md` in that repo (branch
-`infra/creature-kit-consume`).
+`universe-atlas` consumes `creature-kit/planet` as a self-contained built package
+with exact commit/version/file hashes. `npm run update:creature-kit -- --kit <checkout>`
+preflights and builds the committed kit before updating Atlas. Composer source
+consumption remains the earlier SHA-pinned sync while definition convergence
+continues. See Atlas's `docs/creature-kit-planet-package-2026-10-10.md`.
