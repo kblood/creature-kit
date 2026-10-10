@@ -35,3 +35,11 @@ test('planetary forced-mask layers reconstruct exact existing colour or report n
  }
  assert.ok(eligible>0);console.log({eligible,nonlinear});
 });
+
+test('raw layer sampler reproduces original post-mask clamp underhighcontrastreticulation withoutchangingdefaultcolour',()=>{
+ const genome=realisticIndividualCreatureGenome(generateCreatureGenome('RAW-RETIC','runner'),'raw-retic',1,'adult','cursorial');genome.appearance.coat={...genome.appearance.coat,pattern:'reticulated',contrast:1.8,juvenileSpots:0,marks:0};
+ const source=buildQuadrupedBody(genome),before=hash(source),sampler=createQuadrupedBodyPatternSampler(source,{rawLayers:true}),layers=new Float64Array(9),rgb=new Float64Array(3),context={x:0,y:0,z:0,dorsal:0,region:'torso',along:0,footprint:0};let checked=0;
+ assert.equal(sampler.version,'quadruped-body-pattern-sampler-raw-1');
+ for(let v=0;v<source.bodyVertexCount;v+=17){const args=[...source.positions.subarray(v*3,v*3+3),source.normals[v*3+1]],info=sampler.sampleInto(...args,layers,context);sampler.oracle.sampleInto(...args,rgb);if(!info.rawLayers)continue;assert.ok(info.affineError<1e-9);checked++;for(let c=0;c<3;c++){const reconstructed=Math.max(.002,Math.min(1,layers[c]+info.mask*(layers[c+3]-layers[c])+info.mask*info.patch*(layers[c+6]-layers[c+3])));assert.ok(Math.abs(reconstructed-rgb[c])<1e-9);}}
+ assert.ok(checked>100);assert.equal(hash(source),before);
+});

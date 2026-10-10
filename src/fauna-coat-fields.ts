@@ -692,7 +692,7 @@ const MK = new Float64Array(2);
  * because V8 inlines a call only where it is hot relative to its caller and an out-of-line call boxes its double
  * arguments and result. `h` is smooth's clamped ramp (`h * h * (3 - 2 * h)` is its value), `lo`/`hi` its edges and
  * `t` the weight of a colour mix `c += (target - c) * t`. Every expression keeps the helpers' operation order. */
-function coatQ(genome: CoatGenome, sample: CoatSample, out: number[] | Float32Array | Float64Array, offset: number, given: boolean): void {
+function coatQ(genome: CoatGenome, sample: CoatSample, out: number[] | Float32Array | Float64Array, offset: number, given: boolean, unclamped=false): void {
   const C = genome.colours, region = sample.region;
   if (region === 'eye') { const e = C.eye; out[offset] = e[0]; out[offset + 1] = e[1]; out[offset + 2] = e[2]; return; }
   const seed = seedMix(genome.seed);
@@ -849,9 +849,9 @@ function coatQ(genome: CoatGenome, sample: CoatSample, out: number[] | Float32Ar
   }
 
   // 5. Grain (+-4%), clamped to 0.002..1.
-  h = CC[0]! * grain; out[offset] = h < 0.002 ? 0.002 : h > 1 ? 1 : h;
-  h = CC[1]! * grain; out[offset + 1] = h < 0.002 ? 0.002 : h > 1 ? 1 : h;
-  h = CC[2]! * grain; out[offset + 2] = h < 0.002 ? 0.002 : h > 1 ? 1 : h;
+  h = CC[0]! * grain; out[offset] = unclamped?h:h < 0.002 ? 0.002 : h > 1 ? 1 : h;
+  h = CC[1]! * grain; out[offset + 1] = unclamped?h:h < 0.002 ? 0.002 : h > 1 ? 1 : h;
+  h = CC[2]! * grain; out[offset + 2] = unclamped?h:h < 0.002 ? 0.002 : h > 1 ? 1 : h;
 }
 
 /** Evaluate the coat at one sample, writing linear RGB to out[offset..offset+2].
@@ -1042,3 +1042,10 @@ export function coatSeedMix(seed: number): number { return seedMix(seed); }
  * crisp-coat shader, which re-implements the crisp patterns' masks in GLSL with exactly these values. */
 export const COAT_PATTERN_SALTS = Object.freeze({warp: SALT_WARP, detail: SALT_DETAIL, mark: SALT_MARK, band: SALT_BAND});
 export const COAT_WORLEY_JITTER = WORLEY_JITTER;
+
+/** Raw affine main-mask colour before the evaluator's final0.002..1 grain
+ * clamp. For rendering layers only: default evaluateCoat/WithMask stay frozen.
+ * A consumer must reproduce the original clamp and later anatomical overlays. */
+export function evaluateCoatWithMaskUnclamped(genome:CoatGenome,sample:CoatSample,out:number[]|Float32Array|Float64Array,offset:number,mask:number,patch:number):void{
+  MK[0]=mask;MK[1]=patch;coatQ(genome,sample,out,offset,true,true);
+}

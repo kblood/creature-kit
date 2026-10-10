@@ -1,6 +1,6 @@
 import type { CreatureGenome } from './creature-model.ts';
 import { quadrupedFaceBuildSteps, type FaunaFaceFeature, type FaunaFaceAttachment } from './fauna-face.ts';
-import { FAUNA_APPEARANCE_VERSION, sampleFaunaCoat, sampleFaunaCoatWithPatternMask, faunaPreparedCoatContextInto, type FaunaCoatSurface } from './fauna-appearance.ts';
+import { FAUNA_APPEARANCE_VERSION, sampleFaunaCoat, sampleFaunaCoatWithPatternMask, sampleFaunaCoatWithRawPatternMask, faunaPreparedCoatContextInto, type FaunaCoatSurface } from './fauna-appearance.ts';
 import type { CoatRegion } from '../fauna-coat-vocab.ts';
 import {coatPatternProbe,type CoatSample,type CoatGenome} from '../fauna-coat-fields.ts';
 import { appendFaunaStructuralFeatures } from './fauna-structural-appendages.ts';
@@ -349,14 +349,14 @@ function coatRegionAt(plan: QuadrupedPlan, prim: QuadrupedPrimitive, x: number, 
 
 /** Shared connected-body paint arithmetic. The generator supplies its existing
  * nearest primitive so its geometry/weights and paint calculations stay identical. */
-function connectedBodyColour(plan:QuadrupedPlan,nearest:number,x:number,y:number,z:number,ny0:number,coatV2:boolean,surface:FaunaCoatSurface,base:Vec3,accent:Vec3,hoof:Vec3,forcedMask?:number,forcedPatch=0):Vec3{
+function connectedBodyColour(plan:QuadrupedPlan,nearest:number,x:number,y:number,z:number,ny0:number,coatV2:boolean,surface:FaunaCoatSurface,base:Vec3,accent:Vec3,hoof:Vec3,forcedMask?:number,forcedPatch=0,rawMaskLayers=false):Vec3{
   const region = plan.primitives[nearest]!.region;
   let color:Vec3;
   if (coatV2) {
     // Socks, countershading and armour plates come from the coat itself.
     surface.dorsal = ny0;
     const coatRegion = coatRegionAt(plan, plan.primitives[nearest]!, x, y, z, surface);
-    color = forcedMask===undefined?sampleFaunaCoat(plan.genome,x,y,z,plan.torsoY,coatRegion,surface)!:sampleFaunaCoatWithPatternMask(plan.genome,x,y,z,plan.torsoY,coatRegion,surface,forcedMask,forcedPatch)!;
+    color = forcedMask===undefined?sampleFaunaCoat(plan.genome,x,y,z,plan.torsoY,coatRegion,surface)!:rawMaskLayers?sampleFaunaCoatWithRawPatternMask(plan.genome,x,y,z,plan.torsoY,coatRegion,surface,forcedMask,forcedPatch)!:sampleFaunaCoatWithPatternMask(plan.genome,x,y,z,plan.torsoY,coatRegion,surface,forcedMask,forcedPatch)!;
   } else {
     const mark = region === 'torso' || region === 'neck' || region === 'upper' || region === 'tail' ? coatMark(plan, x, y) : 0;
     color = sampleFaunaCoat(plan.genome, x, y, z, plan.torsoY) ?? lerp3(base, accent, mark * .6);
@@ -399,25 +399,27 @@ export function createQuadrupedBodyColourSampler(source:Readonly<QuadrupedBodyDa
 
 export const QUADRUPED_BODY_PATTERN_SAMPLER_VERSION='quadruped-body-pattern-sampler-1';
 export interface QuadrupedBodyPatternSample {
-  coat:Readonly<CoatGenome>|undefined;region:CoatRegion;affineError:number;mask:number;patch:number;
+  coat:Readonly<CoatGenome>|undefined;region:CoatRegion;affineError:number;mask:number;patch:number;rawLayers?:boolean;
 }
 /** Exact planetary context + forced-mask layers for a shared library mask.
  * The returned error compares layer reconstruction against the original colour
  * oracle and intermediate mask probes; nonlinear juvenile overlays are explicit.
  * Source seed, scale clamp, signed flank coords and anatomical rules are kept. */
-export function createQuadrupedBodyPatternSampler(source:Readonly<QuadrupedBodyData>){
+export function createQuadrupedBodyPatternSampler(source:Readonly<QuadrupedBodyData>,options:{rawLayers?:boolean}={}){
   const oracle=createQuadrupedBodyColourSampler(source),plan=source.plan,base=linearHex(plan.genome.color),accent=linearHex(plan.genome.accentColor),hoof:Vec3=[.035,.03,.026],surface:FaunaCoatSurface={dorsal:0,along:0,cellM:source.cellM},probe=new Float64Array(5);
-  return {version:QUADRUPED_BODY_PATTERN_SAMPLER_VERSION,source,oracle,sampleInto(x:number,y:number,z:number,normalY:number,layers:Float64Array,context:CoatSample):QuadrupedBodyPatternSample{
+  return {version:options.rawLayers?'quadruped-body-pattern-sampler-raw-1':QUADRUPED_BODY_PATTERN_SAMPLER_VERSION,source,oracle,sampleInto(x:number,y:number,z:number,normalY:number,layers:Float64Array,context:CoatSample):QuadrupedBodyPatternSample{
     if(layers.length<9)throw new Error('quadruped body pattern sampler: nine layer lanes required');
     let nearest=0,dMin=Infinity;for(let p=0;p<plan.primitives.length;p++){const d=primitiveDistance(plan.primitives[p]!,x,y,z);if(d<dMin){dMin=d;nearest=p;}}
     surface.dorsal=normalY;const region=coatRegionAt(plan,plan.primitives[nearest]!,x,y,z,surface),coat=faunaPreparedCoatContextInto(plan.genome,x,y,z,plan.torsoY,region,surface,context);
     if(!coat){const rgb=new Float64Array(3);oracle.sampleInto(x,y,z,normalY,rgb);for(let k=0;k<3;k++)for(let c=0;c<3;c++)layers[k*3+c]=rgb[c]!;return {coat,region,affineError:0,mask:0,patch:0};}
-    for(let k=0;k<3;k++){const color=connectedBodyColour(plan,nearest,x,y,z,normalY,true,surface,base,accent,hoof,k===0?0:1,k===2?1:0);for(let c=0;c<3;c++)layers[k*3+c]=color[c]!;}
+    const rawLayers=!!options.rawLayers&&region!=='foot'&&region!=='armor';
+    for(let k=0;k<3;k++){const color=connectedBodyColour(plan,nearest,x,y,z,normalY,true,surface,base,accent,hoof,k===0?0:1,k===2?1:0,rawLayers);for(let c=0;c<3;c++)layers[k*3+c]=color[c]!;}
     coatPatternProbe(coat,context,probe);const mask=probe[0]!,patch=coat.pattern==='reticulated'?probe[4]!:0;
-    let affineError=0;const compare=(m:number,p:number)=>{const exact=connectedBodyColour(plan,nearest,x,y,z,normalY,true,surface,base,accent,hoof,m,p);for(let c=0;c<3;c++)affineError=Math.max(affineError,Math.abs(exact[c]!-(layers[c]!+m*(layers[3+c]!-layers[c]!)+m*p*(layers[6+c]!-layers[3+c]!))));};
-    const original=connectedBodyColour(plan,nearest,x,y,z,normalY,true,surface,base,accent,hoof);for(let c=0;c<3;c++)affineError=Math.max(affineError,Math.abs(original[c]!-(layers[c]!+mask*(layers[3+c]!-layers[c]!)+mask*patch*(layers[6+c]!-layers[3+c]!))));
+    const reconstruct=(c:number,m:number,p:number)=>{const value=layers[c]!+m*(layers[3+c]!-layers[c]!)+m*p*(layers[6+c]!-layers[3+c]!);return rawLayers?Math.max(.002,Math.min(1,value)):value;};
+    let affineError=0;const compare=(m:number,p:number)=>{const exact=connectedBodyColour(plan,nearest,x,y,z,normalY,true,surface,base,accent,hoof,m,p);for(let c=0;c<3;c++)affineError=Math.max(affineError,Math.abs(exact[c]!-reconstruct(c,m,p)));};
+    const original=connectedBodyColour(plan,nearest,x,y,z,normalY,true,surface,base,accent,hoof);for(let c=0;c<3;c++)affineError=Math.max(affineError,Math.abs(original[c]!-reconstruct(c,mask,patch)));
     for(const m of [.25,.5,.75])for(const p of [0,.5,1])compare(m,p);
-    return {coat,region,affineError,mask,patch};
+    return {coat,region,affineError,mask,patch,rawLayers};
   }};
 }
 

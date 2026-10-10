@@ -5,7 +5,7 @@ import {
 } from '../fauna-coat-vocab.ts';
 import {
   applyCoatDrift, COAT_CELLS_PER_BODY, COAT_GENOME_RANGES, coatCanonicalSamples, coatIndividualDrift, coatMinFeature, coatPatternProbe, coatRandom,
-  defaultCoatGenome, evaluateCoat, evaluateCoatWithMask, hash3u, linearToSrgb,
+  defaultCoatGenome, evaluateCoat, evaluateCoatWithMask, evaluateCoatWithMaskUnclamped, hash3u, linearToSrgb,
   type CoatGenome, type CoatRGB, type CoatSample,
 } from '../fauna-coat-fields.ts';
 
@@ -737,19 +737,23 @@ export function sampleFaunaCoatWithPatternMask(genome:CreatureGenome,x:number,y:
   if(!Number.isFinite(mask)||mask<0||mask>1||!Number.isFinite(patch)||patch<0||patch>1)throw new Error('planet coat mask: mask/patch0..1 required');
   return sampleFaunaCoatInternal(genome,x,y,z,torsoY,region,surface,mask,patch);
 }
-function sampleFaunaCoatInternal(genome:CreatureGenome,x:number,y:number,z:number,torsoY:number,region:FaunaBodyRegion|CoatRegion|undefined,surface:FaunaCoatSurface|undefined,forcedMask?:number,forcedPatch=0):CoatColor|undefined {
+export function sampleFaunaCoatWithRawPatternMask(genome:CreatureGenome,x:number,y:number,z:number,torsoY:number,region:FaunaBodyRegion|CoatRegion,surface:FaunaCoatSurface,mask:number,patch:number):CoatColor|undefined{
+  if(!Number.isFinite(mask)||mask<0||mask>1||!Number.isFinite(patch)||patch<0||patch>1)throw new Error('planet raw coat mask: mask/patch0..1 required');
+  return sampleFaunaCoatInternal(genome,x,y,z,torsoY,region,surface,mask,patch,true);
+}
+function sampleFaunaCoatInternal(genome:CreatureGenome,x:number,y:number,z:number,torsoY:number,region:FaunaBodyRegion|CoatRegion|undefined,surface:FaunaCoatSurface|undefined,forcedMask?:number,forcedPatch=0,rawMaskLayers=false):CoatColor|undefined {
   const a = genome.appearance;
   if (!a) return undefined;
   if (a.version !== FAUNA_APPEARANCE_VERSION || !a.coat) return sampleLegacyCoat(genome, x, y, z, torsoY);
   const coat = prepare(genome, x, y, z, torsoY, region, surface);
   const stockings = a.growth.stage === 'juvenile' && (coat.marks & COAT_MARK_BITS.socks) !== 0 && (SAMPLE.region === 'limb-lower' || SAMPLE.region === 'foot');
   if (!(coat.marks & COAT_MARK_BITS['juvenile-spots']) || !(coat.juvenileSpots > 0)) {
-    if(forcedMask===undefined)evaluateCoat(coat,SAMPLE,OUT,0);else evaluateCoatWithMask(coat,SAMPLE,OUT,0,forcedMask,forcedPatch);
+    if(forcedMask===undefined)evaluateCoat(coat,SAMPLE,OUT,0);else if(rawMaskLayers)evaluateCoatWithMaskUnclamped(coat,SAMPLE,OUT,0,forcedMask,forcedPatch);else evaluateCoatWithMask(coat,SAMPLE,OUT,0,forcedMask,forcedPatch);
     if(stockings)developingStockings(coat,a.growth.maturity,forcedMask,forcedPatch);
     return [OUT[0]!, OUT[1]!, OUT[2]!];
   }
   const unspotted = withoutLibrarySpots(coat);
-  if(forcedMask===undefined)evaluateCoat(unspotted,SAMPLE,OUT,0);else evaluateCoatWithMask(unspotted,SAMPLE,OUT,0,forcedMask,forcedPatch);
+  if(forcedMask===undefined)evaluateCoat(unspotted,SAMPLE,OUT,0);else if(rawMaskLayers)evaluateCoatWithMaskUnclamped(unspotted,SAMPLE,OUT,0,forcedMask,forcedPatch);else evaluateCoatWithMask(unspotted,SAMPLE,OUT,0,forcedMask,forcedPatch);
   if(stockings)developingStockings(unspotted,a.growth.maturity,forcedMask,forcedPatch);
   // The thigh continues the flank, so spots cut by the torso/limb region seam
   // stay whole discs; the neck is excluded (its surface leaves the torso axis).
