@@ -10,6 +10,8 @@ import {COMPOSER_FACE_GEOMETRY, PROBOSCIS_TRUNK_BASE, PROBOSCIS_TRUNK_LENGTH, co
  * along the bone, +Y dorsal). Creature space: metres, +X forward, +Y up,
  * +Z to the animal's right, ground at y = 0. */
 export const COMPOSER_GRAPH_VERSION = 'fauna-composer-graph-4';
+export const COMPOSER_TRUNK_MOTION_VERSION = 'fauna-composer-trunk-motion-1';
+export interface ComposerPoseOptions {trunkMotion?: 'legacy' | 'wave-1'}
 /** Desktop preview budget. Not a Quest qualification. */
 export const COMPOSER_BUDGET = Object.freeze({maxBones: 160, maxVertices: 48000, maxTriangles: 80000, drawCallsPerCreature: 2});
 export const COMPOSER_MOTIONS = ['neutral', 'idle', 'walk', 'display'] as const;
@@ -763,7 +765,8 @@ function solveArm(limb: ComposerLimb, shoulder: THREE.Vector3, target: THREE.Vec
 // ------------------------------------------------------------------ pose
 const TAU = Math.PI * 2;
 /** Deterministic pose for a motion at `time` seconds (bounded 0..120). */
-export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time: number): ComposerPose {
+export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time: number, options: ComposerPoseOptions = {}): ComposerPose {
+  if (options.trunkMotion !== undefined && options.trunkMotion !== 'legacy' && options.trunkMotion !== 'wave-1') throw new Error('Unknown Composer trunk motion');
   const t = clamp(Number.isFinite(time) ? time : 0, 0, 120);
   const n = graph.bones.length, recipe = graph.recipe, loco = graph.locomotion;
   const positions = new Float64Array(n * 3), quaternions = new Float64Array(n * 4), radialScale = new Float64Array(n).fill(1), chordScale = new Float64Array(n).fill(1);
@@ -815,9 +818,23 @@ export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time:
   // trunk curl
   if (trunk.length && motion !== 'neutral') {
     const lp = desync.lookPhase;
-    const curl = display ? 0.38 + 0.12 * Math.sin(TAU * (t / 2.4 + lp)) : moving ? 0.05 * Math.sin(TAU * cycle) : 0.08 * Math.sin(TAU * (t / 4.6 + lp));
-    const sway = (moving ? 0.12 * Math.sin(TAU * cycle + 1) : 0.1 * Math.sin(TAU * (t / 3.3 + lp)));
-    trunk.forEach((bi, i) => add(bi, pitchQ(curl * (0.4 + i * 0.25)).multiply(yawQ(sway * (i ? 0.4 : 1)))));
+    if (options.trunkMotion === 'wave-1') {
+      const curlWeights = [0.08, 0.45, 0.85, 1.25, 1.6, 1.85], swayWeights = [0.12, 0.35, 0.55, 0.65, 0.65, 0.65];
+      trunk.forEach((bi, i) => {
+        const lag = 0.45 * i;
+        // Distal gain compensates for the shorter lever arms and phase lag;
+        // the base retains its small unamplified offset. A small relaxed curl
+        // biases the free tip upward; clearance corrections remain measurable.
+        const gain = i ? 1.45 : 1, relaxedCurl = i && !display ? 0.035 : 0;
+        const curl = display ? 0.38 + 0.12 * Math.sin(TAU * (t / 2.4 + lp) - lag) : relaxedCurl + gain * (moving ? 0.05 * Math.sin(TAU * cycle - lag) : 0.08 * Math.sin(TAU * (t / 4.6 + lp) - lag));
+        const sway = gain * (moving ? 0.12 * Math.sin(TAU * cycle + 1 - lag) : 0.1 * Math.sin(TAU * (t / 3.3 + lp) - lag));
+        add(bi, pitchQ(curl * curlWeights[i]!).multiply(yawQ(sway * swayWeights[i]!)));
+      });
+    } else {
+      const curl = display ? 0.38 + 0.12 * Math.sin(TAU * (t / 2.4 + lp)) : moving ? 0.05 * Math.sin(TAU * cycle) : 0.08 * Math.sin(TAU * (t / 4.6 + lp));
+      const sway = (moving ? 0.12 * Math.sin(TAU * cycle + 1) : 0.1 * Math.sin(TAU * (t / 3.3 + lp)));
+      trunk.forEach((bi, i) => add(bi, pitchQ(curl * (0.4 + i * 0.25)).multiply(yawQ(sway * (i ? 0.4 : 1)))));
+    }
   }
   // wings: fold (idle/walk), spread and slow grounded display beats
   const wingLimbs = graph.limbs.filter(l => l.kind === 'wing');
