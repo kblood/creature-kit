@@ -25,6 +25,7 @@
     "QUADRUPED_BONE_NAMES",
     "QUADRUPED_BONE_PARENTS",
     "QUADRUPED_GRID_POINT_BUDGET",
+    "QUADRUPED_SCULPTED_BODY_VERSION",
     "WALK_PHASE_OFFSETS",
     "ankleFromToe",
     "appendFaunaStructuralFeatures",

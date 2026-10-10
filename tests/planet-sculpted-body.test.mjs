@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {buildQuadrupedBody,quadrupedBodyBuildSteps,createQuadrupedPlan,quadrupedPoseAt,quadrupedBodyBytes,QUADRUPED_BODY_VERSION,QUADRUPED_SCULPTED_BODY_VERSION,createPlanetAnimalInspector} from '../src/planet-v1/index.ts';
+import {buildQuadrupedBody,quadrupedBodyBuildSteps,createQuadrupedPlan,quadrupedPoseAt,quadrupedBodyBytes,QUADRUPED_BODY_VERSION,QUADRUPED_SCULPTED_BODY_VERSION,createPlanetAnimalInspector,generateCreatureGenome,realisticIndividualCreatureGenome} from '../src/planet-v1/index.ts';
 import {digestBody,bonePalette,deformBody,footSurfaceEvidence,topologyEvidence} from './helpers/planet-body-evidence.mjs';
 const {rows}=JSON.parse(readFileSync(new URL('./fixtures/planet-sculpted-specimens.json',import.meta.url),'utf8'));
 for(const row of rows)test(`sculpted presentation preserves inherited identity and exact rig: ${row.id}`,()=>{
@@ -25,6 +25,14 @@ for(const row of rows)test(`sculpted presentation preserves inherited identity a
     const palette=bonePalette(body.plan,pose),posed=deformBody(body,palette);assert.ok(posed.every(Number.isFinite));
     const feet=footSurfaceEvidence(body,posed,pose);
     for(const foot of feet){assert.ok(foot.vertices>3);if(foot.stance){assert.ok(foot.soleGapM>-.012,`${p.name} ${foot.id} penetrates ${foot.soleGapM}`);assert.ok(foot.soleGapM<Math.max(.018,body.cellM*.75),`${p.name} ${foot.id} floats ${foot.soleGapM}`);}}
+  }
+});
+test('optional authoring families keep their structural appendages and shared rig',()=>{
+  for(const family of ['proboscidean','winged'])for(const stage of ['adult','juvenile']){
+    const g=realisticIndividualCreatureGenome(generateCreatureGenome('SCULPT-STRUCTURAL',family==='proboscidean'?'low-slung':'browser'),`structural/${family}/${stage}`,0,stage,family);
+    const baseline=buildQuadrupedBody(g),body=buildQuadrupedBody(g,{presentation:'sculpted-v1'});
+    assert.equal(body.structuralVertexCount,baseline.structuralVertexCount);assert.equal(body.structuralTriangleCount,baseline.structuralTriangleCount);assert.ok(body.structuralVertexCount>0);
+    assert.deepEqual(body.plan.bones,baseline.plan.bones);assert.equal(topologyEvidence(body).components,1);assert.ok(body.positions.every(Number.isFinite));
   }
 });
 test('explicit presentation selection, resumable build and shared inspector agree',()=>{
