@@ -21,6 +21,9 @@ import {composerFeatherFanSpan, composerWingChord, composerWingThickness, type C
  * mouth disc shaded as a mouth; the earlier eye rules (eyeRules 1) still build skin-3 byte for byte. */
 /** skin-5 (coat crisp v1, docs/fauna-coat-crisp-v1.md): crisp-coat layer colours per vertex for the per-fragment coat. */
 export const COMPOSER_SKIN_VERSION = 'fauna-composer-skin-5';
+/** Additive presentation revision. Recipe/individual/graph identities are unchanged. */
+export const COMPOSER_REALISM_SKIN_VERSION = 'fauna-composer-skin-6';
+export type ComposerSkinPresentation = 'skin-5' | 'realism-1';
 /** The per-fragment ("crisp") coat: the shader that evaluates the pattern per fragment (fauna-composer.ts) and the
  * layer colours the skin carries for it. */
 export const COMPOSER_COAT_CRISP_VERSION = 'fauna-composer-coat-crisp-1';
@@ -116,7 +119,7 @@ export interface ComposerSkinEyeDebug {
   rimFallbacks: number;
 }
 export interface ComposerSkin {
-  version: typeof COMPOSER_SKIN_VERSION;
+  version: typeof COMPOSER_SKIN_VERSION | typeof COMPOSER_REALISM_SKIN_VERSION;
   positions: Float32Array; colors: Float32Array; skinIndex: Uint16Array; skinWeight: Float32Array; index: Uint32Array;
   /** skin-5: the shading normals (three's area-weighted vertex normals, except that every welded seam group - vertices
    * with bitwise-equal positions and equal skin indices and weights, outside the eyes - shares one normal built from
@@ -140,6 +143,8 @@ export interface ComposerSkin {
   debug?: ComposerSkinDebug;
 }
 export interface ComposerSkinOptions {
+  /** Explicit surface revision; omitted retains the frozen skin-5 presentation. */
+  presentation?: ComposerSkinPresentation;
   /** Individual traits to build with (default composerIndividualTraits(graph.recipe)). */
   traits?: ComposerIndividualTraits;
   /** Report ring centrelines, spline fallbacks and coat scale in `debug`. */
@@ -661,6 +666,8 @@ const jitterU = (seed: number, k: number, j: number) => hash3u(k, j, 7, seed) / 
 
 // ------------------------------------------------------------------ skin builder
 export function buildComposerSkin(graph: ComposerGraph, options: ComposerSkinOptions = {}): ComposerSkin {
+  if (options.presentation !== undefined && options.presentation !== 'skin-5' && options.presentation !== 'realism-1') throw new Error('Unknown Composer skin presentation');
+  const realism = options.presentation === 'realism-1';
   const s = new Skin(), r = graph.recipe, d = graph.dims, bones = graph.bones;
   const traits = options.traits ?? composerIndividualTraits(r);
   const jv = traits.neutral ? 0 : clamp(r.variability, 0, 1.5);
@@ -1277,8 +1284,10 @@ export function buildComposerSkin(graph: ComposerGraph, options: ComposerSkinOpt
     }
     setFootprints(rings, metas, radial);
     // a small start cap keeps the buried root closed (positive part volume) without a visible collar
-    loft(s, rings, radial, 0.1, kind === 'arm' ? 0.3 : 0.4);
+    const joinedFoot = realism && kind === 'leg' && ['pad', 'hoof', 'claw'].includes(r.feet);
+    loft(s, rings, radial, 0.1, joinedFoot ? 0 : kind === 'arm' ? 0.3 : 0.4);
     report(chainName, rings, metas);
+    return {ring: rings[rings.length - 1]!, radial};
   };
   for (const limb of graph.limbs) {
     const carrier = bones[limb.socketBone]!;
@@ -1288,11 +1297,13 @@ export function buildComposerSkin(graph: ComposerGraph, options: ComposerSkinOpt
       s.begin('leg', name);
       s.region = REGION['limb-upper'];
       const firstVertex = s.nv, footBone = bones[limb.bones[limb.bones.length - 1]!]!;
-      limbChain(limb, limb.bones.slice(0, limb.segments.length).map(i => bones[i]!), 'leg', name);
+      const ankle = limbChain(limb, limb.bones.slice(0, limb.segments.length).map(i => bones[i]!), 'leg', name);
       s.end();
       s.begin('foot', `${r.feet} ${limb.pair + 1}${tag}`);
       s.region = REGION.foot;
-      buildFoot(s, r.feet, footBone, bones[limb.bones[limb.bones.length - 2]!]!, limb.footHeight, limb.footLength, limb.side, pal, at, axis, p => coatAt(p, 0, 'foot', 1));
+      const footCoat = (p: THREE.Vector3) => coatAt(p, 0, 'foot', 1);
+      if (realism && (r.feet === 'pad' || r.feet === 'hoof' || r.feet === 'claw')) buildRealismFoot(s, r.feet, footBone, limb.footHeight, limb.footLength, limb.side, ankle, pal, at, axis, footCoat);
+      else buildFoot(s, r.feet, footBone, bones[limb.bones[limb.bones.length - 2]!]!, limb.footHeight, limb.footLength, limb.side, pal, at, axis, footCoat);
       s.end();
       fitFootContract(s, firstVertex, footBone, limb.footHeight, limb.footExtent);
     } else if (limb.kind === 'arm') {
@@ -1336,7 +1347,7 @@ export function buildComposerSkin(graph: ComposerGraph, options: ComposerSkinOpt
     coatLayers = {c0: s.l0.slice(0, s.nv * 3), c1: s.l1.slice(0, s.nv * 3), c2: s.l2.slice(0, s.nv * 3), sample: sampleOut};
   }
   const normals = composerSeamNormals(positions, index, skinIndex, skinWeight, s.hid.subarray(0, s.ni / 3), eyeVertices(s.parts, index, s.nv));
-  const out: ComposerSkin = {version: COMPOSER_SKIN_VERSION, positions, normals, colors, skinIndex, skinWeight, index, regions, gloss, eyeFallbacks: eyeCtx.fallbacks, parts: s.parts, vertexCount: positions.length / 3, triangleCount: index.length / 3, coatScale: {pattern: genome.pattern, requested: requestedScale, effective: genome.scale}, coatCrisp, coatLayers};
+  const out: ComposerSkin = {version: realism ? COMPOSER_REALISM_SKIN_VERSION : COMPOSER_SKIN_VERSION, positions, normals, colors, skinIndex, skinWeight, index, regions, gloss, eyeFallbacks: eyeCtx.fallbacks, parts: s.parts, vertexCount: positions.length / 3, triangleCount: index.length / 3, coatScale: {pattern: genome.pattern, requested: requestedScale, effective: genome.scale}, coatCrisp, coatLayers};
   if (options.debug) out.debug = {
     rings: debugRings!, splineFallbacks,
     coat: {pattern: genome.pattern, requestedScale, effectiveScale: genome.scale, cellsPerBody: cells, meanCellDiameter: cells > 0 ? scale / (cells * genome.scale) : Infinity, torsoEdgeEstimate: torsoEdge},
@@ -2406,6 +2417,52 @@ function fitFootContract(s: Skin, firstVertex: number, foot: ComposerBone, hF: n
     const p = local.applyQuaternion(rotate).add(origin);
     s.p[i * 3] = p.x; s.p[i * 3 + 1] = p.y; s.p[i * 3 + 2] = p.z;
   }
+}
+
+/** Skin-6 feet continue the actual ankle boundary. The shared ring keeps its exact
+ * position, weight and colour samples, so its seam stays closed under every pose.
+ * Foot height/extent and the graph's contact solver retain their skin-5 meaning. */
+function buildRealismFoot(s: Skin, type: 'pad' | 'hoof' | 'claw', foot: ComposerBone, hF: number, lF: number, side: number, ankle: {ring: Ring; radial: number}, pal: Palette, at: At, axis: Axis, coat: (p: THREE.Vector3) => RGB) {
+  const w: W = [[foot.index, 1]], ax = axis(foot, 1, 0, 0), ay = axis(foot, 0, 1, 0), az = axis(foot, 0, 0, 1);
+  const down = ay.clone().negate(), a = ankle.ring, r0 = a.rx;
+  const skinColour = (p: THREE.Vector3) => mixC(coat(p), pal.skin, type === 'claw' ? 0.4 : 0.18);
+  const colour = (i: number, p: THREE.Vector3) => type === 'hoof' ? mixC(coat(p), pal.keratin, smooth(0, 2, i)) : skinColour(p);
+  // Heel stays behind the ankle; a fuller toe slopes forward. The sole is a
+  // plane, not a rounded cap later crushed by the ground-contract clamp.
+  const shape = type === 'claw'
+    ? [[0.06, -0.28, Math.max(a.ry, 0.16 * lF), Math.max(r0, 0.15 * lF)], [0.15, -0.65, 0.25 * lF, Math.max(r0, 0.19 * lF)], [0.17, -1, 0.23 * lF, Math.max(r0 * 0.94, 0.17 * lF)]]
+    : [[0.03, -0.25, Math.max(a.ry, r0 * 1.08), r0 * 1.05], [0.11, -0.7, Math.max(r0 * 1.2, lF * 0.38), r0 * 1.23], [0.14, -1, Math.max(r0 * 1.23, lF * 0.4), r0 * 1.24]];
+  const rings: Ring[] = [a, ...shape.map(([x, y, fore, lateral], i): Ring => ({
+    c: at(foot, x! * lF, y! * hF), t: down, u: ax,
+    rx: lateral!, ry: fore!, w, region: REGION.foot, color: (_angle, p) => colour(i + 1, p),
+  }))];
+  loft(s, rings, ankle.radial, 0, 0);
+  capFlat(s, rings[rings.length - 1]!, ankle.radial, 1);
+  if (type === 'pad') {
+    // Broad nails sit in the toe wall, instead of separate white beads on its rim.
+    const toe = shape[2]!, fore = toe[2]!, lateral = toe[3]!;
+    for (let k = -1; k <= 1; k++) {
+      const ang = k * 0.56;
+      ellipsoid(s, at(foot, toe[0]! * lF + fore * Math.cos(ang) * 0.97, -0.79 * hF, lateral * Math.sin(ang)), [ax, ay, az], [0.09 * fore, 0.16 * hF, 0.19 * lateral], w, () => mixC(pal.keratin, pal.horn, 0.4), 8, 4);
+    }
+  }
+  if (type !== 'claw') return;
+  // Three forward digits: a fleshy proximal pad, small knuckles and a narrowing
+  // distal phalanx, followed by a separate keratin tip. All use the planted foot.
+  const toeR = 0.082 * lF;
+  for (const spread of [-0.42, 0, 0.42]) {
+    const dir = ax.clone().multiplyScalar(Math.cos(spread)).addScaledVector(az, Math.sin(spread) * side).normalize();
+    const base = at(foot, 0.18 * lF, 0, Math.sin(spread) * side * 0.12 * lF);
+    const len = (0.76 - 0.18 * Math.abs(spread)) * lF;
+    const stations = [[0, 1.08, -0.55, 0.45], [0.2, 1.12, -0.55, 0.45], [0.36, 0.87, -0.59, 0.4], [0.53, 0.91, -0.58, 0.41], [0.72, 0.68, -0.67, 0.32], [0.9, 0.48, -0.7, 0.28]];
+    const digit = stations.map(([f, radius, y, h]): Ring => ({c: base.clone().addScaledVector(dir, len * f!).addScaledVector(ay, hF * y!), t: dir, u: ay, rx: toeR * radius!, ry: hF * h!, w, region: REGION.foot, color: (_angle, p) => skinColour(p)}));
+    loft(s, digit, 10, 0.12, 0.12);
+    const tip = digit[digit.length - 1]!.c, claw = [tip, tip.clone().addScaledVector(dir, toeR * 1.3).addScaledVector(ay, -0.02 * hF), tip.clone().addScaledVector(dir, toeR * 2.3).addScaledVector(ay, -0.2 * hF)];
+    tube(s, claw, [toeR * 0.48, toeR * 0.27, toeR * 0.025], [w, w, w], () => pal.keratin, 8, 0.05, 0.05, 0.65, ay);
+  }
+  const back = ax.clone().negate().addScaledVector(az, -side * 0.15).normalize();
+  const heel = at(foot, -0.01 * lF, -0.58 * hF);
+  tube(s, [heel, heel.clone().addScaledVector(back, 0.14 * lF), heel.clone().addScaledVector(back, 0.28 * lF).addScaledVector(ay, -0.12 * hF)], [toeR * 0.8, toeR * 0.6, toeR * 0.16], [w, w, w], (i, _a, p) => i === 2 ? pal.keratin : skinColour(p), 8, 0.1, 0.1, 0.62, ay);
 }
 
 function buildFoot(s: Skin, type: ComposerRecipe['feet'], foot: ComposerBone, shank: ComposerBone, hF: number, lF: number, side: number, pal: Palette, at: At, axis: Axis, coat: (p: THREE.Vector3) => RGB) {

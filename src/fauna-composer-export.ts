@@ -42,7 +42,7 @@ import * as THREE from 'three';
 import {createComposerCreature} from './fauna-composer.ts';
 import {COMPOSER_RECIPE_VERSION, decodeComposerRecipe, encodeComposerRecipe, normalizeComposerRecipe, type ComposerRecipe} from './fauna-composer-recipe.ts';
 import {COMPOSER_BUDGET, COMPOSER_GRAPH_VERSION, COMPOSER_MOTIONS, poseComposer, type ComposerGraph, type ComposerMotion, type ComposerPose} from './fauna-composer-rig.ts';
-import {COMPOSER_SKIN_VERSION} from './fauna-composer-mesh.ts';
+import {COMPOSER_SKIN_VERSION, COMPOSER_REALISM_SKIN_VERSION, type ComposerSkinPresentation} from './fauna-composer-mesh.ts';
 import {COMPOSER_INDIVIDUAL_VERSION, composerSpeciesKey} from './fauna-composer-individual.ts';
 import {COMPOSER_FACE_VERSION} from './fauna-composer-face.ts';
 import {COMPOSER_FACE_GEOMETRY_VERSION} from './fauna-composer-face-geometry.ts';
@@ -50,7 +50,7 @@ import {COMPOSER_EYE_VERSION} from './fauna-composer-eye.ts';
 import {COMPOSER_EYE_CATALOGUE_VERSION} from './fauna-composer-eye-catalogue.ts';
 import {COMPOSER_SPECIES_GENERATOR_VERSION} from './fauna-composer-species.ts';
 import {FAUNA_COAT_FIELD_VERSION} from './fauna-coat-fields.ts';
-import {COMPOSER_LOD_VERSION, buildComposerLodChain, type ComposerLodLevel} from './fauna-composer-lod.ts';
+import {COMPOSER_LOD_VERSION, COMPOSER_FOOT_LOD_VERSION, buildComposerLodChain, composerFootLodConstraints, type ComposerLodLevel} from './fauna-composer-lod.ts';
 
 /** Historical: written by plain exports up to export v2 (kept exported for compatibility; no longer written). */
 export const COMPOSER_EXPORT_VERSION = 'fauna-composer-export-1';
@@ -126,6 +126,8 @@ export const COMPOSER_EXPORT_SEAM_TOLERANCE = Object.freeze({position: 5e-4, ang
 
 export interface ComposerClipRequest {motion: ComposerMotion; fps?: number; duration?: number}
 export interface ComposerExportOptions {
+  /** Surface revision, independent of recipe identity. Omitted exports skin-5. */
+  presentation?: ComposerSkinPresentation;
   /** Motions (or explicit clip windows) to bake; default every COMPOSER_MOTIONS entry. */
   clips?: readonly (ComposerMotion | ComposerClipRequest)[];
   fps?: number;
@@ -722,7 +724,7 @@ export function exportCreatureGlb(input: ComposerRecipe | string, options: Compo
   if (new Set(requests.map(r => r.motion)).size !== requests.length) throw new Error('composer export: a motion is listed twice');
   const v2 = resolveV2(options);
 
-  const creature = createComposerCreature(recipe);
+  const creature = createComposerCreature(recipe, {presentation: options.presentation});
   try {
     const {graph, skin} = creature;
     const geometry = creature.mesh.geometry;
@@ -745,7 +747,8 @@ export function exportCreatureGlb(input: ComposerRecipe | string, options: Compo
     if (v2?.lods) {
       const numeric = v2.lods.filter((l): l is number => l !== 'full');
       const chain = numeric.length ? buildComposerLodChain({positions: skin.positions, normals: normalOut, colors: skin.colors, gloss: skin.gloss,
-        skinIndex: skin.skinIndex, skinWeight: skin.skinWeight, index: skin.index, parts: full.parts}, numeric) : null;
+        skinIndex: skin.skinIndex, skinWeight: skin.skinWeight, index: skin.index, parts: full.parts}, numeric,
+        skin.version === COMPOSER_REALISM_SKIN_VERSION ? composerFootLodConstraints(skin) : undefined) : null;
       const reducedLevels: Level[] = (chain?.levels ?? []).map(l => ({positions: l.positions, normals: l.normals!, colors: l.colors, gloss: l.gloss!, skinIndex: l.skinIndex,
         skinWeight: l.skinWeight, index: l.index, vertexCount: l.vertices, parts: l.parts, target: l.target, reduced: l}));
       levels = v2.lods[0] === 'full' ? [levels[0]!, ...reducedLevels] : reducedLevels;
@@ -775,6 +778,8 @@ export function exportCreatureGlb(input: ComposerRecipe | string, options: Compo
     const recipeText = encodeComposerRecipe(recipe);
     const effectiveRecipeText = encodeComposerRecipe(creature.individual.effectiveRecipe);
     const versions: Record<string, string | number> = v2 ? {...composerExportVersions(), lod: COMPOSER_LOD_VERSION} : composerExportVersions();
+    versions.skin = skin.version;
+    if (v2?.lods && skin.version === COMPOSER_REALISM_SKIN_VERSION) versions.lodFeet = COMPOSER_FOOT_LOD_VERSION;
     if (reduction) versions.skeleton = COMPOSER_SKELETON_VERSION;
     const exportVersion = COMPOSER_EXPORT_V3_VERSION;
 

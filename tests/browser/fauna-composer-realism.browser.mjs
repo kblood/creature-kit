@@ -1,0 +1,37 @@
+import assert from 'node:assert/strict';
+import {mkdir,writeFile,readFile} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
+import {join} from 'node:path';
+import {chromium} from 'playwright';
+import {withGpuLock} from '../helpers/gpu-lock.mjs';
+import {browserArgs} from './browser-options.mjs';
+
+const output=process.env.CREATURE_LAB_RESULTS;
+assert.ok(output,'CREATURE_LAB_RESULTS must name a new review directory');
+await mkdir(output,{recursive:false});
+const origin=process.env.CREATURE_LAB_URL||'http://127.0.0.1:5231';
+const html=`<!doctype html><meta charset="utf-8"><style>body{margin:0;background:#bbc7ce;font:16px system-ui}canvas{display:block}#title{position:absolute;top:8px;left:12px}#labels{position:absolute;top:38px;left:12px;display:flex;width:1180px}#labels span{width:600px}</style><div id="title"></div><div id="labels"><span>skin-5 · original</span><span>skin-6 · realism-1 candidate</span></div><script type="module">
+import * as T from '/node_modules/three/build/three.module.js';
+import {createComposerCreature} from '/src/fauna-composer.ts';
+import {composerPreset,COMPOSER_PRESET_IDS} from '/src/fauna-composer-recipe.ts';
+import {buildComposerLodChain,composerFootLodConstraints} from '/src/fauna-composer-lod.ts';
+const W=600,H=540,renderer=new T.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});renderer.setSize(W*2,H);renderer.setPixelRatio(1);renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1;renderer.setScissorTest(true);document.body.append(renderer.domElement);
+const scenes=[0,1].map(()=>{const scene=new T.Scene();scene.background=new T.Color('#bbc7ce');scene.add(new T.HemisphereLight(0xe9efff,0x757b66,2));const key=new T.DirectionalLight(0xfff4e7,3);key.position.set(4,7,5);scene.add(key);const plane=new T.Mesh(new T.PlaneGeometry(100,100),new T.MeshStandardMaterial({color:'#969e8c',roughness:1}));plane.rotation.x=-Math.PI/2;plane.position.y=-.00002;scene.add(plane);const grid=new T.GridHelper(30,60,0x707666,0x8a9280);grid.position.y=-.00001;scene.add(grid);return scene;});
+const camera=new T.OrthographicCamera(-1,1,1,-1,.001,1000);let animals=[];
+function frame(box,view){const c=box.getCenter(new T.Vector3()),size=box.getSize(new T.Vector3()),dir=new T.Vector3(...(view==='side'?[0,.13,1]:[.9,.55,1.6])).normalize();camera.position.copy(c).addScaledVector(dir,size.length()*3+2);camera.lookAt(c);camera.updateMatrixWorld(true);let x=0,y=0;for(const xx of [box.min.x,box.max.x])for(const yy of [box.min.y,box.max.y])for(const zz of [box.min.z,box.max.z]){const p=new T.Vector3(xx,yy,zz).applyMatrix4(camera.matrixWorldInverse);x=Math.max(x,Math.abs(p.x));y=Math.max(y,Math.abs(p.y));}const half=Math.max(y,x/(W/H),.02)*1.25;camera.top=half;camera.bottom=-half;camera.left=-half*W/H;camera.right=half*W/H;camera.updateProjectionMatrix();}
+function reduce(a,target){if(!target)return;const level=buildComposerLodChain(a.skin,[target],a.skin.version==='fauna-composer-skin-6'?composerFootLodConstraints(a.skin):undefined).levels[0],g=new T.BufferGeometry();for(const [name,key,n]of [['position','positions',3],['normal','normals',3],['color','colors',3],['skinIndex','skinIndex',4],['skinWeight','skinWeight',4],['composerGloss','gloss',1]])g.setAttribute(name,new T.BufferAttribute(level[key],n));for(const name of ['coatL0','coatL1','coatL2','coatSample']){const src=a.mesh.geometry.getAttribute(name);if(src){const dst=new Float32Array(level.vertices*src.itemSize);for(let i=0;i<level.vertices;i++)for(let k=0;k<src.itemSize;k++)dst[i*src.itemSize+k]=src.array[level.sourceVertex[i]*src.itemSize+k];g.setAttribute(name,new T.BufferAttribute(dst,src.itemSize));}}g.setIndex(new T.BufferAttribute(level.index,1));a.mesh.geometry.dispose();a.mesh.geometry=g;return{triangles:level.triangles,reached:level.reached};}
+window.review={ids:COMPOSER_PRESET_IDS,draw({id,maturity=1,motion='neutral',view='hero',feet=false,lod=null}){animals.forEach(a=>a.dispose());animals=['skin-5','realism-1'].map(p=>createComposerCreature({...composerPreset(id),maturity},{presentation:p}));const boxes=[],data=[];animals.forEach((a,i)=>{const reduction=reduce(a,lod);scenes[i].add(a.group);const time=motion==='walk'?a.graph.locomotion.period*.73:0;const pose=a.update(motion,time);a.group.updateMatrixWorld(true);let box=a.bounds();if(feet){const part=a.skin.parts.find(p=>p.part==='foot'&&p.label.endsWith('R'));box=new T.Box3();const v=new T.Vector3();if(part){for(let j=part.firstTriangle*3;j<(part.firstTriangle+part.triangles)*3;j++){const vi=a.skin.index[j];v.fromArray(a.skin.positions,vi*3);a.mesh.applyBoneTransform(vi,v);box.expandByPoint(v);}const dy=box.max.y-box.min.y;box.max.y+=dy*2;box.min.y=Math.min(0,box.min.y);}}boxes.push(box);data.push({version:a.skin.version,vertices:a.skin.vertexCount,triangles:a.skin.triangleCount,bones:a.graph.bones.length,time,period:a.graph.locomotion.period,contacts:pose.contacts.map(c=>({limb:c.limb,stance:c.stance,contact:c.contact})),reduction,bounds:{min:box.min.toArray(),max:box.max.toArray()}});});frame(boxes[0].clone().union(boxes[1]),view);for(let i=0;i<2;i++){renderer.setViewport(i*W,0,W,H);renderer.setScissor(i*W,0,W,H);renderer.render(scenes[i],camera);}document.querySelector('#title').textContent=id+' · maturity '+maturity+' · '+motion+' · '+(feet?'foot detail':view)+' · '+(lod?'LOD '+lod:'full source');return data;}};
+</script>`;
+const samples=[],errors=[];
+await withGpuLock({owner:'composer-realism-paired',timeoutMs:60000,retryMs:10000},async()=>{
+ const browser=await chromium.launch({headless:true,args:browserArgs});
+ try{const page=await browser.newPage({viewport:{width:1200,height:540}});page.on('pageerror',e=>errors.push(e.message));await page.route('**/tests/composer-realism-review.html',r=>r.fulfill({contentType:'text/html',body:html}));await page.goto(origin+'/tests/composer-realism-review.html');await page.waitForFunction(()=>window.review);
+ const ids=await page.evaluate(()=>window.review.ids),cases=[];
+ for(const id of ids)for(const maturity of [1,.35])for(const motion of ['neutral','walk'])cases.push({id,maturity,motion});
+ for(const id of ['dinosaur','rhinoceros','giraffe','turtle','bird','ostrich'])cases.push({id,feet:true});
+ for(const id of ['dinosaur','rhinoceros','giraffe','turtle','centipede','worm'])for(const lod of [8000,3000,1000])cases.push({id,lod,motion:'walk',view:'side'});
+ for(const c of cases.filter(c=>!process.env.LOD_ONLY||c.lod)){const data=await page.evaluate(c=>window.review.draw(c),c);if(c.motion==='walk'&&data[1].contacts.length)assert.ok(data[1].contacts.some(x=>!x.stance),c.id+' actual swing');for(const d of data)if(d.reduction)assert.ok(d.reduction.reached);const file=[c.id,c.maturity??1,c.motion??'neutral',c.feet?'feet':c.view??'hero',c.lod??'full'].join('-')+'.png';await page.screenshot({path:join(output,file)});samples.push({...c,file,data});console.log(file);}
+ }finally{await browser.close();}
+});
+const source={};for(const name of ['fauna-composer-mesh.ts','fauna-composer.ts','fauna-composer-rig.ts','fauna-composer-recipe.ts'])source[name]=createHash('sha256').update(await readFile(new URL('../../src/'+name,import.meta.url))).digest('hex');
+await writeFile(join(output,'report.json'),JSON.stringify({version:1,source,errors,samples,lighting:'identical studio hemisphere2 + key3; ACES exposure1; no shadows',visualAcceptance:false,headsetAcceptance:false},null,2));assert.deepEqual(errors,[]);

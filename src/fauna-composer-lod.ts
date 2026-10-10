@@ -29,6 +29,7 @@
 export const COMPOSER_LOD_VERSION = 'fauna-composer-lod-1';
 /** Additive opt-in constraints; absent options preserve the original reducer. */
 export const COMPOSER_LOD_CONSTRAINTS_VERSION='fauna-composer-lod-constraints-1';
+export const COMPOSER_FOOT_LOD_VERSION = 'fauna-composer-foot-lod-1';
 
 /** Default attribute weights (dimensionless; multiplied by the body diagonal) and the largest allowed face turn. */
 export const COMPOSER_LOD_DEFAULTS = Object.freeze({colour: 0.02, gloss: 0.05, skin: 0.08, boundary: 10, minFaceCosine: 0.3});
@@ -50,6 +51,49 @@ export interface ComposerLodOptions {
   /** Source-vertex importance>=1; welded positions take the maximum. */
   vertexImportance?: Float32Array;
   colour?: number; gloss?: number; skin?: number; boundary?: number; minFaceCosine?: number;
+}
+/** Skin-6's joined ankles no longer have separate closed foot components to
+ * resist collapse. Preserve sole/ankle extrema and the supporting leg's joint
+ * regions, and spend more of the remaining error budget on these contours.
+ * Explicit opt-in: historical skin-5 reductions remain byte-identical. */
+export function composerFootLodConstraints(source: ComposerLodSource): Pick<ComposerLodOptions, 'protectedVertices' | 'vertexImportance'> {
+  const count = source.positions.length / 3;
+  const protectedVertices = new Uint8Array(count), vertexImportance = new Float32Array(count).fill(1);
+  const legCount = source.parts?.filter(part => part.part === 'leg').length ?? 0;
+  for (const part of source.parts ?? []) {
+    if (part.part === 'leg') {
+      const next = source.parts?.[(source.parts.indexOf(part)) + 1];
+      if (!next || !/^(pad|hoof|claw) /.test(next.label)) continue;
+      // A surviving sole is insufficient if reduction removes the shank above
+      // it. Keep the spatial extrema of each dominant joint region as well.
+      const groups = new Map<number, number[]>();
+      for (const id of new Set(source.index.slice(part.firstTriangle * 3, (part.firstTriangle + part.triangles) * 3))) {
+        vertexImportance[id] = 4;
+        let slot = 0; for (let k = 1; k < 4; k++) if (source.skinWeight[id * 4 + k]! > source.skinWeight[id * 4 + slot]!) slot = k;
+        const joint = source.skinIndex[id * 4 + slot]!;
+        if (!groups.has(joint)) groups.set(joint, []);
+        groups.get(joint)!.push(id);
+      }
+      for (const band of groups.values()) for (const axis of (legCount > 8 ? [1, 2] : [0, 1, 2])) for (const sign of [-1, 1]) {
+        let best = -1, value = -Infinity;
+        for (const id of band) { const q = sign * source.positions[id * 3 + axis]!; if (q > value) { value = q; best = id; } }
+        if (best >= 0) protectedVertices[best] = 1;
+      }
+    }
+    if (part.part !== 'foot' || !/^(pad|hoof|claw) /.test(part.label)) continue;
+    const ids = [...new Set(source.index.slice(part.firstTriangle * 3, (part.firstTriangle + part.triangles) * 3))];
+    let low = Infinity, high = -Infinity;
+    for (const id of ids) { const y = source.positions[id * 3 + 1]!; low = Math.min(low, y); high = Math.max(high, y); vertexImportance[id] = 8; }
+    const height = Math.max(high - low, 1e-8);
+    const sole = ids.filter(id => source.positions[id * 3 + 1]! <= low + height * 0.05);
+    const ankle = ids.filter(id => source.positions[id * 3 + 1]! >= low + height * 0.65);
+    for (const band of [sole, ankle]) for (const axis of [0, 2]) for (const sign of [-1, 1]) {
+      let best = -1, value = -Infinity;
+      for (const id of band) { const q = sign * source.positions[id * 3 + axis]!; if (q > value) { value = q; best = id; } }
+      if (best >= 0) protectedVertices[best] = 1;
+    }
+  }
+  return {protectedVertices, vertexImportance};
 }
 export interface ComposerLodLevel {
   /** Requested triangle target; null for the unreduced source. */

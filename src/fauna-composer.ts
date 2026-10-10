@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {composerConstraints, normalizeComposerRecipe, type ComposerConstraint, type ComposerRecipe} from './fauna-composer-recipe.ts';
 import {buildComposerGraph, composerSkeletonSegments, composerStructure, poseComposer, COMPOSER_BUDGET, type ComposerGraph, type ComposerMotion, type ComposerPose} from './fauna-composer-rig.ts';
-import {COMPOSER_COAT_CRISP_VERSION, buildComposerSkin, type ComposerCoatCrisp, type ComposerSkin} from './fauna-composer-mesh.ts';
+import {COMPOSER_COAT_CRISP_VERSION, buildComposerSkin, type ComposerCoatCrisp, type ComposerSkin, type ComposerSkinPresentation} from './fauna-composer-mesh.ts';
 import {COAT_PATTERN_CRISP_GLSL as COMPOSER_COAT_CRISP_GLSL} from './fauna-coat-crisp-glsl.ts';
 export {COAT_PATTERN_CRISP_GLSL as COMPOSER_COAT_CRISP_GLSL} from './fauna-coat-crisp-glsl.ts';
 import {deriveComposerIndividual, type ComposerIndividualTraits} from './fauna-composer-individual.ts';
@@ -115,13 +115,13 @@ export function createComposerCrispCoatMaterial(crisp: ComposerCoatCrisp): THREE
   return material;
 }
 
-export function createComposerCreature(input: ComposerRecipe): ComposerCreature {
+export function createComposerCreature(input: ComposerRecipe, options: {presentation?: ComposerSkinPresentation} = {}): ComposerCreature {
   const started = performance.now();
   const recipe = normalizeComposerRecipe(input).recipe;
   // The only caller of deriveComposerIndividual: the rig and skin receive the effective recipe.
   const derived = deriveComposerIndividual(recipe);
   const graph = buildComposerGraph(derived.recipe);
-  const skin = buildComposerSkin(graph);
+  const skin = buildComposerSkin(graph, options);
   if (skin.vertexCount > COMPOSER_BUDGET.maxVertices || skin.triangleCount > COMPOSER_BUDGET.maxTriangles)
     throw new Error(`Composer skin exceeds the desktop preview budget (${skin.vertexCount} vertices, ${skin.triangleCount} triangles).`);
   const geometry = new THREE.BufferGeometry();
