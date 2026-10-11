@@ -70,21 +70,45 @@ export function applyComposerVolumeConstraints(source: ComposerLodSource, graph:
   if (torso) {
     const ids = idsOf(torso), armored = parts.some(part => part.part === 'armor');
     for (const v of ids) importance[v] = Math.max(importance[v]!, 8);
-    // Four directions retain the ordinary torso. Armor also needs the
-    // diagonal surface under its studs, rather than a diamond cross-section.
-    sample(ids, graph.chains.torso ?? [], armored ? [0, .5, 1] : [0, 1], armored ? OCTAGON : CARDINAL);
+    // Thin appendages otherwise lose their intervening surface before the
+    // broad torso. This priority reserves no extra hard vertices.
+    const slenderJoints = new Set([...(graph.chains.neck ?? []), ...(graph.chains.tail ?? [])]);
+    for (const v of ids) if ([0, 1, 2, 3].some(k => source.skinWeight[v * 4 + k]! > .1 && slenderJoints.has(source.skinIndex[v * 4 + k]!))) importance[v] = Math.max(importance[v]!, 32);
+    // Armor needs diagonal support beneath its studs at bone boundaries.
+    // Only vertical midpoint samples are additional: the adjacent octagons
+    // already bound its width, freeing redundant anchors for attachments.
+    sample(ids, graph.chains.torso ?? [], [0, 1], armored ? OCTAGON : CARDINAL);
+    if (armored) sample(ids, graph.chains.torso ?? [], [.5], [[1, 0], [-1, 0]]);
     const neck = graph.chains.neck ?? [];
     // The denser armored torso also supports the fused neck root. Avoid a
     // second hard ring there; ordinary four-direction bodies need their own.
     sample(ids, neck.slice(0, 1), armored ? [.5, 1] : [0, .5, 1], CARDINAL);
     sample(ids, neck.slice(1), [0, .5, 1], CARDINAL);
+    const tail = graph.chains.tail ?? [];
+    if (tail.length) {
+      // Bound the root bend on both sides, the middle and the tip join.
+      // Four source rings remain bounded as tail tessellation/bones grow.
+      sample(ids, tail.slice(0, 1), [.75], CARDINAL);
+      sample(ids, tail.slice(1, 2), [.25], CARDINAL);
+      sample(ids, tail.slice(Math.floor(tail.length / 2), Math.floor(tail.length / 2) + 1), [.5], CARDINAL);
+      sample(ids, tail.slice(-1), [1], CARDINAL);
+    }
   }
   const legs = graph.limbs?.filter(limb => limb.kind === 'leg') ?? [];
   // Dense multi-leg recipes already have bounded joint-region/sole anchors.
   // Additional rings must not grow with every tiny leg in those recipes.
   if (legs.length <= 8) for (const limb of legs) {
     const part = parts.find(p => p.label === `leg ${limb.pair + 1}${limb.side < 0 ? 'L' : 'R'}`);
-    if (part) sample(idsOf(part), limb.bones.slice(0, -1), [.25, .75], CARDINAL);
+    if (part) {
+      // Three-segment legs need two full rings through their slender shank.
+      // Two-segment legs retain vertical bend support at both quarters, with
+      // one shared lateral ring between the existing joint-region extrema.
+      if (limb.bones.length > 3) sample(idsOf(part), limb.bones.slice(0, -1), [.25, .75], CARDINAL);
+      else {
+        sample(idsOf(part), limb.bones.slice(0, -1), [.25, .75], [[1, 0], [-1, 0]]);
+        sample(idsOf(part), limb.bones.slice(0, -1), [.5], [[0, 1], [0, -1]]);
+      }
+    }
   }
   for (const part of parts.filter(part => part.part === 'wing')) {
     const ids = idsOf(part); for (const v of ids) importance[v] = Math.max(importance[v]!, 8);
@@ -102,11 +126,34 @@ export function applyComposerVolumeConstraints(source: ComposerLodSource, graph:
       if (best >= 0) keep[best] = 1;
     }
   }
+  // The rear cranium is part of the fused neck loft, so a head-part vertex
+  // alone is not the supporting surface. Preserve the actual closest source
+  // triangle on either the head or its weighted neck junction, plus the ear
+  // vertex it supports. Every coordinate and weight remains original.
+  const headJoints = new Set([graph.chains.head, ...(graph.chains.neck ?? []).slice(-1)]);
+  const headSurface: number[] = [];
+  for (const part of parts) if ((part.part === 'head' && !part.label.endsWith('ears')) || part.part === 'torso') {
+    for (let t = part.firstTriangle * 3; t < (part.firstTriangle + part.triangles) * 3; t += 3) {
+      if (part.part === 'torso' && ![0, 1, 2].some(k => {
+        const v = source.index[t + k]!; return [0, 1, 2, 3].some(j => source.skinWeight[v * 4 + j]! > 0 && headJoints.has(source.skinIndex[v * 4 + j]!));
+      })) continue;
+      headSurface.push(t);
+    }
+  }
   const head = parts.filter(part => part.part === 'head' && !part.label.endsWith('ears')).flatMap(idsOf);
   for (const part of parts.filter(part => part.part === 'head' && part.label.endsWith('ears'))) {
     for (const ear of components(part).slice(0, 2)) {
-      const root = nearest(ear, graph.bones[graph.chains.head]!.restPosition);
-      if (root >= 0) nearest(head, p.subarray(root * 3, root * 3 + 3));
+      // The existing head contour support is distinct from the closest neck
+      // facet; retain it while adding the actual attachment surface below.
+      const centralRoot = nearest(ear, graph.bones[graph.chains.head]!.restPosition);
+      if (centralRoot >= 0) nearest(head, p.subarray(centralRoot * 3, centralRoot * 3 + 3));
+      for (const v of ear) importance[v] = Math.max(importance[v]!, 8);
+      let root = -1, best = -1, distance = Infinity;
+      for (const v of ear) for (const t of headSurface) {
+        const d = pointTriangleDistance2(p, v, source.index[t]!, source.index[t + 1]!, source.index[t + 2]!);
+        if (d < distance) { distance = d; best = t; root = v; }
+      }
+      if (best >= 0) { keep[root] = 1; for (let k = 0; k < 3; k++) keep[source.index[best + k]!] = 1; }
     }
   }
   // Global-diagonal skin penalties preferentially remove the circumference
@@ -125,7 +172,8 @@ export function applyComposerVolumeConstraints(source: ComposerLodSource, graph:
   }
   // The articulated proboscis already has calibrated quarter-section rings
   // and substantial inter-joint motion. Preserve its historical deformation
-  // priority, including the source-welded head join.
+  // scale, including the source-welded head join. Its stronger soft priority
+  // preserves that curved junction alongside the new neck/tail priority.
   let diagonal2 = 0;
   for (let k = 0; k < 3; k++) {
     let low = Infinity, high = -Infinity;
@@ -133,6 +181,28 @@ export function applyComposerVolumeConstraints(source: ComposerLodSource, graph:
     diagonal2 += (high - low) ** 2;
   }
   const diagonal = Math.sqrt(diagonal2);
-  for (const part of parts.filter(part => part.part === 'trunk')) for (const v of idsOf(part)) deformationScale[v] = diagonal;
+  for (const part of parts.filter(part => part.part === 'trunk')) for (const v of idsOf(part)) {
+    deformationScale[v] = diagonal;
+    importance[v] = Math.max(importance[v]!, 96);
+  }
   return {...base, deformationScale};
+}
+
+// Closest surface support, rather than a nearby vertex whose incident head
+// triangles can recede from the ear root. Ericson triangle Voronoi regions.
+function pointTriangleDistance2(p: Float32Array, v: number, a: number, b: number, c: number): number {
+  const ax=p[a*3]!,ay=p[a*3+1]!,az=p[a*3+2]!,px=p[v*3]!,py=p[v*3+1]!,pz=p[v*3+2]!;
+  const bx=p[b*3]!,by=p[b*3+1]!,bz=p[b*3+2]!,cx=p[c*3]!,cy=p[c*3+1]!,cz=p[c*3+2]!;
+  const abx=bx-ax,aby=by-ay,abz=bz-az,acx=cx-ax,acy=cy-ay,acz=cz-az,apx=px-ax,apy=py-ay,apz=pz-az;
+  const d1=abx*apx+aby*apy+abz*apz,d2=acx*apx+acy*apy+acz*apz;
+  const at=(x:number,y:number,z:number)=>(px-x)**2+(py-y)**2+(pz-z)**2;
+  if(d1<=0&&d2<=0)return at(ax,ay,az);
+  const bpx=px-bx,bpy=py-by,bpz=pz-bz,d3=abx*bpx+aby*bpy+abz*bpz,d4=acx*bpx+acy*bpy+acz*bpz;
+  if(d3>=0&&d4<=d3)return at(bx,by,bz);
+  const vc=d1*d4-d3*d2;if(vc<=0&&d1>=0&&d3<=0){const u=d1/(d1-d3);return at(ax+u*abx,ay+u*aby,az+u*abz);}
+  const cpx=px-cx,cpy=py-cy,cpz=pz-cz,d5=abx*cpx+aby*cpy+abz*cpz,d6=acx*cpx+acy*cpy+acz*cpz;
+  if(d6>=0&&d5<=d6)return at(cx,cy,cz);
+  const vb=d5*d2-d1*d6;if(vb<=0&&d2>=0&&d6<=0){const u=d2/(d2-d6);return at(ax+u*acx,ay+u*acy,az+u*acz);}
+  const va=d3*d6-d5*d4;if(va<=0&&d4-d3>=0&&d5-d6>=0){const u=(d4-d3)/((d4-d3)+(d5-d6));return at(bx+u*(cx-bx),by+u*(cy-by),bz+u*(cz-bz));}
+  const n=1/(va+vb+vc),u=vb*n,w=vc*n;return at(ax+abx*u+acx*w,ay+aby*u+acy*w,az+abz*u+acz*w);
 }

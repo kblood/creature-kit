@@ -16,15 +16,17 @@ function components(skin,part){
  const remaining=new Set(adjacent.keys()),out=[];while(remaining.size){const stack=[remaining.values().next().value],group=new Set();while(stack.length){const k=stack.pop();if(!remaining.delete(k))continue;group.add(k);for(const b of adjacent.get(k))stack.push(b);}out.push(group);}return out.sort((a,b)=>b.size-a.size);
 }
 
-test('shared anatomy constraints are bounded, deterministic and strictly include foot-1; all outputs remain original source attributes',()=>{
+test('shared anatomy constraints are bounded, deterministic and strictly include foot-1; all outputs remain original source attributes',t=>{
+ const targets=[];
  for(const s of corpus){const {skin,graph,options,chain}=built(s),foot=composerFootLodConstraints(skin);
   assert.deepEqual(options,composerAnatomyLodConstraints(skin,graph));
   const added=options.protectedVertices.reduce((n,v,i)=>n+(v&&!foot.protectedVertices[i]?1:0),0);
-  // Anatomy2 adds bounded body/neck/leg cross-sections and membrane anchors;
+  // Anatomy3 includes bounded body sections, membranes and attachments;
   // the cap is independent of source tessellation (not a percentage of it).
   assert.ok(added<=360,`${s.id} bounded additional anchors ${added}`);
   for(let v=0;v<skin.vertexCount;v++){if(foot.protectedVertices[v])assert.equal(options.protectedVertices[v],1);assert.ok(options.vertexImportance[v]>=foot.vertexImportance[v]);}
   for(const l of chain.levels){
+   targets.push({id:s.id,target:l.target,triangles:l.triangles,reached:l.reached});
    assert.equal(l.reached,l.triangles<=l.target);
    // These combined advanced recipes cannot retain the added body volume,
    // stud shells and articulated trunk inside their historical low targets.
@@ -39,6 +41,7 @@ test('shared anatomy constraints are bounded, deterministic and strictly include
    }
   }
  }
+ t.diagnostic(JSON.stringify({targets}));
 });
 
 test('actual trunk triangle sections retain diameter through bends; head junction and mouth survive both tiers',()=>{
@@ -82,6 +85,6 @@ test('realism GLB uses exactly the shared anatomy chain and tags it; impossible 
  assert.equal(json.meshes.length,2);
  for(let i=0;i<2;i++){const p=json.meshes[i].primitives[0],l=chain.levels[i];assert.deepEqual(accessor(json,bin,p.attributes.POSITION),l.positions);assert.deepEqual(Array.from(accessor(json,bin,p.indices)),Array.from(l.index));assert.deepEqual(accessor(json,bin,p.attributes.COLOR_0),l.colors);}
  const impossible=corpus.find(x=>x.id==='advanced-trunked-centipede-adult');assert.throws(()=>exportCreatureGlb(impossible.recipe,{presentation:'realism-1',clips:['neutral'],lods:[1500,1000]}),e=>e instanceof ComposerExportBudgetError&&e.reasons.some(r=>r.code==='lod-target'));
- const token=planetComposerSourceIdentity(d);assert.equal(token.versions.constraints,COMPOSER_LOD_CONSTRAINTS_VERSION);assert.match(token.key,/fauna-composer-lod-constraints-3/);
+ const token=planetComposerSourceIdentity(d);assert.equal(token.versions.constraints,COMPOSER_LOD_CONSTRAINTS_VERSION);assert.match(token.key,/fauna-composer-lod-constraints-4/);
  const legacy=exportCreatureGlb(d.recipe,{clips:['neutral'],lods:[1500,1000]}),explicit=exportCreatureGlb(d.recipe,{clips:['neutral'],lods:[1500,1000],presentation:'skin-5'});assert.deepEqual(legacy.glb,explicit.glb);assert.equal(legacy.report.versions.lodAnatomy,undefined);
 });

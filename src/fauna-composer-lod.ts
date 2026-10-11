@@ -30,9 +30,9 @@ import {applyComposerVolumeConstraints} from './fauna-composer-lod-volume.ts';
 
 export const COMPOSER_LOD_VERSION = 'fauna-composer-lod-1';
 /** Additive opt-in constraints; absent options preserve the original reducer. */
-export const COMPOSER_LOD_CONSTRAINTS_VERSION='fauna-composer-lod-constraints-3';
+export const COMPOSER_LOD_CONSTRAINTS_VERSION='fauna-composer-lod-constraints-4';
 export const COMPOSER_FOOT_LOD_VERSION = 'fauna-composer-foot-lod-1';
-export const COMPOSER_ANATOMY_LOD_VERSION = 'fauna-composer-anatomy-lod-2';
+export const COMPOSER_ANATOMY_LOD_VERSION = 'fauna-composer-anatomy-lod-3';
 
 /** Default attribute weights (dimensionless; multiplied by the body diagonal) and the largest allowed face turn. */
 export const COMPOSER_LOD_DEFAULTS = Object.freeze({colour: 0.02, gloss: 0.05, skin: 0.08, boundary: 10, minFaceCosine: 0.3});
@@ -50,7 +50,7 @@ export interface ComposerLodSource {
 export interface ComposerLodAnatomyGraph {
   bones: readonly {restPosition: readonly [number, number, number]; restQuaternion: readonly [number, number, number, number]; length: number;
     start: {h: number; w: number; yc?: number}; end: {h: number; w: number; yc?: number}}[];
-  chains: {head: number; trunk: readonly number[]; torso?: readonly number[]; neck?: readonly number[]};
+  chains: {head: number; trunk: readonly number[]; torso?: readonly number[]; neck?: readonly number[]; tail?: readonly number[]};
   limbs?: readonly {kind: string; pair: number; side: number; bones: readonly number[]}[];
 }
 export interface ComposerLodOptions {
