@@ -7,9 +7,15 @@ dimensions, exact coat values, maturity/sex and full-cycle gait distances to
 prevent another application of seeded variation or maturity scaling. Graph fit
 metadata records requested and constructed dimensions and derived gait ratios.
 
+Patch 0.8.1 corrects the terrain rotation pivot: pose revision 3 rotates the
+local root offset and orientation together before adding external ground height.
+The old pivot could leave a planted hoof 13.755 mm above even a shallow plane.
+The captured regression retains the original genome, graph, source arrays and
+world footholds. Default poses without terrain environment remain unchanged.
+
 `buildPlanetComposerSource` and `createPlanetComposerAnimal` use the same source
 builder as ordinary Composer authoring. Source revision 2 includes the corrected
-gait units and juvenile coat layers. `posePlanetComposer` revision 2 uses the
+gait units and juvenile coat layers. `posePlanetComposer` revision 3 uses the
 caller's canonical dated orbit/activity and ground samples, with fixed stance
 footholds and heading, smooth swing, and continuous stop/resume transitions.
 The caller retains world generation, populations, navigation and time controls.
