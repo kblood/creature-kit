@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import {poseComposer, type ComposerGraph, type ComposerLimb, type ComposerPose, type ComposerPoseOptions, type Quat, type Vec3} from './fauna-composer-rig.ts';
 import type {PlanetFaunaActivity, PlanetFaunaPathMember} from './planet-v1/caller-contract.ts';
 
-export const PLANET_COMPOSER_POSE_VERSION = 'planet-composer-pose-2';
+export const PLANET_COMPOSER_POSE_VERSION = 'planet-composer-pose-3';
 export type PlanetComposerGround = (x: number, z: number) => number;
 export interface PlanetComposerPose extends ComposerPose {
   planet: {version: typeof PLANET_COMPOSER_POSE_VERSION; memberId: string; cyclesPerRevolution: number; cycle: number; strideM: number; speedMps: number; root: Vec3; yaw: number};

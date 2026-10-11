@@ -1,0 +1,2383 @@
+{
+  "schema": "planet-composer-terrain-regression-1",
+  "provenance": {
+    "id": "G001/C2456,274,-369/0/planet/1:fauna:32e5fe9d",
+    "atlasCommit": "0c6690b",
+    "kitCommit": "1ca52515d1f2266e3913bc4a6a691a789f803530",
+    "capturedFrom": "Assets/_assetctl/planet-composer-migration-20261011/foot-focus-gpu-32e5fe9d-01/phase-0.json",
+    "captureSha256": "a3acf45bfc8f8b9537a2d9c0716b277b9bd6bf0473fdd4eba419bf4c57f5bdfb",
+    "provider": "deterministic-code",
+    "license": "UNLICENSED",
+    "note": "Definition, member and immutable terrain stencil captured from the actual production world. Clock rows are evaluated by its actual dated activity function, not hand-authored gait labels.",
+    "before": {
+      "foot": "hoof 2R",
+      "sourceAndActualGpuGapM": 0.013754862948303526,
+      "reachErrorM": 0.015313080321242234
+    }
+  },
+  "definition": {
+    "schema": "planet-composer-definition-1",
+    "kind": "planet-composer",
+    "genome": {
+      "version": "creature-genome-1",
+      "archetype": "long-neck",
+      "torsoLength": 1.759,
+      "torsoHeight": 0.94,
+      "torsoWidth": 0.647,
+      "legLength": 1.476,
+      "upperLegFraction": 0.54,
+      "stanceWidth": 0.765,
+      "neckLength": 1.594,
+      "neckRise": 0.969,
+      "headLength": 0.477,
+      "headWidth": 0.293,
+      "tailLength": 0.787,
+      "footLength": 0.268,
+      "footWidth": 0.156,
+      "hornLength": 0,
+      "earLength": 0.22,
+      "armor": 0.05,
+      "walkSpeed": 1.161,
+      "runSpeed": 3.577,
+      "strideLength": 1.161,
+      "color": "#a07947",
+      "accentColor": "#372107",
+      "pattern": "spots",
+      "mutationLog": [
+        "long-neck founder anatomy",
+        "long-neck phenotype; adult anatomy and identity-preserving coat; female"
+      ],
+      "appearance": {
+        "version": "fauna-appearance-2",
+        "individualKey": "G001/C2456,274,-369/0/planet/1:fauna:32e5fe9d/0/appearance-v1",
+        "markingSeed": 697609730,
+        "pattern": "spots",
+        "palette": {
+          "base": "#a07947",
+          "marking": "#372107",
+          "belly": "#cdc7a5"
+        },
+        "roughness": 0.8131826739102096,
+        "profile": {
+          "mass": 0.8996702683855944,
+          "limb": -0.36282867876878677,
+          "neck": 0.34051809537702193,
+          "dimorphism": 0.3378475260129199,
+          "hornlessFemales": false
+        },
+        "individual": {
+          "size": 0.6250622676743804,
+          "condition": 0.5581282436750197,
+          "muzzle": 0.6566731109415818,
+          "ears": 0.0549321409908432,
+          "sex": "female",
+          "coatPhase": 0.01054563233628869,
+          "limb": 0.9458099561617268,
+          "neck": 0.6450712614797687,
+          "tail": 0.780642935489454
+        },
+        "growth": {
+          "stage": "adult",
+          "maturity": 1,
+          "lateral": 1
+        },
+        "coat": {
+          "version": "fauna-coat-1",
+          "pattern": "rosettes",
+          "marks": 200,
+          "scale": 0.8860682328080071,
+          "contrast": 0.7476617980282754,
+          "countershade": 0.8214878255268558,
+          "bellyLine": -0.38579798594582826,
+          "colours": {
+            "base": [
+              0.3944696915969144,
+              0.16902495048879215,
+              0.013884322050474273
+            ],
+            "accent": [
+              0.03871036127097185,
+              0.015410159455342767,
+              0.0022576043498779195
+            ],
+            "belly": [
+              0.6137101866734817,
+              0.5695240064026752,
+              0.37681482131154387
+            ],
+            "keratin": [
+              0.023923041347487177,
+              0.017627995018829487,
+              0.008903222238421512
+            ],
+            "skin": [
+              0.2536581565394649,
+              0.12118308149017694,
+              0.03154587216863723
+            ],
+            "eye": [
+              0.0061992311970964,
+              0.0044240494295719425,
+              0.0023305682516327705
+            ],
+            "horn": [
+              0.04991530989952856,
+              0.036639132302930644,
+              0.017173115547515973
+            ],
+            "plate": [
+              0.2536581565394649,
+              0.1460982826609499,
+              0.02500343909212411
+            ]
+          },
+          "markRole": "accent",
+          "seed": 1803617318,
+          "warp": 0.25700089666061104,
+          "threshold": -0.010392428385093806,
+          "juvenileSpots": 0,
+          "greying": 0.15297811993760296
+        },
+        "lineage": {
+          "family": "ochre",
+          "pattern": "rosettes"
+        }
+      },
+      "morphology": {
+        "version": "fauna-morphology-1",
+        "family": "long-neck",
+        "footType": "hoof",
+        "trunkLength": 0,
+        "wingSpan": 0,
+        "wingState": "none"
+      }
+    },
+    "recipe": {
+      "version": 4,
+      "layout": "quadruped",
+      "legPairs": 2,
+      "bodyLength": 1.76,
+      "girth": 1,
+      "posture": 0,
+      "torso": "deep-chest",
+      "neckLength": 1.32,
+      "head": "muzzle",
+      "headSize": 1,
+      "snoutLength": 0.6,
+      "horns": "none",
+      "legs": "unguligrade",
+      "legLength": 0.84,
+      "feet": "hoof",
+      "arms": "none",
+      "armLength": 0.6,
+      "hands": "hand",
+      "tail": "tufted",
+      "tailLength": 0.45,
+      "armor": "none",
+      "wings": "none",
+      "wingSpan": 2,
+      "trunk": "none",
+      "trunkLength": 0.8,
+      "palette": "ochre",
+      "colorSeed": 0,
+      "pattern": "rosettes",
+      "marks": 200,
+      "patternScale": 0.9,
+      "patternContrast": 0.75,
+      "countershade": 0.8,
+      "dimorphism": 0,
+      "variability": 0,
+      "allometry": 0,
+      "individualSeed": 0,
+      "sex": "auto",
+      "maturity": 1,
+      "condition": 0,
+      "eyes": "auto",
+      "iris": "auto",
+      "eyeRules": 2
+    },
+    "phenotype": {
+      "version": "fauna-composer-phenotype-1",
+      "units": "m",
+      "identity": {
+        "individualId": "G001/C2456,274,-369/0/planet/1:fauna:32e5fe9d",
+        "speciesId": "biosphere-lab-3/planet/2a5ba810706a8d34/lineage/quadruped/long-neck/0",
+        "appearanceKey": "G001/C2456,274,-369/0/planet/1:fauna:32e5fe9d/0/appearance-v1",
+        "maturity": 1,
+        "sex": "female"
+      },
+      "dimensions": {
+        "bodyLength": 1.759,
+        "torsoWidth": 0.647,
+        "torsoHeight": 0.94,
+        "legReach": 1.476,
+        "upperLegFraction": 0.54,
+        "stanceWidth": 0.765,
+        "neckLength": 2.0966294597758566,
+        "neckElevation": 1.301457921917387,
+        "headLength": 0.477,
+        "headWidth": 0.293,
+        "tailLength": 0.787,
+        "footLength": 0.268,
+        "footWidth": 0.156,
+        "hornLength": 0,
+        "earLength": 0.22,
+        "trunkLength": 0,
+        "wingSpan": 0
+      },
+      "coat": {
+        "version": "fauna-coat-1",
+        "pattern": "rosettes",
+        "marks": 200,
+        "scale": 0.8860682328080071,
+        "contrast": 0.7476617980282754,
+        "countershade": 0.8214878255268558,
+        "bellyLine": -0.38579798594582826,
+        "colours": {
+          "base": [
+            0.3944696915969144,
+            0.16902495048879215,
+            0.013884322050474273
+          ],
+          "accent": [
+            0.03871036127097185,
+            0.015410159455342767,
+            0.0022576043498779195
+          ],
+          "belly": [
+            0.6137101866734817,
+            0.5695240064026752,
+            0.37681482131154387
+          ],
+          "keratin": [
+            0.023923041347487177,
+            0.017627995018829487,
+            0.008903222238421512
+          ],
+          "skin": [
+            0.2536581565394649,
+            0.12118308149017694,
+            0.03154587216863723
+          ],
+          "eye": [
+            0.0061992311970964,
+            0.0044240494295719425,
+            0.0023305682516327705
+          ],
+          "horn": [
+            0.04991530989952856,
+            0.036639132302930644,
+            0.017173115547515973
+          ],
+          "plate": [
+            0.2536581565394649,
+            0.1460982826609499,
+            0.02500343909212411
+          ]
+        },
+        "markRole": "accent",
+        "seed": 1803617318,
+        "warp": 0.25700089666061104,
+        "threshold": -0.010392428385093806,
+        "juvenileSpots": 0,
+        "greying": 0.15297811993760296
+      },
+      "coatStage": {
+        "version": "planet-juvenile-coat-1",
+        "stage": "adult",
+        "maturity": 1
+      },
+      "coatFrame": {
+        "phase": 0,
+        "lateral": 1
+      },
+      "roughness": 0.8131826739102096,
+      "motion": {
+        "walkSpeed": 1.161,
+        "strideLength": 1.161
+      }
+    },
+    "ledger": {
+      "units": "metres; radians for neckElevation; linear RGB for coat",
+      "sourceGenomeVersion": "creature-genome-1",
+      "sourceAppearanceVersion": "fauna-appearance-2",
+      "sourceMorphologyVersion": "fauna-morphology-1",
+      "family": "long-neck",
+      "growth": "already-resolved-no-additional-growth",
+      "coat": "resolved-coat-exact",
+      "recipeControlAdjustments": [
+        "bodyLength: control 1.759 → 1.76; resolved phenotype remains exact",
+        "neckLength: control 1.3243821993404439 → 1.32; resolved phenotype remains exact",
+        "legLength: control 0.839113132461626 → 0.84; resolved phenotype remains exact",
+        "tailLength: control 0.44741330301307564 → 0.45; resolved phenotype remains exact",
+        "patternScale: control 0.8860682328080071 → 0.9; resolved phenotype remains exact",
+        "patternContrast: control 0.7476617980282754 → 0.75; resolved phenotype remains exact",
+        "countershade: control 0.8214878255268558 → 0.8; resolved phenotype remains exact"
+      ],
+      "mappings": [
+        "Inherited genome is quadrupedal; categorical anatomy is mapped field by field, without selecting a Composer preset.",
+        "Torso width/height and head width are full diameters; Composer graph sections use half-extents. Surface lobes and shading remain Composer geometry.",
+        "Neck centreline preserves the genome forward=.35×neckLength and rise=neckRise+.66×neckLength vector; stored neckLength is its Euclidean length.",
+        "Leg reach is nominal articulated length; upperLegFraction divides upper/lower after any metapodial share. The Composer ground/reach solver may lengthen limbs and shorten stride; graph constraints disclose this.",
+        "Stance width is the exact left/right sole-centre separation. Foot length/width are nominal profile dimensions; generated/deformed bounds are separate measurements.",
+        "Head, muzzle, ears, horns, armor and tail surface shapes use Composer profiles; armor amount selects presence, not the old plate-area fraction.",
+        "Derived profile mappings: cranium height = headWidth/(2×face.craniumWidth); snout length = headLength×recipe.snoutLength×face.snout (initial recipe.snoutLength .6); foot height = .42×footWidth; neck bone count = round(1+3.4×recipe.neckLength), clamped to 1..6. graph.phenotypeFit exposes numeric derived ratios.",
+        "Resolved coat RGB, seed, pattern and marks are copied exactly. Coat coordinates use the Composer torso frame plus the existing phase/lateral growth offsets; surface coverage changes with anatomy.",
+        "Source runSpeed and mutation log remain in the genome; Composer walking uses source walkSpeed with reach-fitted stride and cadence. No new species/individual identity is generated.",
+        "phenotype.motion.strideLength is metres per full gait cycle. Composer stance sweep = duty×cycleLength; period = cycleLength/walkSpeed. graph.phenotypeFit records requested and fitted cycle, sweep, period and limb reaches.",
+        "Explicit coatStage retains planetary fawn rows and developing stockings in both vertex fallback and all crisp-colour layers, with a layout sized for the generated Composer torso cells. Shared shader interpolates those layers; spot placement follows the new anatomy."
+      ]
+    }
+  },
+  "member": {
+    "id": "G001/C2456,274,-369/0/planet/1:fauna:32e5fe9d",
+    "spatialCellId": "y-/41474/128643",
+    "archetype": "long-neck",
+    "speciesId": "biosphere-lab-3/planet/2a5ba810706a8d34/lineage/quadruped/long-neck/0",
+    "speciesGenome": {
+      "version": "creature-genome-1",
+      "archetype": "long-neck",
+      "torsoLength": 1.605,
+      "torsoHeight": 0.803,
+      "torsoWidth": 0.543,
+      "legLength": 1.373,
+      "upperLegFraction": 0.54,
+      "stanceWidth": 0.68,
+      "neckLength": 1.344,
+      "neckRise": 0.82,
+      "headLength": 0.43,
+      "headWidth": 0.27,
+      "tailLength": 0.687,
+      "footLength": 0.252,
+      "footWidth": 0.14,
+      "hornLength": 0,
+      "earLength": 0.206,
+      "armor": 0.05,
+      "walkSpeed": 1.12,
+      "runSpeed": 3.45,
+      "strideLength": 1.08,
+      "color": "#596f65",
+      "accentColor": "#b9a675",
+      "pattern": "spots",
+      "mutationLog": [
+        "long-neck founder anatomy"
+      ]
+    },
+    "genomeSeed": "[\"[\\\"LETHRA-001\\\",\\\"G001\\\"]\",[2456,274,-369],0]/planet/1|G001/C2456,274,-369/0/planet/1|fauna|y-/41474/128643|founder",
+    "variant": 0,
+    "stage": "adult",
+    "anchorOffsetX": 0.9128526452616168,
+    "anchorOffsetZ": -1.6954476191765868,
+    "orbitRadiusM": 5.149121003923938,
+    "orbitAngularSpeed": 0.15274260114176494,
+    "orbitPhase": 3.4098480178567523,
+    "gaitPeriodS": 10.931433483958244
+  },
+  "ground": {
+    "rawGrid": [
+      187.97278580037815,
+      188.032640334332,
+      188.09235833375126,
+      188.15176633995557,
+      188.2106895341147,
+      188.2689524556052,
+      188.3263797529321,
+      188.12061921333176,
+      188.17870803651897,
+      188.2366117596251,
+      188.2941555156928,
+      188.35116247706299,
+      188.40745458255375,
+      188.4628532990048,
+      188.2715861585006,
+      188.3279439794321,
+      188.38407116973795,
+      188.43979172385477,
+      188.494927043078,
+      188.5492966673526,
+      188.60271904287848,
+      188.42545284563428,
+      188.4801169776897,
+      188.53450784609134,
+      188.5884486034841,
+      188.6417591512676,
+      188.69425687124794,
+      188.74575739503996,
+      188.58198143178697,
+      188.63499270668234,
+      188.68769083271246,
+      188.73989844304842,
+      188.7914342414414,
+      188.84211372977163,
+      188.8917499747983,
+      188.74085220251422,
+      188.79233517910347,
+      188.84338836693678,
+      188.89391356069174,
+      188.94372859796772,
+      188.99264741429562,
+      189.04048080272824,
+      188.901140573177,
+      188.9515055668212,
+      189.00127479442074,
+      189.05026764613154,
+      189.09842062157182,
+      189.14564092734645,
+      189.19173741356948
+    ],
+    "relief": 1,
+    "cellId": "fauna/32/y-/41474/128643",
+    "n": 7,
+    "halfM": 24,
+    "stepM": 8
+  },
+  "sourceDigests": {
+    "graph": "41989d7dc0d21585fdcc6c84953350eec1a8d277461e1883e8236bf5885f80f9",
+    "skinBuffers": {
+      "positions": "6315cf3e91bd7fb445943325658ace2c22220cbd0986799397db69abbd3e77e2",
+      "normals": "6d10cdbd1b91009b4da8592834188852e35e10290f1b5f33f9f77b7744ecb3e0",
+      "colors": "e3942154ae4c3cc4ab36162982efb35b9843ade74207a1d8682444cb36e7c47e",
+      "skinIndex": "c7dcdb8f4a92fa126aafa5b2501c0577fecbb67cc177b529cc336c740ecc61e5",
+      "skinWeight": "c307c6ecae576f664e7ca3c9f63fdc08760fe73b6f9ddabfb491b9edd5a97c3f",
+      "index": "5769b4e7825538266370a1b11b18c1168d7cb9a49fa867120bedbc1ced31637e",
+      "regions": "c0eac036615014f521f36503f3a8ff7fe1936114248ced37616656b54a222fb1",
+      "gloss": "d0081539ab36f92dd2be4c58f531cd7039ae44918aebfaf421332a50cd9909b8",
+      "coatLayers.c0": "6eb3130601ac72a2f6a0f9ea12d03994f2f5c0e17062b40b1bfb419b505041f0",
+      "coatLayers.c1": "1c8b66a3a7f18ecac44a6a2cd22d6fad093f34e8046240b9c32d9b20fa6cdae7",
+      "coatLayers.c2": "1c8b66a3a7f18ecac44a6a2cd22d6fad093f34e8046240b9c32d9b20fa6cdae7",
+      "coatLayers.sample": "b1cec7fdf2de73cb1ede11e76c70c0f414819c91f4ebbee81614e92ca4a835b4"
+    }
+  },
+  "clock": [
+    {
+      "worldNs": "435084631200000025066820000",
+      "deltaNs": "0",
+      "activity": {
+        "pose": {
+          "x": 5.21239940039979,
+          "z": -4.528704546006814,
+          "yaw": 7.27132893388365,
+          "gait": "idle"
+        },
+        "travel": 0.36457377544070085,
+        "revolutionS": 41.135775221,
+        "stateS": 10.069795122
+      },
+      "rigSeconds": 25.06682
+    },
+    {
+      "worldNs": "435084631200000025106820000",
+      "deltaNs": "40000000",
+      "activity": {
+        "pose": {
+          "x": 5.21239940039979,
+          "z": -4.528704546006814,
+          "yaw": 7.27132893388365,
+          "gait": "idle"
+        },
+        "travel": 0.36457377544070085,
+        "revolutionS": 41.135775221,
+        "stateS": 10.109795122
+      },
+      "rigSeconds": 25.10682
+    },
+    {
+      "worldNs": "435084631200000025146820000",
+      "deltaNs": "80000000",
+      "activity": {
+        "pose": {
+          "x": 5.21239940039979,
+          "z": -4.528704546006814,
+          "yaw": 7.27132893388365,
+          "gait": "idle"
+        },
+        "travel": 0.36457377544070085,
+        "revolutionS": 41.135775221,
+        "stateS": 10.149795122
+      },
+      "rigSeconds": 25.14682
+    },
+    {
+      "worldNs": "435084631200000025186820000",
+      "deltaNs": "120000000",
+      "activity": {
+        "pose": {
+          "x": 5.21239940039979,
+          "z": -4.528704546006814,
+          "yaw": 7.27132893388365,
+          "gait": "idle"
+        },
+        "travel": 0.36457377544070085,
+        "revolutionS": 41.135775221,
+        "stateS": 10.189795122
+      },
+      "rigSeconds": 25.18682
+    },
+    {
+      "worldNs": "435084631200000025226820000",
+      "deltaNs": "160000000",
+      "activity": {
+        "pose": {
+          "x": 5.21239940039979,
+          "z": -4.528704546006814,
+          "yaw": 7.27132893388365,
+          "gait": "idle"
+        },
+        "travel": 0.36457377544070085,
+        "revolutionS": 41.135775221,
+        "stateS": 10.229795122
+      },
+      "rigSeconds": 25.22682
+    },
+    {
+      "worldNs": "435084631200000025266820000",
+      "deltaNs": "200000000",
+      "activity": {
+        "pose": {
+          "x": 5.21239940039979,
+          "z": -4.528704546006814,
+          "yaw": 7.27132893388365,
+          "gait": "idle"
+        },
+        "travel": 0.36457377544070085,
+        "revolutionS": 41.135775221,
+        "stateS": 10.269795122
+      },
+      "rigSeconds": 25.26682
+    },
+    {
+      "worldNs": "435084631200000025306820000",
+      "deltaNs": "240000000",
+      "activity": {
+        "pose": {
+          "x": 5.21239940039979,
+          "z": -4.528704546006814,
+          "yaw": 7.27132893388365,
+          "gait": "idle"
+        },
+        "travel": 0.36457377544070085,
+        "revolutionS": 41.135775221,
+        "stateS": 10.309795122
+      },
+      "rigSeconds": 25.30682
+    },
+    {
+      "worldNs": "435084631200000025346820000",
+      "deltaNs": "280000000",
+      "activity": {
+        "pose": {
+          "x": 5.21239940039979,
+          "z": -4.528704546006814,
+          "yaw": 7.27132893388365,
+          "gait": "idle"
+        },
+        "travel": 0.36457377544070085,
+        "revolutionS": 41.135775221,
+        "stateS": 10.349795122
+      },
+      "rigSeconds": 25.34682
+    },
+    {
+      "worldNs": "435084631200000025366820000",
+      "deltaNs": "300000000",
+      "activity": {
+        "pose": {
+          "x": 5.21239940039979,
+          "z": -4.528704546006814,
+          "yaw": 7.27132893388365,
+          "gait": "idle"
+        },
+        "travel": 0.36457377544070085,
+        "revolutionS": 41.135775221,
+        "stateS": 10.369795122
+      },
+      "rigSeconds": 25.36682
+    },
+    {
+      "worldNs": "435084631200000025386820000",
+      "deltaNs": "320000000",
+      "activity": {
+        "pose": {
+          "x": 5.21239940039979,
+          "z": -4.528704546006814,
+          "yaw": 7.27132893388365,
+          "gait": "idle"
+        },
+        "travel": 0.36457377544070085,
+        "revolutionS": 41.135775221,
+        "stateS": 10.389795122
+      },
+      "rigSeconds": 25.38682
+    },
+    {
+      "worldNs": "435084631200000025426820000",
+      "deltaNs": "360000000",
+      "activity": {
+        "pose": {
+          "x": 5.21239940039979,
+          "z": -4.528704546006814,
+          "yaw": 7.27132893388365,
+          "gait": "idle"
+        },
+        "travel": 0.36457377544070085,
+        "revolutionS": 41.135775221,
+        "stateS": 10.429795122
+      },
+      "rigSeconds": 25.42682
+    },
+    {
+      "worldNs": "435084631200000025466820000",
+      "deltaNs": "400000000",
+      "activity": {
+        "pose": {
+          "x": 5.21239940039979,
+          "z": -4.528704546006814,
+          "yaw": 7.27132893388365,
+          "gait": "idle"
+        },
+        "travel": 0.36457377544070085,
+        "revolutionS": 41.135775221,
+        "stateS": 10.469795122
+      },
+      "rigSeconds": 25.46682
+    },
+    {
+      "worldNs": "435084631200000025506820000",
+      "deltaNs": "440000000",
+      "activity": {
+        "pose": {
+          "x": 5.21239940039979,
+          "z": -4.528704546006814,
+          "yaw": 7.27132893388365,
+          "gait": "idle"
+        },
+        "travel": 0.36457377544070085,
+        "revolutionS": 41.135775221,
+        "stateS": 10.509795122
+      },
+      "rigSeconds": 25.50682
+    },
+    {
+      "worldNs": "435084631200000025546820000",
+      "deltaNs": "480000000",
+      "activity": {
+        "pose": {
+          "x": 5.21239940039979,
+          "z": -4.528704546006814,
+          "yaw": 7.27132893388365,
+          "gait": "idle"
+        },
+        "travel": 0.36457377544070085,
+        "revolutionS": 41.135775221,
+        "stateS": 10.549795122
+      },
+      "rigSeconds": 25.54682
+    },
+    {
+      "worldNs": "435084631200000025586820000",
+      "deltaNs": "520000000",
+      "activity": {
+        "pose": {
+          "x": 5.21239940039979,
+          "z": -4.528704546006814,
+          "yaw": 7.27132893388365,
+          "gait": "idle"
+        },
+        "travel": 0.36457377544070085,
+        "revolutionS": 41.135775221,
+        "stateS": 10.589795122
+      },
+      "rigSeconds": 25.58682
+    },
+    {
+      "worldNs": "435084631200000025626820000",
+      "deltaNs": "560000000",
+      "activity": {
+        "pose": {
+          "x": 5.21239940039979,
+          "z": -4.528704546006814,
+          "yaw": 7.27132893388365,
+          "gait": "idle"
+        },
+        "travel": 0.36457377544070085,
+        "revolutionS": 41.135775221,
+        "stateS": 10.629795122
+      },
+      "rigSeconds": 25.62682
+    },
+    {
+      "worldNs": "435084631200000025666820000",
+      "deltaNs": "600000000",
+      "activity": {
+        "pose": {
+          "x": 5.21239940039979,
+          "z": -4.528704546006814,
+          "yaw": 7.27132893388365,
+          "gait": "idle"
+        },
+        "travel": 0.36457377544070085,
+        "revolutionS": 41.135775221,
+        "stateS": 10.669795122
+      },
+      "rigSeconds": 25.66682
+    },
+    {
+      "worldNs": "435084631200000025706820000",
+      "deltaNs": "640000000",
+      "activity": {
+        "pose": {
+          "x": 5.21239940039979,
+          "z": -4.528704546006814,
+          "yaw": 7.27132893388365,
+          "gait": "idle"
+        },
+        "travel": 0.36457377544070085,
+        "revolutionS": 41.135775221,
+        "stateS": 10.709795122
+      },
+      "rigSeconds": 25.70682
+    },
+    {
+      "worldNs": "435084631200000025746820000",
+      "deltaNs": "680000000",
+      "activity": {
+        "pose": {
+          "x": 5.21239940039979,
+          "z": -4.528704546006814,
+          "yaw": 7.27132893388365,
+          "gait": "idle"
+        },
+        "travel": 0.36457377544070085,
+        "revolutionS": 41.135775221,
+        "stateS": 10.749795122
+      },
+      "rigSeconds": 25.74682
+    },
+    {
+      "worldNs": "435084631200000025766820000",
+      "deltaNs": "700000000",
+      "activity": {
+        "pose": {
+          "x": 5.21239940039979,
+          "z": -4.528704546006814,
+          "yaw": 7.27132893388365,
+          "gait": "idle"
+        },
+        "travel": 0.36457377544070085,
+        "revolutionS": 41.135775221,
+        "stateS": 10.769795122
+      },
+      "rigSeconds": 25.76682
+    },
+    {
+      "worldNs": "435084631200000025786820000",
+      "deltaNs": "720000000",
+      "activity": {
+        "pose": {
+          "x": 5.21239940039979,
+          "z": -4.528704546006814,
+          "yaw": 7.27132893388365,
+          "gait": "idle"
+        },
+        "travel": 0.36457377544070085,
+        "revolutionS": 41.135775221,
+        "stateS": 10.789795122
+      },
+      "rigSeconds": 25.78682
+    },
+    {
+      "worldNs": "435084631200000025826820000",
+      "deltaNs": "760000000",
+      "activity": {
+        "pose": {
+          "x": 5.21239940039979,
+          "z": -4.528704546006814,
+          "yaw": 7.27132893388365,
+          "gait": "idle"
+        },
+        "travel": 0.36457377544070085,
+        "revolutionS": 41.135775221,
+        "stateS": 10.829795122
+      },
+      "rigSeconds": 25.82682
+    },
+    {
+      "worldNs": "435084631200000025866820000",
+      "deltaNs": "800000000",
+      "activity": {
+        "pose": {
+          "x": 5.21239940039979,
+          "z": -4.528704546006814,
+          "yaw": 7.27132893388365,
+          "gait": "idle"
+        },
+        "travel": 0.36457377544070085,
+        "revolutionS": 41.135775221,
+        "stateS": 10.869795122
+      },
+      "rigSeconds": 25.86682
+    },
+    {
+      "worldNs": "435084631200000025906820000",
+      "deltaNs": "840000000",
+      "activity": {
+        "pose": {
+          "x": 5.21239940039979,
+          "z": -4.528704546006814,
+          "yaw": 7.27132893388365,
+          "gait": "idle"
+        },
+        "travel": 0.36457377544070085,
+        "revolutionS": 41.135775221,
+        "stateS": 10.909795122
+      },
+      "rigSeconds": 25.90682
+    },
+    {
+      "worldNs": "435084631200000025927458362",
+      "deltaNs": "860638362",
+      "activity": {
+        "pose": {
+          "x": 5.21239940039979,
+          "z": -4.528704546006814,
+          "yaw": 7.27132893388365,
+          "gait": "idle"
+        },
+        "travel": 0.36457377544070085,
+        "revolutionS": 41.135775221,
+        "stateS": 10.930433484
+      },
+      "rigSeconds": 25.927458362
+    },
+    {
+      "worldNs": "435084631200000025928457362",
+      "deltaNs": "861637362",
+      "activity": {
+        "pose": {
+          "x": 5.21239940039979,
+          "z": -4.528704546006814,
+          "yaw": 7.27132893388365,
+          "gait": "idle"
+        },
+        "travel": 0.36457377544070085,
+        "revolutionS": 41.135775221,
+        "stateS": 10.931432484
+      },
+      "rigSeconds": 25.928457362
+    },
+    {
+      "worldNs": "435084631200000025928458362",
+      "deltaNs": "861638362",
+      "activity": {
+        "pose": {
+          "x": 5.21239940039979,
+          "z": -4.528704546006814,
+          "yaw": 7.27132893388365,
+          "gait": "walk"
+        },
+        "travel": 0.36457377544070085,
+        "revolutionS": 41.135775221,
+        "stateS": 0
+      },
+      "rigSeconds": 25.928458362
+    },
+    {
+      "worldNs": "435084631200000025928459362",
+      "deltaNs": "861639362",
+      "activity": {
+        "pose": {
+          "x": 5.212399833158774,
+          "z": -4.528703889282823,
+          "yaw": 7.271329086626252,
+          "gait": "walk"
+        },
+        "travel": 0.36457379975044085,
+        "revolutionS": 41.135775221,
+        "stateS": 0.000001
+      },
+      "rigSeconds": 25.928459362
+    },
+    {
+      "worldNs": "435084631200000025929458362",
+      "deltaNs": "862638362",
+      "activity": {
+        "pose": {
+          "x": 5.212832109275949,
+          "z": -4.5280477890038915,
+          "yaw": 7.2714816764847905,
+          "gait": "walk"
+        },
+        "travel": 0.36459808518069303,
+        "revolutionS": 41.135775221,
+        "stateS": 0.001
+      },
+      "rigSeconds": 25.929458362
+    },
+    {
+      "worldNs": "435084631200000025946820000",
+      "deltaNs": "880000000",
+      "activity": {
+        "pose": {
+          "x": 5.220328644994056,
+          "z": -4.516634891368861,
+          "yaw": 7.274133538232967,
+          "gait": "walk"
+        },
+        "travel": 0.36502014208631167,
+        "revolutionS": 41.135775221,
+        "stateS": 0.018361638
+      },
+      "rigSeconds": 25.94682
+    },
+    {
+      "worldNs": "435084631200000025948458362",
+      "deltaNs": "881638362",
+      "activity": {
+        "pose": {
+          "x": 5.221034505662565,
+          "z": -4.515556867195693,
+          "yaw": 7.274383785906457,
+          "gait": "walk"
+        },
+        "travel": 0.3650599702405448,
+        "revolutionS": 41.135775221,
+        "stateS": 0.02
+      },
+      "rigSeconds": 25.948458362
+    },
+    {
+      "worldNs": "435084631200000025986820000",
+      "deltaNs": "920000000",
+      "activity": {
+        "pose": {
+          "x": 5.237484761525103,
+          "z": -4.490264996400555,
+          "yaw": 7.280243242278581,
+          "gait": "walk"
+        },
+        "travel": 0.3659925316859996,
+        "revolutionS": 41.135775221,
+        "stateS": 0.058361638
+      },
+      "rigSeconds": 25.98682
+    },
+    {
+      "worldNs": "435084631200000026026820000",
+      "deltaNs": "960000000",
+      "activity": {
+        "pose": {
+          "x": 5.254479446599611,
+          "z": -4.463790775462359,
+          "yaw": 7.286352946324194,
+          "gait": "walk"
+        },
+        "travel": 0.36696492128568753,
+        "revolutionS": 41.135775221,
+        "stateS": 0.098361638
+      },
+      "rigSeconds": 26.02682
+    },
+    {
+      "worldNs": "435084631200000026028458362",
+      "deltaNs": "961638362",
+      "activity": {
+        "pose": {
+          "x": 5.255172082081864,
+          "z": -4.462704206785286,
+          "yaw": 7.286603193997683,
+          "gait": "walk"
+        },
+        "travel": 0.3670047494399206,
+        "revolutionS": 41.135775221,
+        "stateS": 0.1
+      },
+      "rigSeconds": 26.028458362
+    },
+    {
+      "worldNs": "435084631200000026066820000",
+      "deltaNs": "1000000000",
+      "activity": {
+        "pose": {
+          "x": 5.271312065833735,
+          "z": -4.437213216793716,
+          "yaw": 7.292462650369807,
+          "gait": "walk"
+        },
+        "travel": 0.3679373108853754,
+        "revolutionS": 41.135775221,
+        "stateS": 0.138361638
+      },
+      "rigSeconds": 26.06682
+    },
+    {
+      "worldNs": "435084631200000026106820000",
+      "deltaNs": "1040000000",
+      "activity": {
+        "pose": {
+          "x": 5.287981990893278,
+          "z": -4.410533312491502,
+          "yaw": 7.298572354415421,
+          "gait": "walk"
+        },
+        "travel": 0.36890970048506333,
+        "revolutionS": 41.135775221,
+        "stateS": 0.178361638
+      },
+      "rigSeconds": 26.10682
+    },
+    {
+      "worldNs": "435084631200000026146820000",
+      "deltaNs": "1080000000",
+      "activity": {
+        "pose": {
+          "x": 5.304488599517153,
+          "z": -4.383752058472985,
+          "yaw": 7.304682058461034,
+          "gait": "walk"
+        },
+        "travel": 0.36988209008475126,
+        "revolutionS": 41.135775221,
+        "stateS": 0.218361638
+      },
+      "rigSeconds": 26.14682
+    },
+    {
+      "worldNs": "435084631200000026186820000",
+      "deltaNs": "1120000000",
+      "activity": {
+        "pose": {
+          "x": 5.320831275540609,
+          "z": -4.356870454438656,
+          "yaw": 7.310791762506647,
+          "gait": "walk"
+        },
+        "travel": 0.37085447968443913,
+        "revolutionS": 41.135775221,
+        "stateS": 0.258361638
+      },
+      "rigSeconds": 26.18682
+    },
+    {
+      "worldNs": "435084631200000026226820000",
+      "deltaNs": "1160000000",
+      "activity": {
+        "pose": {
+          "x": 5.337009408918232,
+          "z": -4.329889503834907,
+          "yaw": 7.3169014665522605,
+          "gait": "walk"
+        },
+        "travel": 0.37182686928412706,
+        "revolutionS": 41.135775221,
+        "stateS": 0.298361638
+      },
+      "rigSeconds": 26.22682
+    },
+    {
+      "worldNs": "435084631200000026228458362",
+      "deltaNs": "1161638362",
+      "activity": {
+        "pose": {
+          "x": 5.337668533334959,
+          "z": -4.328782286419696,
+          "yaw": 7.31715171422575,
+          "gait": "walk"
+        },
+        "travel": 0.37186669743836015,
+        "revolutionS": 41.135775221,
+        "stateS": 0.3
+      },
+      "rigSeconds": 26.228458362
+    },
+    {
+      "worldNs": "435084631200000026266820000",
+      "deltaNs": "1200000000",
+      "activity": {
+        "pose": {
+          "x": 5.3530223957467165,
+          "z": -4.302810213816571,
+          "yaw": 7.323011170597875,
+          "gait": "walk"
+        },
+        "travel": 0.372799258883815,
+        "revolutionS": 41.135775221,
+        "stateS": 0.338361638
+      },
+      "rigSeconds": 26.26682
+    },
+    {
+      "worldNs": "435084631200000026306820000",
+      "deltaNs": "1240000000",
+      "activity": {
+        "pose": {
+          "x": 5.3688696382874,
+          "z": -4.275633595209345,
+          "yaw": 7.329120874643487,
+          "gait": "walk"
+        },
+        "travel": 0.37377164848350286,
+        "revolutionS": 41.135775221,
+        "stateS": 0.378361638
+      },
+      "rigSeconds": 26.30682
+    },
+    {
+      "worldNs": "435084631200000026346820000",
+      "deltaNs": "1280000000",
+      "activity": {
+        "pose": {
+          "x": 5.384550544988597,
+          "z": -4.248360662472024,
+          "yaw": 7.3352305786891,
+          "gait": "walk"
+        },
+        "travel": 0.3747440380831908,
+        "revolutionS": 41.135775221,
+        "stateS": 0.418361638
+      },
+      "rigSeconds": 26.34682
+    },
+    {
+      "worldNs": "435084631200000026386820000",
+      "deltaNs": "1320000000",
+      "activity": {
+        "pose": {
+          "x": 5.400064530507662,
+          "z": -4.22099243365866,
+          "yaw": 7.3413402827347145,
+          "gait": "walk"
+        },
+        "travel": 0.3757164276828787,
+        "revolutionS": 41.135775221,
+        "stateS": 0.458361638
+      },
+      "rigSeconds": 26.38682
+    },
+    {
+      "worldNs": "435084631200000026426820000",
+      "deltaNs": "1360000000",
+      "activity": {
+        "pose": {
+          "x": 5.415411015732836,
+          "z": -4.193529930380566,
+          "yaw": 7.347449986780327,
+          "gait": "walk"
+        },
+        "travel": 0.3766888172825666,
+        "revolutionS": 41.135775221,
+        "stateS": 0.498361638
+      },
+      "rigSeconds": 26.42682
+    },
+    {
+      "worldNs": "435084631200000026466820000",
+      "deltaNs": "1400000000",
+      "activity": {
+        "pose": {
+          "x": 5.43058942780489,
+          "z": -4.165974177768138,
+          "yaw": 7.353559690825941,
+          "gait": "walk"
+        },
+        "travel": 0.3776612068822545,
+        "revolutionS": 41.135775221,
+        "stateS": 0.538361638
+      },
+      "rigSeconds": 26.46682
+    },
+    {
+      "worldNs": "435084631200000026506820000",
+      "deltaNs": "1440000000",
+      "activity": {
+        "pose": {
+          "x": 5.445599200138473,
+          "z": -4.138326204432645,
+          "yaw": 7.359669394871554,
+          "gait": "walk"
+        },
+        "travel": 0.37863359648194245,
+        "revolutionS": 41.135775221,
+        "stateS": 0.578361638
+      },
+      "rigSeconds": 26.50682
+    },
+    {
+      "worldNs": "435084631200000026546820000",
+      "deltaNs": "1480000000",
+      "activity": {
+        "pose": {
+          "x": 5.460439772443293,
+          "z": -4.110587042427792,
+          "yaw": 7.365779098917168,
+          "gait": "walk"
+        },
+        "travel": 0.3796059860816303,
+        "revolutionS": 41.135775221,
+        "stateS": 0.618361638
+      },
+      "rigSeconds": 26.54682
+    },
+    {
+      "worldNs": "435084631200000026586820000",
+      "deltaNs": "1520000000",
+      "activity": {
+        "pose": {
+          "x": 5.475110590745014,
+          "z": -4.082757727211208,
+          "yaw": 7.371888802962781,
+          "gait": "walk"
+        },
+        "travel": 0.38057837568131825,
+        "revolutionS": 41.135775221,
+        "stateS": 0.658361638
+      },
+      "rigSeconds": 26.58682
+    },
+    {
+      "worldNs": "435084631200000026626820000",
+      "deltaNs": "1560000000",
+      "activity": {
+        "pose": {
+          "x": 5.489611107405938,
+          "z": -4.054839297605795,
+          "yaw": 7.377998507008394,
+          "gait": "walk"
+        },
+        "travel": 0.3815507652810062,
+        "revolutionS": 41.135775221,
+        "stateS": 0.698361638
+      },
+      "rigSeconds": 26.62682
+    },
+    {
+      "worldNs": "435084631200000026666820000",
+      "deltaNs": "1600000000",
+      "activity": {
+        "pose": {
+          "x": 5.503940781145455,
+          "z": -4.026832795760954,
+          "yaw": 7.3841082110540075,
+          "gait": "walk"
+        },
+        "travel": 0.38252315488069405,
+        "revolutionS": 41.135775221,
+        "stateS": 0.738361638
+      },
+      "rigSeconds": 26.66682
+    },
+    {
+      "worldNs": "435084631200000026706820000",
+      "deltaNs": "1640000000",
+      "activity": {
+        "pose": {
+          "x": 5.518099077060237,
+          "z": -3.998739267113673,
+          "yaw": 7.390217915099621,
+          "gait": "walk"
+        },
+        "travel": 0.383495544480382,
+        "revolutionS": 41.135775221,
+        "stateS": 0.778361638
+      },
+      "rigSeconds": 26.70682
+    },
+    {
+      "worldNs": "435084631200000026746820000",
+      "deltaNs": "1680000000",
+      "activity": {
+        "pose": {
+          "x": 5.532085466644212,
+          "z": -3.970559760349512,
+          "yaw": 7.396327619145234,
+          "gait": "walk"
+        },
+        "travel": 0.3844679340800699,
+        "revolutionS": 41.135775221,
+        "stateS": 0.818361638
+      },
+      "rigSeconds": 26.74682
+    },
+    {
+      "worldNs": "435084631200000026786820000",
+      "deltaNs": "1720000000",
+      "activity": {
+        "pose": {
+          "x": 5.5458994278082905,
+          "z": -3.9422953273634525,
+          "yaw": 7.402437323190847,
+          "gait": "walk"
+        },
+        "travel": 0.3854403236797578,
+        "revolutionS": 41.135775221,
+        "stateS": 0.858361638
+      },
+      "rigSeconds": 26.78682
+    },
+    {
+      "worldNs": "435084631200000026826820000",
+      "deltaNs": "1760000000",
+      "activity": {
+        "pose": {
+          "x": 5.559540444899856,
+          "z": -3.9139470232206346,
+          "yaw": 7.408547027236461,
+          "gait": "walk"
+        },
+        "travel": 0.3864127132794457,
+        "revolutionS": 41.135775221,
+        "stateS": 0.898361638
+      },
+      "rigSeconds": 26.82682
+    },
+    {
+      "worldNs": "435084631200000026866820000",
+      "deltaNs": "1800000000",
+      "activity": {
+        "pose": {
+          "x": 5.57300800872201,
+          "z": -3.8855159061169697,
+          "yaw": 7.414656731282074,
+          "gait": "walk"
+        },
+        "travel": 0.3873851028791336,
+        "revolutionS": 41.135775221,
+        "stateS": 0.938361638
+      },
+      "rigSeconds": 26.86682
+    },
+    {
+      "worldNs": "435084631200000026906820000",
+      "deltaNs": "1840000000",
+      "activity": {
+        "pose": {
+          "x": 5.586301616552584,
+          "z": -3.857003037339643,
+          "yaw": 7.420766435327687,
+          "gait": "walk"
+        },
+        "travel": 0.3883574924788215,
+        "revolutionS": 41.135775221,
+        "stateS": 0.978361638
+      },
+      "rigSeconds": 26.90682
+    },
+    {
+      "worldNs": "435084631200000026946820000",
+      "deltaNs": "1880000000",
+      "activity": {
+        "pose": {
+          "x": 5.5994207721628975,
+          "z": -3.828409481227496,
+          "yaw": 7.4268761393733005,
+          "gait": "walk"
+        },
+        "travel": 0.38932988207850944,
+        "revolutionS": 41.135775221,
+        "stateS": 1.018361638
+      },
+      "rigSeconds": 26.94682
+    },
+    {
+      "worldNs": "435084631200000026986820000",
+      "deltaNs": "1920000000",
+      "activity": {
+        "pose": {
+          "x": 5.612364985836291,
+          "z": -3.7997363051312973,
+          "yaw": 7.432985843418914,
+          "gait": "walk"
+        },
+        "travel": 0.3903022716781973,
+        "revolutionS": 41.135775221,
+        "stateS": 1.058361638
+      },
+      "rigSeconds": 26.98682
+    },
+    {
+      "worldNs": "435084631200000027026820000",
+      "deltaNs": "1960000000",
+      "activity": {
+        "pose": {
+          "x": 5.625133774386402,
+          "z": -3.7709845793738985,
+          "yaw": 7.439095547464527,
+          "gait": "walk"
+        },
+        "travel": 0.39127466127788524,
+        "revolutionS": 41.135775221,
+        "stateS": 1.098361638
+      },
+      "rigSeconds": 27.02682
+    },
+    {
+      "worldNs": "435084631200000027066820000",
+      "deltaNs": "2000000000",
+      "activity": {
+        "pose": {
+          "x": 5.637726661175199,
+          "z": -3.742155377210282,
+          "yaw": 7.44520525151014,
+          "gait": "walk"
+        },
+        "travel": 0.39224705087757317,
+        "revolutionS": 41.135775221,
+        "stateS": 1.138361638
+      },
+      "rigSeconds": 27.06682
+    },
+    {
+      "worldNs": "435084631200000027106820000",
+      "deltaNs": "2040000000",
+      "activity": {
+        "pose": {
+          "x": 5.650143176130777,
+          "z": -3.7132497747874993,
+          "yaw": 7.451314955555754,
+          "gait": "walk"
+        },
+        "travel": 0.39321944047726104,
+        "revolutionS": 41.135775221,
+        "stateS": 1.178361638
+      },
+      "rigSeconds": 27.10682
+    },
+    {
+      "worldNs": "435084631200000027146820000",
+      "deltaNs": "2080000000",
+      "activity": {
+        "pose": {
+          "x": 5.662382855764905,
+          "z": -3.6842688511044965,
+          "yaw": 7.457424659601367,
+          "gait": "walk"
+        },
+        "travel": 0.39419183007694897,
+        "revolutionS": 41.135775221,
+        "stateS": 1.218361638
+      },
+      "rigSeconds": 27.14682
+    },
+    {
+      "worldNs": "435084631200000027186820000",
+      "deltaNs": "2120000000",
+      "activity": {
+        "pose": {
+          "x": 5.674445243190323,
+          "z": -3.655213687971841,
+          "yaw": 7.46353436364698,
+          "gait": "walk"
+        },
+        "travel": 0.3951642196766369,
+        "revolutionS": 41.135775221,
+        "stateS": 1.258361638
+      },
+      "rigSeconds": 27.18682
+    },
+    {
+      "worldNs": "435084631200000027226820000",
+      "deltaNs": "2160000000",
+      "activity": {
+        "pose": {
+          "x": 5.686329888137804,
+          "z": -3.626085369971338,
+          "yaw": 7.4696440676925935,
+          "gait": "walk"
+        },
+        "travel": 0.39613660927632477,
+        "revolutionS": 41.135775221,
+        "stateS": 1.298361638
+      },
+      "rigSeconds": 27.22682
+    },
+    {
+      "worldNs": "435084631200000027266820000",
+      "deltaNs": "2200000000",
+      "activity": {
+        "pose": {
+          "x": 5.698036346972952,
+          "z": -3.596884984415543,
+          "yaw": 7.475753771738207,
+          "gait": "walk"
+        },
+        "travel": 0.3971089988760127,
+        "revolutionS": 41.135775221,
+        "stateS": 1.338361638
+      },
+      "rigSeconds": 27.26682
+    },
+    {
+      "worldNs": "435084631200000027306820000",
+      "deltaNs": "2240000000",
+      "activity": {
+        "pose": {
+          "x": 5.709564182712771,
+          "z": -3.567613621307176,
+          "yaw": 7.48186347578382,
+          "gait": "walk"
+        },
+        "travel": 0.3980813884757006,
+        "revolutionS": 41.135775221,
+        "stateS": 1.378361638
+      },
+      "rigSeconds": 27.30682
+    },
+    {
+      "worldNs": "435084631200000027346820000",
+      "deltaNs": "2280000000",
+      "activity": {
+        "pose": {
+          "x": 5.720912965041975,
+          "z": -3.538272373298435,
+          "yaw": 7.487973179829433,
+          "gait": "walk"
+        },
+        "travel": 0.3990537780753885,
+        "revolutionS": 41.135775221,
+        "stateS": 1.418361638
+      },
+      "rigSeconds": 27.34682
+    },
+    {
+      "worldNs": "435084631200000027386820000",
+      "deltaNs": "2320000000",
+      "activity": {
+        "pose": {
+          "x": 5.732082270329047,
+          "z": -3.508862335650205,
+          "yaw": 7.494082883875047,
+          "gait": "walk"
+        },
+        "travel": 0.4000261676750764,
+        "revolutionS": 41.135775221,
+        "stateS": 1.458361638
+      },
+      "rigSeconds": 27.38682
+    },
+    {
+      "worldNs": "435084631200000027426820000",
+      "deltaNs": "2360000000",
+      "activity": {
+        "pose": {
+          "x": 5.743071681642054,
+          "z": -3.479384606191177,
+          "yaw": 7.50019258792066,
+          "gait": "walk"
+        },
+        "travel": 0.40099855727476436,
+        "revolutionS": 41.135775221,
+        "stateS": 1.498361638
+      },
+      "rigSeconds": 27.42682
+    },
+    {
+      "worldNs": "435084631200000027466820000",
+      "deltaNs": "2400000000",
+      "activity": {
+        "pose": {
+          "x": 5.753880788764215,
+          "z": -3.449840285276866,
+          "yaw": 7.506302291966273,
+          "gait": "walk"
+        },
+        "travel": 0.40197094687445223,
+        "revolutionS": 41.135775221,
+        "stateS": 1.538361638
+      },
+      "rigSeconds": 27.46682
+    },
+    {
+      "worldNs": "435084631200000027506820000",
+      "deltaNs": "2440000000",
+      "activity": {
+        "pose": {
+          "x": 5.764509188209207,
+          "z": -3.420230475748539,
+          "yaw": 7.5124119960118865,
+          "gait": "walk"
+        },
+        "travel": 0.40294333647414016,
+        "revolutionS": 41.135775221,
+        "stateS": 1.578361638
+      },
+      "rigSeconds": 27.50682
+    },
+    {
+      "worldNs": "435084631200000027546820000",
+      "deltaNs": "2480000000",
+      "activity": {
+        "pose": {
+          "x": 5.774956483236229,
+          "z": -3.390556282892044,
+          "yaw": 7.5185217000575,
+          "gait": "walk"
+        },
+        "travel": 0.4039157260738281,
+        "revolutionS": 41.135775221,
+        "stateS": 1.618361638
+      },
+      "rigSeconds": 27.54682
+    },
+    {
+      "worldNs": "435084631200000027586820000",
+      "deltaNs": "2520000000",
+      "activity": {
+        "pose": {
+          "x": 5.785222283864816,
+          "z": -3.360818814396555,
+          "yaw": 7.524631404103113,
+          "gait": "walk"
+        },
+        "travel": 0.40488811567351596,
+        "revolutionS": 41.135775221,
+        "stateS": 1.658361638
+      },
+      "rigSeconds": 27.58682
+    },
+    {
+      "worldNs": "435084631200000027626820000",
+      "deltaNs": "2560000000",
+      "activity": {
+        "pose": {
+          "x": 5.79530620688939,
+          "z": -3.3310191803132216,
+          "yaw": 7.530741108148726,
+          "gait": "walk"
+        },
+        "travel": 0.4058605052732039,
+        "revolutionS": 41.135775221,
+        "stateS": 1.698361638
+      },
+      "rigSeconds": 27.62682
+    },
+    {
+      "worldNs": "435084631200000027666820000",
+      "deltaNs": "2600000000",
+      "activity": {
+        "pose": {
+          "x": 5.805207875893568,
+          "z": -3.301158493013733,
+          "yaw": 7.53685081219434,
+          "gait": "walk"
+        },
+        "travel": 0.4068328948728918,
+        "revolutionS": 41.135775221,
+        "stateS": 1.738361638
+      },
+      "rigSeconds": 27.66682
+    },
+    {
+      "worldNs": "435084631200000027706820000",
+      "deltaNs": "2640000000",
+      "activity": {
+        "pose": {
+          "x": 5.814926921264209,
+          "z": -3.2712378671487965,
+          "yaw": 7.542960516239953,
+          "gait": "walk"
+        },
+        "travel": 0.4078052844725797,
+        "revolutionS": 41.135775221,
+        "stateS": 1.778361638
+      },
+      "rigSeconds": 27.70682
+    },
+    {
+      "worldNs": "435084631200000027746820000",
+      "deltaNs": "2680000000",
+      "activity": {
+        "pose": {
+          "x": 5.824462980205219,
+          "z": -3.2412584196065266,
+          "yaw": 7.549070220285566,
+          "gait": "walk"
+        },
+        "travel": 0.4087776740722676,
+        "revolutionS": 41.135775221,
+        "stateS": 1.818361638
+      },
+      "rigSeconds": 27.74682
+    },
+    {
+      "worldNs": "435084631200000027786820000",
+      "deltaNs": "2720000000",
+      "activity": {
+        "pose": {
+          "x": 5.833815696751086,
+          "z": -3.211221269470757,
+          "yaw": 7.5551799243311795,
+          "gait": "walk"
+        },
+        "travel": 0.4097500636719555,
+        "revolutionS": 41.135775221,
+        "stateS": 1.858361638
+      },
+      "rigSeconds": 27.78682
+    },
+    {
+      "worldNs": "435084631200000027826820000",
+      "deltaNs": "2760000000",
+      "activity": {
+        "pose": {
+          "x": 5.842984721780169,
+          "z": -3.1811275379792625,
+          "yaw": 7.561289628376793,
+          "gait": "walk"
+        },
+        "travel": 0.4107224532716434,
+        "revolutionS": 41.135775221,
+        "stateS": 1.898361638
+      },
+      "rigSeconds": 27.82682
+    },
+    {
+      "worldNs": "435084631200000027866820000",
+      "deltaNs": "2800000000",
+      "activity": {
+        "pose": {
+          "x": 5.851969713027734,
+          "z": -3.1509783484819103,
+          "yaw": 7.567399332422406,
+          "gait": "walk"
+        },
+        "travel": 0.41169484287133135,
+        "revolutionS": 41.135775221,
+        "stateS": 1.938361638
+      },
+      "rigSeconds": 27.86682
+    },
+    {
+      "worldNs": "435084631200000027906820000",
+      "deltaNs": "2840000000",
+      "activity": {
+        "pose": {
+          "x": 5.860770335098727,
+          "z": -3.1207748263987214,
+          "yaw": 7.573509036468019,
+          "gait": "walk"
+        },
+        "travel": 0.4126672324710192,
+        "revolutionS": 41.135775221,
+        "stateS": 1.978361638
+      },
+      "rigSeconds": 27.90682
+    },
+    {
+      "worldNs": "435084631200000027946820000",
+      "deltaNs": "2880000000",
+      "activity": {
+        "pose": {
+          "x": 5.869386259480294,
+          "z": -3.0905180991778662,
+          "yaw": 7.579618740513633,
+          "gait": "walk"
+        },
+        "travel": 0.41363962207070715,
+        "revolutionS": 41.135775221,
+        "stateS": 2.018361638
+      },
+      "rigSeconds": 27.94682
+    },
+    {
+      "worldNs": "435084631200000027986820000",
+      "deltaNs": "2920000000",
+      "activity": {
+        "pose": {
+          "x": 5.877817164554042,
+          "z": -3.060209296253574,
+          "yaw": 7.585728444559246,
+          "gait": "walk"
+        },
+        "travel": 0.4146120116703951,
+        "revolutionS": 41.135775221,
+        "stateS": 2.058361638
+      },
+      "rigSeconds": 27.98682
+    },
+    {
+      "worldNs": "435084631200000028026820000",
+      "deltaNs": "2960000000",
+      "activity": {
+        "pose": {
+          "x": 5.886062735608051,
+          "z": -3.029849549003978,
+          "yaw": 7.591838148604859,
+          "gait": "walk"
+        },
+        "travel": 0.41558440127008295,
+        "revolutionS": 41.135775221,
+        "stateS": 2.098361638
+      },
+      "rigSeconds": 28.02682
+    },
+    {
+      "worldNs": "435084631200000028066820000",
+      "deltaNs": "3000000000",
+      "activity": {
+        "pose": {
+          "x": 5.894122664848616,
+          "z": -2.9994399907088756,
+          "yaw": 7.5979478526504725,
+          "gait": "walk"
+        },
+        "travel": 0.4165567908697709,
+        "revolutionS": 41.135775221,
+        "stateS": 2.138361638
+      },
+      "rigSeconds": 28.06682
+    },
+    {
+      "worldNs": "435084631200000028106820000",
+      "deltaNs": "3040000000",
+      "activity": {
+        "pose": {
+          "x": 5.901996651411733,
+          "z": -2.968981756507433,
+          "yaw": 7.604057556696086,
+          "gait": "walk"
+        },
+        "travel": 0.4175291804694588,
+        "revolutionS": 41.135775221,
+        "stateS": 2.178361638
+      },
+      "rigSeconds": 28.10682
+    },
+    {
+      "worldNs": "435084631200000028146820000",
+      "deltaNs": "3080000000",
+      "activity": {
+        "pose": {
+          "x": 5.909684401374343,
+          "z": -2.938475983355806,
+          "yaw": 7.610167260741699,
+          "gait": "walk"
+        },
+        "travel": 0.4185015700691467,
+        "revolutionS": 41.135775221,
+        "stateS": 2.218361638
+      },
+      "rigSeconds": 28.14682
+    },
+    {
+      "worldNs": "435084631200000028186820000",
+      "deltaNs": "3120000000",
+      "activity": {
+        "pose": {
+          "x": 5.917185627765289,
+          "z": -2.9079238099847036,
+          "yaw": 7.616276964787312,
+          "gait": "walk"
+        },
+        "travel": 0.4194739596688346,
+        "revolutionS": 41.135775221,
+        "stateS": 2.258361638
+      },
+      "rigSeconds": 28.18682
+    },
+    {
+      "worldNs": "435084631200000028226820000",
+      "deltaNs": "3160000000",
+      "activity": {
+        "pose": {
+          "x": 5.924500050576036,
+          "z": -2.8773263768568786,
+          "yaw": 7.622386668832926,
+          "gait": "walk"
+        },
+        "travel": 0.42044634926852253,
+        "revolutionS": 41.135775221,
+        "stateS": 2.298361638
+      },
+      "rigSeconds": 28.22682
+    },
+    {
+      "worldNs": "435084631200000028266820000",
+      "deltaNs": "3200000000",
+      "activity": {
+        "pose": {
+          "x": 5.931627396771122,
+          "z": -2.846684826124556,
+          "yaw": 7.628496372878539,
+          "gait": "walk"
+        },
+        "travel": 0.4214187388682104,
+        "revolutionS": 41.135775221,
+        "stateS": 2.338361638
+      },
+      "rigSeconds": 28.26682
+    },
+    {
+      "worldNs": "435084631200000028306820000",
+      "deltaNs": "3240000000",
+      "activity": {
+        "pose": {
+          "x": 5.93856740029835,
+          "z": -2.8160003015868,
+          "yaw": 7.634606076924152,
+          "gait": "walk"
+        },
+        "travel": 0.42239112846789834,
+        "revolutionS": 41.135775221,
+        "stateS": 2.378361638
+      },
+      "rigSeconds": 28.30682
+    },
+    {
+      "worldNs": "435084631200000028346820000",
+      "deltaNs": "3280000000",
+      "activity": {
+        "pose": {
+          "x": 5.94531980209872,
+          "z": -2.785273948646811,
+          "yaw": 7.640715780969766,
+          "gait": "walk"
+        },
+        "travel": 0.42336351806758626,
+        "revolutionS": 41.135775221,
+        "stateS": 2.418361638
+      },
+      "rigSeconds": 28.34682
+    },
+    {
+      "worldNs": "435084631200000028386820000",
+      "deltaNs": "3320000000",
+      "activity": {
+        "pose": {
+          "x": 5.951884350116093,
+          "z": -2.7545069142691947,
+          "yaw": 7.646825485015379,
+          "gait": "walk"
+        },
+        "travel": 0.42433590766727414,
+        "revolutionS": 41.135775221,
+        "stateS": 2.458361638
+      },
+      "rigSeconds": 28.38682
+    },
+    {
+      "worldNs": "435084631200000028426820000",
+      "deltaNs": "3360000000",
+      "activity": {
+        "pose": {
+          "x": 5.958260799306612,
+          "z": -2.7237003469371004,
+          "yaw": 7.652935189060992,
+          "gait": "walk"
+        },
+        "travel": 0.42530829726696207,
+        "revolutionS": 41.135775221,
+        "stateS": 2.498361638
+      },
+      "rigSeconds": 28.42682
+    },
+    {
+      "worldNs": "435084631200000028466820000",
+      "deltaNs": "3400000000",
+      "activity": {
+        "pose": {
+          "x": 5.964448911647838,
+          "z": -2.6928553966093927,
+          "yaw": 7.659044893106606,
+          "gait": "walk"
+        },
+        "travel": 0.42628068686665,
+        "revolutionS": 41.135775221,
+        "stateS": 2.538361638
+      },
+      "rigSeconds": 28.46682
+    },
+    {
+      "worldNs": "435084631200000028506820000",
+      "deltaNs": "3440000000",
+      "activity": {
+        "pose": {
+          "x": 5.970448456147638,
+          "z": -2.6619732146777233,
+          "yaw": 7.665154597152219,
+          "gait": "walk"
+        },
+        "travel": 0.42725307646633787,
+        "revolutionS": 41.135775221,
+        "stateS": 2.578361638
+      },
+      "rigSeconds": 28.50682
+    },
+    {
+      "worldNs": "435084631200000028546820000",
+      "deltaNs": "3480000000",
+      "activity": {
+        "pose": {
+          "x": 5.976259208852814,
+          "z": -2.631054953923507,
+          "yaw": 7.671264301197833,
+          "gait": "walk"
+        },
+        "travel": 0.4282254660660258,
+        "revolutionS": 41.135775221,
+        "stateS": 2.618361638
+      },
+      "rigSeconds": 28.54682
+    },
+    {
+      "worldNs": "435084631200000028586820000",
+      "deltaNs": "3520000000",
+      "activity": {
+        "pose": {
+          "x": 5.981880952857453,
+          "z": -2.6001017684749557,
+          "yaw": 7.677374005243446,
+          "gait": "walk"
+        },
+        "travel": 0.4291978556657137,
+        "revolutionS": 41.135775221,
+        "stateS": 2.658361638
+      },
+      "rigSeconds": 28.58682
+    },
+    {
+      "worldNs": "435084631200000028626820000",
+      "deltaNs": "3560000000",
+      "activity": {
+        "pose": {
+          "x": 5.987313478311028,
+          "z": -2.569114813763943,
+          "yaw": 7.683483709289059,
+          "gait": "walk"
+        },
+        "travel": 0.4301702452654016,
+        "revolutionS": 41.135775221,
+        "stateS": 2.698361638
+      },
+      "rigSeconds": 28.62682
+    },
+    {
+      "worldNs": "435084631200000028666820000",
+      "deltaNs": "3600000000",
+      "activity": {
+        "pose": {
+          "x": 5.992556582426233,
+          "z": -2.5380952464828987,
+          "yaw": 7.689593413334673,
+          "gait": "walk"
+        },
+        "travel": 0.4311426348650895,
+        "revolutionS": 41.135775221,
+        "stateS": 2.738361638
+      },
+      "rigSeconds": 28.66682
+    },
+    {
+      "worldNs": "435084631200000028706820000",
+      "deltaNs": "3640000000",
+      "activity": {
+        "pose": {
+          "x": 5.997610069486552,
+          "z": -2.5070442245416276,
+          "yaw": 7.695703117380286,
+          "gait": "walk"
+        },
+        "travel": 0.43211502446477745,
+        "revolutionS": 41.135775221,
+        "stateS": 2.778361638
+      },
+      "rigSeconds": 28.70682
+    },
+    {
+      "worldNs": "435084631200000028746820000",
+      "deltaNs": "3680000000",
+      "activity": {
+        "pose": {
+          "x": 6.0024737508535635,
+          "z": -2.475962907024085,
+          "yaw": 7.701812821425899,
+          "gait": "walk"
+        },
+        "travel": 0.4330874140644653,
+        "revolutionS": 41.135775221,
+        "stateS": 2.818361638
+      },
+      "rigSeconds": 28.74682
+    },
+    {
+      "worldNs": "435084631200000028786820000",
+      "deltaNs": "3720000000",
+      "activity": {
+        "pose": {
+          "x": 6.007147444973983,
+          "z": -2.444852454145111,
+          "yaw": 7.7079225254715125,
+          "gait": "walk"
+        },
+        "travel": 0.43405980366415325,
+        "revolutionS": 41.135775221,
+        "stateS": 2.858361638
+      },
+      "rigSeconds": 28.78682
+    },
+    {
+      "worldNs": "435084631200000028826820000",
+      "deltaNs": "3760000000",
+      "activity": {
+        "pose": {
+          "x": 6.011630977386438,
+          "z": -2.4137140272071207,
+          "yaw": 7.714032229517126,
+          "gait": "walk"
+        },
+        "travel": 0.4350321932638411,
+        "revolutionS": 41.135775221,
+        "stateS": 2.898361638
+      },
+      "rigSeconds": 28.82682
+    },
+    {
+      "worldNs": "435084631200000028866820000",
+      "deltaNs": "3800000000",
+      "activity": {
+        "pose": {
+          "x": 6.015924180727984,
+          "z": -2.382548788556755,
+          "yaw": 7.720141933562739,
+          "gait": "walk"
+        },
+        "travel": 0.43600458286352906,
+        "revolutionS": 41.135775221,
+        "stateS": 2.938361638
+      },
+      "rigSeconds": 28.86682
+    },
+    {
+      "worldNs": "435084631200000028906820000",
+      "deltaNs": "3840000000",
+      "activity": {
+        "pose": {
+          "x": 6.020026894740349,
+          "z": -2.3513579015414927,
+          "yaw": 7.726251637608352,
+          "gait": "walk"
+        },
+        "travel": 0.436976972463217,
+        "revolutionS": 41.135775221,
+        "stateS": 2.978361638
+      },
+      "rigSeconds": 28.90682
+    },
+    {
+      "worldNs": "435084631200000028946820000",
+      "deltaNs": "3880000000",
+      "activity": {
+        "pose": {
+          "x": 6.023938966275916,
+          "z": -2.320142530466224,
+          "yaw": 7.732361341653966,
+          "gait": "walk"
+        },
+        "travel": 0.43794936206290486,
+        "revolutionS": 41.135775221,
+        "stateS": 3.018361638
+      },
+      "rigSeconds": 28.94682
+    },
+    {
+      "worldNs": "435084631200000028986820000",
+      "deltaNs": "3920000000",
+      "activity": {
+        "pose": {
+          "x": 6.027660249303445,
+          "z": -2.2889038405497897,
+          "yaw": 7.738471045699579,
+          "gait": "walk"
+        },
+        "travel": 0.4389217516625928,
+        "revolutionS": 41.135775221,
+        "stateS": 3.058361638
+      },
+      "rigSeconds": 28.98682
+    },
+    {
+      "worldNs": "435084631200000029026820000",
+      "deltaNs": "3960000000",
+      "activity": {
+        "pose": {
+          "x": 6.031190604913511,
+          "z": -2.257642997881484,
+          "yaw": 7.744580749745192,
+          "gait": "walk"
+        },
+        "travel": 0.4398941412622807,
+        "revolutionS": 41.135775221,
+        "stateS": 3.098361638
+      },
+      "rigSeconds": 29.02682
+    },
+    {
+      "worldNs": "435084631200000029066820000",
+      "deltaNs": "4000000000",
+      "activity": {
+        "pose": {
+          "x": 6.0345299013237055,
+          "z": -2.226361169377527,
+          "yaw": 7.7506904537908055,
+          "gait": "walk"
+        },
+        "travel": 0.4408665308619686,
+        "revolutionS": 41.135775221,
+        "stateS": 3.138361638
+      },
+      "rigSeconds": 29.06682
+    },
+    {
+      "worldNs": "435084631200000030066820000",
+      "deltaNs": "5000000000",
+      "activity": {
+        "pose": {
+          "x": 6.055678991064642,
+          "z": -1.4409200372429984,
+          "yaw": 7.9034330549311385,
+          "gait": "walk"
+        },
+        "travel": 0.46517627085416635,
+        "revolutionS": 41.135775221,
+        "stateS": 4.138361638
+      },
+      "rigSeconds": 30.06682
+    },
+    {
+      "worldNs": "435084631200000047790325330",
+      "deltaNs": "22723505330",
+      "activity": {
+        "pose": {
+          "x": -3.8593312348812088,
+          "z": 0.23838487800501462,
+          "yaw": 10.610567360359891,
+          "gait": "walk"
+        },
+        "travel": 0.896030077176797,
+        "revolutionS": 41.135775221,
+        "stateS": 21.861866968
+      },
+      "rigSeconds": 47.79032533
+    },
+    {
+      "worldNs": "435084631200000047791324330",
+      "deltaNs": "22724504330",
+      "activity": {
+        "pose": {
+          "x": -3.859626262550277,
+          "z": 0.23765666863130286,
+          "yaw": 10.610719950218428,
+          "gait": "walk"
+        },
+        "travel": 0.8960543626070491,
+        "revolutionS": 41.135775221,
+        "stateS": 21.862865968
+      },
+      "rigSeconds": 47.79132433
+    },
+    {
+      "worldNs": "435084631200000047791325330",
+      "deltaNs": "22724505330",
+      "activity": {
+        "pose": {
+          "x": -3.8596265578176023,
+          "z": 0.2376559396704312,
+          "yaw": 10.61072010296103,
+          "gait": "idle"
+        },
+        "travel": 0.8960543869167891,
+        "revolutionS": 41.135775221,
+        "stateS": 0
+      },
+      "rigSeconds": 47.79132533
+    },
+    {
+      "worldNs": "435084631200000047791326330",
+      "deltaNs": "22724506330",
+      "activity": {
+        "pose": {
+          "x": -3.8596265578176023,
+          "z": 0.2376559396704312,
+          "yaw": 10.61072010296103,
+          "gait": "idle"
+        },
+        "travel": 0.8960543869167891,
+        "revolutionS": 41.135775221,
+        "stateS": 0.000001
+      },
+      "rigSeconds": 47.79132633
+    },
+    {
+      "worldNs": "435084631200000047792325330",
+      "deltaNs": "22725505330",
+      "activity": {
+        "pose": {
+          "x": -3.8596265578176023,
+          "z": 0.2376559396704312,
+          "yaw": 10.61072010296103,
+          "gait": "idle"
+        },
+        "travel": 0.8960543869167891,
+        "revolutionS": 41.135775221,
+        "stateS": 0.001
+      },
+      "rigSeconds": 47.79232533
+    },
+    {
+      "worldNs": "435084631200000047811325330",
+      "deltaNs": "22744505330",
+      "activity": {
+        "pose": {
+          "x": -3.8596265578176023,
+          "z": 0.2376559396704312,
+          "yaw": 10.61072010296103,
+          "gait": "idle"
+        },
+        "travel": 0.8960543869167891,
+        "revolutionS": 41.135775221,
+        "stateS": 0.02
+      },
+      "rigSeconds": 47.81132533
+    },
+    {
+      "worldNs": "435084631200000047891325330",
+      "deltaNs": "22824505330",
+      "activity": {
+        "pose": {
+          "x": -3.8596265578176023,
+          "z": 0.2376559396704312,
+          "yaw": 10.61072010296103,
+          "gait": "idle"
+        },
+        "travel": 0.8960543869167891,
+        "revolutionS": 41.135775221,
+        "stateS": 0.1
+      },
+      "rigSeconds": 47.89132533
+    },
+    {
+      "worldNs": "435084631200000048091325330",
+      "deltaNs": "23024505330",
+      "activity": {
+        "pose": {
+          "x": -3.8596265578176023,
+          "z": 0.2376559396704312,
+          "yaw": 10.61072010296103,
+          "gait": "idle"
+        },
+        "travel": 0.8960543869167891,
+        "revolutionS": 41.135775221,
+        "stateS": 0.3
+      },
+      "rigSeconds": 48.09132533
+    }
+  ],
+  "boundaries": [
+    {
+      "before": "435084631200000025928457362",
+      "after": "435084631200000025928459362"
+    },
+    {
+      "before": "435084631200000047791324330",
+      "after": "435084631200000047791326330"
+    }
+  ]
+}

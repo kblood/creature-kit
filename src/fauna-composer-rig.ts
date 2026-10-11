@@ -854,10 +854,6 @@ export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time:
   let travel = 0;
   const rootBone = graph.bones[torso[0]!]!;
   const rootP = v3(rootBone.offset), rootQ = q4(rootBone.restLocal);
-  if (environment) {
-    rootP.y += environment.rootHeight ?? 0;
-    if (environment.rootRotation) rootQ.premultiply(q4(environment.rootRotation));
-  }
 
   // ---- axial motion offsets
   if (moving && !limbless) {
@@ -923,6 +919,19 @@ export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time:
     add(fore, pitchQ(-(Math.PI - 0.22) * fold));
     add(hand, pitchQ((Math.PI - 0.3) * fold + (display ? 0.4 * flap : 0)));
     limb.bones.forEach((bi, k) => { chordScale[bi] = 1 - WING_FURL[k]! * fold; });
+  }
+
+  // The terrain attitude is a rigid transform of the local body, including its
+  // root offset and axial motion. Rotating only rootQ instead pivots the body
+  // around the elevated rear root joint and can pull a planted foot out of IK
+  // reach even on a shallow plane. External ground height remains a translation
+  // in the caller's frame; it must never be rotated with the body.
+  if (environment) {
+    if (environment.rootRotation) {
+      const terrainFrame = q4(environment.rootRotation);
+      rootP.applyQuaternion(terrainFrame); rootQ.premultiply(terrainFrame);
+    }
+    rootP.y += environment.rootHeight ?? 0;
   }
 
   // ---- forward kinematics for every FK bone (parents precede children)
