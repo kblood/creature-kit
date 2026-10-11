@@ -21,5 +21,5 @@ export function measurePlanetComposerSource(source: {graph: ComposerGraph; skin:
     requested:graph.phenotype?structuredClone(graph.phenotype.dimensions):null,
     resolved:{bodyLength:graph.dims.bodyLength,torsoWidth:graph.dims.torsoWidth*2,torsoHeight:graph.dims.torsoHeight*2,neckLength:graph.dims.neckLength,headLength:graph.dims.headLength,headWidth:graph.dims.craniumWidth*2,
       legs:graph.limbs.filter(l=>l.kind==='leg').map(l=>({limb:l.index,reach:l.segments.reduce((a,b)=>a+b,0),footLength:l.footLength,footHeight:l.footHeight,rest:[...l.rest]})),
-      stride:graph.locomotion.stride,speed:graph.locomotion.speed,period:graph.locomotion.period},constraints:graph.constraints.map(c=>({...c}))};
+      stride:graph.locomotion.stride,cycleLength:graph.locomotion.stride/graph.locomotion.duty,speed:graph.locomotion.speed,period:graph.locomotion.period},fit:graph.phenotypeFit?structuredClone(graph.phenotypeFit):null,constraints:graph.constraints.map(c=>({...c}))};
 }

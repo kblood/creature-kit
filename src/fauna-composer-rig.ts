@@ -74,6 +74,8 @@ export interface ComposerGraph {
   version: typeof COMPOSER_GRAPH_VERSION;
   /** Additive, explicit measured-anatomy input. Absent on historical graphs. */
   phenotype?: ComposerBuildPhenotype;
+  /** Numeric fit audit exists only for explicitly resolved phenotypes. */
+  phenotypeFit?: ComposerPhenotypeFit;
   recipe: ComposerRecipe;
   constraints: ComposerConstraint[];
   bones: ComposerBone[];
@@ -90,6 +92,8 @@ export interface ComposerGraph {
    * jitter, torso profile terms and carriage. Neutral traits build the version-1 rest skeleton bit for bit. */
   traits: ComposerIndividualTraits;
 }
+export interface ComposerPhenotypeFitEntry {field:string;requested:number;built:number;units:'m'|'m/s'|'s'|'ratio';reason:string}
+export interface ComposerPhenotypeFit {version:'composer-phenotype-fit-1';entries:ComposerPhenotypeFitEntry[];deviations:ComposerPhenotypeFitEntry[];derived:{snoutToHeadRatio:number;craniumHeightToWidthRatio:number;footHeightToWidthRatio:number;neckBones:number}}
 /** A leg's ground support. `contact` is the sole point under the foot in the centred display frame;
  * `world` adds the walk's travel along +X. `extension` is socket-to-hock distance / (upper + lower). */
 export interface ComposerContact {limb: number; side: -1 | 1; pair: number; stance: boolean; contact: Vec3; world: Vec3; reachError: number; extension: number}
@@ -288,7 +292,17 @@ export function buildComposerGraph(input: ComposerRecipe, options: {phenotype?: 
     const placeRoot = () => { const local = layout === 'many-legged' ? segmentSocketLocal(0, 1) : hipSocketLocal(1); root.y = socketHeight - v3(local).applyQuaternion(rootQ).y; };
     const allowed = () => { let f = Infinity; for (let i = 0; i <= 16; i++) { const u = i / 16, s = profile(u); f = Math.min(f, (root.y + u * torsoLength * Math.sin(pitch) - margin()) / Math.max(1e-6, (s.h - s.yc) * Math.cos(pitch))); } return f; };
     const originalReach = legReach;
-    for (let k = 0; k < 24; k++) {
+    if(measured&&allowed()<1){
+      // Only the measured branch: find the smallest reach that clears the
+      // unchanged torso, instead of rounding up to a 20% multiplicative step.
+      const testReach=(reach:number)=>{legReach=reach;socketHeight=legRest(reach).height;placeRoot();return allowed()>=1;};
+      let lo=originalReach,hi=originalReach;
+      for(let k=0;k<24&&!testReach(hi);k++)hi*=2;
+      if(!testReach(hi))throw new Error('Resolved torso cannot clear ground within the bounded leg fitter');
+      for(let k=0;k<44;k++){const mid=(lo+hi)/2;if(testReach(mid))hi=mid;else lo=mid;}
+      testReach(hi);
+    }
+    for (let k = 0; !measured&&k < 24; k++) {
       const f = allowed(); if (f >= 1) break;
       // modest depth reduction first; a body that would need more is raised on longer legs instead
       if (!measured && h * f >= originalH * 0.6) h *= Math.min(f, 0.995);
@@ -459,14 +473,16 @@ export function buildComposerGraph(input: ComposerRecipe, options: {phenotype?: 
     limbs.push(limb);
   };
   const locomotion = locomotionFor(recipe, legReach, socketHeight, legSpec, sprawl, L, traits);
-  if (phenotype) {locomotion.stride = phenotype.motion.strideLength; locomotion.speed = phenotype.motion.walkSpeed; locomotion.period = locomotion.stride / (locomotion.duty * locomotion.speed);}
+  if (phenotype) {locomotion.stride = locomotion.duty * phenotype.motion.strideLength; locomotion.speed = phenotype.motion.walkSpeed; locomotion.period = phenotype.motion.strideLength / locomotion.speed;}
   if (layout === 'biped') {
     for (const side of [-1, 1] as const) addLeg(0, side, torso[0]!, hipSocketLocal(side), legReach, false, side < 0 ? 0 : 0.5);
   } else if (layout === 'quadruped' || layout === 'sprawled') {
     const frontSocket = toBone(front, shoulderSocketLocal(1));
     frontLegReach = layout === 'quadruped' ? clamp(frontSocket.y / legRestHeightPerReach, legReach * 0.5, legReach * 2) : legReach;
     if (measured && layout === 'quadruped') {
-      let lo = legReach * .25, hi = legReach * 3;
+      let lo = 0, hi = Math.max(.001,legReach);
+      for(let k=0;k<24&&legRest(hi,true).height<frontSocket.y;k++)hi*=2;
+      if(legRest(hi,true).height<frontSocket.y)throw new Error('Resolved shoulder cannot reach ground within the bounded leg fitter');
       for (let i = 0; i < 40; i++) {const mid = (lo + hi) / 2; if (legRest(mid, true).height < frontSocket.y) lo = mid; else hi = mid;}
       frontLegReach = (lo + hi) / 2;
     }
@@ -546,6 +562,18 @@ export function buildComposerGraph(input: ComposerRecipe, options: {phenotype?: 
   };
   if (legged) fitStride(graph);
   if (phenotype && graph.locomotion.stride > 0) {graph.locomotion.speed = phenotype.motion.walkSpeed; graph.locomotion.period = graph.locomotion.stride / (graph.locomotion.duty * graph.locomotion.speed);}
+  if(phenotype){
+    const p=phenotype.dimensions,l=graph.locomotion,entries:ComposerPhenotypeFitEntry[]=[];
+    const record=(field:string,requested:number,built:number,units:ComposerPhenotypeFitEntry['units'],reason:string)=>entries.push({field,requested,built,units,reason});
+    record('legReach',p.legReach,legReach,'m','Minimum articulated reach for the unchanged torso belly clearance.');
+    record('frontLegReach',p.legReach,frontLegReach,'m','Forelimb reach fitted to the built shoulder height.');
+    for(const limb of limbs.filter(x=>x.kind==='leg')){const sum=limb.segments.reduce((a,b)=>a+b,0),two=limb.segments[0]!+limb.segments[1]!;record(`limb.${limb.index}.reach`,p.legReach,sum,'m','Actual segment sum after socket and lateral stance fitting.');record(`limb.${limb.index}.upperLegFraction`,p.upperLegFraction,limb.segments[0]!/two,'ratio','Upper share of upper/lower pair, excluding any metapodial segment.');record(`limb.${limb.index}.footLength`,p.footLength,limb.footLength,'m','Nominal foot profile length; surface extent is separately measured.');}
+    record('cycleLength',phenotype.motion.strideLength,l.stride/l.duty,'m','Full gait cycle; fitted stance sweep divided by duty.');
+    record('stanceSweep',phenotype.motion.strideLength*l.duty,l.stride,'m','Composer stride is the stance sweep, duty times full cycle length.');
+    record('period',phenotype.motion.strideLength/phenotype.motion.walkSpeed,l.period,'s','Fitted full gait cycle divided by retained walking speed.');
+    record('walkSpeed',phenotype.motion.walkSpeed,l.speed,'m/s','Source walking speed, or zero for an immobile fitted gait.');
+    graph.phenotypeFit={version:'composer-phenotype-fit-1',entries,deviations:entries.filter(x=>Math.abs(x.built-x.requested)>1e-9*Math.max(1,Math.abs(x.requested))),derived:{snoutToHeadRatio:snoutLength/headLength,craniumHeightToWidthRatio:craniumH/p.headWidth,footHeightToWidthRatio:.42,neckBones:nNeck}};
+  }
   return graph;
 }
 

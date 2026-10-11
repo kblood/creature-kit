@@ -1,6 +1,7 @@
 import {COAT_GENOME_RANGES, type CoatGenome} from './fauna-coat-fields.ts';
 import {COAT_ROLES, COAT_PATTERNS} from './fauna-coat-vocab.ts';
 import type {ComposerRecipe} from './fauna-composer-recipe.ts';
+import {FAUNA_JUVENILE_COAT_VERSION, type FaunaJuvenileCoatStage} from './fauna-coat-juvenile.ts';
 
 /** An already resolved individual. This is additive to recipe v4, not a new
  * individual random stream. Dimensions are never quantized to recipe controls. */
@@ -18,9 +19,13 @@ export interface ComposerBuildPhenotype {
     hornLength: number; earLength: number; trunkLength: number; wingSpan: number;
   };
   coat: CoatGenome;
+  /** Optional sampled stage layers. Absent definitions retain library-only spots/socks. */
+  coatStage?: FaunaJuvenileCoatStage;
   /** Pattern-frame offsets in torso-length units; colours remain linear RGB. */
   coatFrame: {phase: number; lateral: number};
   roughness: number;
+  /** walkSpeed: metres/second; strideLength: metres travelled in ONE FULL GAIT
+   * CYCLE, not the Composer locomotion.stride stance sweep (duty × cycle). */
   motion: {walkSpeed: number; strideLength: number};
 }
 
@@ -37,6 +42,7 @@ export function cloneComposerBuildPhenotype(input: ComposerBuildPhenotype): Comp
   if (!['none','female','male'].includes(input.identity.sex)) throw new Error('Invalid Composer phenotype sex');
   for (const key of ['individualId','speciesId','appearanceKey'] as const) {const value = input.identity[key]; if (value !== undefined && (typeof value !== 'string' || !value || value.length > 2048)) throw new Error(`Invalid Composer phenotype ${key}`);}
   finite(input.motion.walkSpeed, .001, 30, 'walkSpeed'); finite(input.motion.strideLength, .001, 20, 'strideLength');
+  if(input.coatStage){if(input.coatStage.version!==FAUNA_JUVENILE_COAT_VERSION||!['adult','juvenile'].includes(input.coatStage.stage))throw new Error('Invalid Composer coat stage');finite(input.coatStage.maturity,0,1,'coat stage maturity');}
   finite(input.coatFrame.phase, -10, 10, 'coat phase'); finite(input.coatFrame.lateral, .01, 100, 'coat lateral'); finite(input.roughness, 0, 1, 'roughness');
   const c = input.coat;
   if (!c || c.version !== 'fauna-coat-1' || c.pattern === ('auto' as string) || !(COAT_PATTERNS as readonly string[]).includes(c.pattern) || !['accent','belly'].includes(c.markRole)) throw new Error('Invalid Composer resolved coat');

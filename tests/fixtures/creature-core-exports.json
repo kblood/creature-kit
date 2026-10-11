@@ -48,6 +48,20 @@
         "CoatWeightedSample"
       ]
     },
+    "fauna-coat-juvenile.ts": {
+      "values": [
+        "FAUNA_JUVENILE_COAT_VERSION",
+        "FAWN_CREAM",
+        "evaluateFaunaStageCoat",
+        "faunaFawnSpotLayout",
+        "faunaFawnSpotMask",
+        "faunaJuvenileStockingStrength"
+      ],
+      "types": [
+        "FaunaFawnSpotLayout",
+        "FaunaJuvenileCoatStage"
+      ]
+    },
     "fauna-coat-crisp-glsl.ts": {
       "values": [
         "COAT_PATTERN_CRISP_GLSL",
@@ -409,6 +423,8 @@
         "ComposerLocomotion",
         "ComposerMotion",
         "ComposerPart",
+        "ComposerPhenotypeFit",
+        "ComposerPhenotypeFitEntry",
         "ComposerPose",
         "ComposerPoseEnvironment",
         "ComposerPoseOptions",

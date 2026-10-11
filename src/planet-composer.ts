@@ -6,11 +6,13 @@ import {COMPOSER_BUILD_PHENOTYPE_VERSION, cloneComposerBuildPhenotype, assertCom
 import {buildComposerSource, type ComposerSourceOptions} from './fauna-composer-source.ts';
 import {createComposerCreature} from './fauna-composer.ts';
 import type {ComposerPoseOptions} from './fauna-composer-rig.ts';
+import {FAUNA_JUVENILE_COAT_VERSION} from './fauna-coat-juvenile.ts';
 
 export {COMPOSER_BUILD_PHENOTYPE_VERSION, type ComposerBuildPhenotype} from './fauna-composer-phenotype.ts';
 export {measurePlanetComposerSource} from './planet-composer-measure.ts';
+export {PLANET_COMPOSER_IDENTITY_VERSION,planetComposerSourceIdentity,assertPlanetComposerSourceIdentity,type PlanetComposerSourceIdentity,type PlanetComposerSourceIdentityOptions} from './planet-composer-identity.ts';
 export const PLANET_COMPOSER_DEFINITION_VERSION = 'planet-composer-definition-1';
-export const PLANET_COMPOSER_SOURCE_VERSION = 'planet-composer-source-1';
+export const PLANET_COMPOSER_SOURCE_VERSION = 'planet-composer-source-2';
 export interface PlanetComposerIdentity {individualId?: string; speciesId?: string}
 export interface PlanetComposerDefinition {
   schema: typeof PLANET_COMPOSER_DEFINITION_VERSION;
@@ -81,7 +83,7 @@ export function planetComposerDefinition(input: CreatureGenome, identity: Planet
     dimensions: {bodyLength: g.torsoLength, torsoWidth: g.torsoWidth, torsoHeight: g.torsoHeight, legReach: g.legLength, upperLegFraction: g.upperLegFraction, stanceWidth: g.stanceWidth,
       neckLength, neckElevation: Math.atan2(neckRise, neckForward), headLength: g.headLength, headWidth: g.headWidth, tailLength: g.tailLength,
       footLength: g.footLength, footWidth: g.footWidth, hornLength: g.hornLength, earLength: g.earLength, trunkLength, wingSpan},
-    coat, coatFrame: {phase, lateral: a?.growth.lateral ?? 1}, roughness: a?.roughness ?? .82, motion: {walkSpeed: g.walkSpeed, strideLength: g.strideLength}});
+    coat,...(a?.version===FAUNA_APPEARANCE_VERSION?{coatStage:{version:FAUNA_JUVENILE_COAT_VERSION,stage:a.growth.stage,maturity:a.growth.maturity}}:{}),coatFrame: {phase, lateral: a?.growth.lateral ?? 1}, roughness: a?.roughness ?? .82, motion: {walkSpeed: g.walkSpeed, strideLength: g.strideLength}});
   const recipeControlAdjustments = COMPOSER_RECIPE_KEYS.filter(k => k in raw && recipe[k] !== raw[k as keyof typeof raw]).map(k => `${k}: control ${String(raw[k as keyof typeof raw])} → ${String(recipe[k])}; resolved phenotype remains exact`);
   return frozen({schema: PLANET_COMPOSER_DEFINITION_VERSION, kind: 'planet-composer', genome: g, recipe, phenotype,
     ledger: {units: 'metres; radians for neckElevation; linear RGB for coat', sourceGenomeVersion: g.version, sourceAppearanceVersion: a?.version ?? null, sourceMorphologyVersion: g.morphology?.version ?? null,
@@ -93,8 +95,11 @@ export function planetComposerDefinition(input: CreatureGenome, identity: Planet
         'Leg reach is nominal articulated length; upperLegFraction divides upper/lower after any metapodial share. The Composer ground/reach solver may lengthen limbs and shorten stride; graph constraints disclose this.',
         'Stance width is the exact left/right sole-centre separation. Foot length/width are nominal profile dimensions; generated/deformed bounds are separate measurements.',
         'Head, muzzle, ears, horns, armor and tail surface shapes use Composer profiles; armor amount selects presence, not the old plate-area fraction.',
+        'Derived profile mappings: cranium height = headWidth/(2×face.craniumWidth); snout length = headLength×recipe.snoutLength×face.snout (initial recipe.snoutLength .6); foot height = .42×footWidth; neck bone count = round(1+3.4×recipe.neckLength), clamped to 1..6. graph.phenotypeFit exposes numeric derived ratios.',
         'Resolved coat RGB, seed, pattern and marks are copied exactly. Coat coordinates use the Composer torso frame plus the existing phase/lateral growth offsets; surface coverage changes with anatomy.',
         'Source runSpeed and mutation log remain in the genome; Composer walking uses source walkSpeed with reach-fitted stride and cadence. No new species/individual identity is generated.',
+        'phenotype.motion.strideLength is metres per full gait cycle. Composer stance sweep = duty×cycleLength; period = cycleLength/walkSpeed. graph.phenotypeFit records requested and fitted cycle, sweep, period and limb reaches.',
+        'Explicit coatStage retains planetary fawn rows and developing stockings in both vertex fallback and all crisp-colour layers, with a layout sized for the generated Composer torso cells. Shared shader interpolates those layers; spot placement follows the new anatomy.',
       ]}});
 }
 
@@ -109,7 +114,25 @@ export function parsePlanetComposerDefinition(input: unknown): PlanetComposerDef
   if (!value.ledger || value.ledger.growth !== 'already-resolved-no-additional-growth' || !Array.isArray(value.ledger.mappings)) throw new Error('Planet Composer definition is missing its mapping ledger');
   return frozen({...structuredClone(value), genome, phenotype, recipe: normalized.recipe});
 }
-export function serializePlanetComposerDefinition(input: PlanetComposerDefinition): string {return JSON.stringify(parsePlanetComposerDefinition(input));}
+const canonicalCache=new WeakMap<PlanetComposerDefinition,string>();
+function sortedJson(value:unknown):string{
+  if(value===null||typeof value!=='object')return JSON.stringify(value);
+  if(Array.isArray(value))return '['+value.map(v=>sortedJson(v===undefined?null:v)).join(',')+']';
+  return '{'+Object.keys(value).sort().filter(k=>(value as Record<string,unknown>)[k]!==undefined).map(k=>JSON.stringify(k)+':'+sortedJson((value as Record<string,unknown>)[k])).join(',')+'}';
+}
+const deeplyFrozen=(value:unknown):boolean=>!value||typeof value!=='object'||Object.isFrozen(value)&&Object.values(value).every(deeplyFrozen);
+export function serializePlanetComposerDefinition(input: PlanetComposerDefinition): string {
+  const previous=canonicalCache.get(input);if(previous!==undefined)return previous;
+  const canonical=sortedJson(parsePlanetComposerDefinition(input));if(deeplyFrozen(input))canonicalCache.set(input,canonical);return canonical;
+}
+/** Normal world members must bring their actual identity and resolved appearance.
+ * Debug inputs can use planetComposerDefinition, but are never relabelled as a
+ * real member by this wrapper. No source payload fields are rewritten. */
+export function planetComposerWorldDefinition(input:CreatureGenome,identity:Required<PlanetComposerIdentity>):PlanetComposerDefinition{
+  if(!identity||![identity.individualId,identity.speciesId].every(x=>typeof x==='string'&&x.trim().length>0&&x.length<=2048))throw new Error('World Composer animals require actual individualId and speciesId');
+  if(input.appearance?.version!==FAUNA_APPEARANCE_VERSION)throw new Error('World Composer animals require a resolved inherited appearance');
+  return planetComposerDefinition(input,identity);
+}
 const definitionOf = (input: CreatureGenome | PlanetComposerDefinition) => 'schema' in input ? parsePlanetComposerDefinition(input) : planetComposerDefinition(input);
 
 /** Worker-safe shared source: no actor/material is allocated. */

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import {composerHash, composerRandom, type ComposerRecipe} from './fauna-composer-recipe.ts';
 import {COAT_REGIONS, type CoatRegion} from './fauna-coat-vocab.ts';
 import {COAT_CELLS_PER_BODY, applyCoatDrift, coatIndividualDrift, coatSeedMix, defaultCoatGenome, evaluateCoat, evaluateCoatWithMask, hash3u, valueNoise3, type CoatGenome} from './fauna-coat-fields.ts';
+import {evaluateFaunaStageCoat} from './fauna-coat-juvenile.ts';
 import {composerIndividualTraits, type ComposerIndividualTraits} from './fauna-composer-individual.ts';
 import {COMPOSER_IRIS_RGB, FACE_EYE_PROFILE, composerEyeProfileId, composerEyeRulesOf, composerHeadgearBuild, composerSkullOf, resolveComposerEyes, type ComposerSkull} from './fauna-composer-face.ts';
 import {EYE_PATCH, EYE_ROLE, OCELLUS, type LiddedEyeType, buildCompoundEye, buildEyePatch, buildEyespot, buildEyespotBead, buildFacetedEye, buildOcellus, buildStalk, catalogueEyeSpec, type CatalogueEyeSpec, eyeBarAxis, eyeGaze, nearestExit, normalize3, outermostExit, raycastFirstHit, raycastLine, type EyePatch, type RayHit, type Vec3 as EyeVec3} from './fauna-composer-eye.ts';
@@ -715,6 +716,7 @@ export function buildComposerSkin(graph: ComposerGraph, options: ComposerSkinOpt
   if (fwd.lengthSq() < 1e-12) fwd.set(1, 0, 0);
   fwd.normalize();
   const coatPhase = graph.phenotype?.coatFrame.phase ?? 0, coatLateral = graph.phenotype?.coatFrame.lateral ?? 1;
+  const coatStage=graph.phenotype?.coatStage,stageBody={x:0,y:0,z:0,halfH:d.torsoHeight/scale,halfW:d.torsoWidth/scale,cell:.024};
   const coatOut = new Float64Array(3);
   const sample = {x: 0, y: 0, z: 0, dorsal: 0, region: 'torso' as CoatRegion, along: 0, footprint: 0};
   const groundRef = Math.max(d.legReach, d.frontLegReach, 1e-3);
@@ -730,17 +732,18 @@ export function buildComposerSkin(graph: ComposerGraph, options: ComposerSkinOpt
     const dx = p.x - origin.x, dy = p.y - origin.y;
     sample.x = (dx * fwd.x + dy * fwd.y) / scale + coatPhase; sample.y = (dy * fwd.x - dx * fwd.y) / scale; sample.z = p.z / scale * coatLateral;
     sample.dorsal = clamp(dorsal, -1, 1); sample.region = region; sample.along = clamp(along, 0, 1); sample.footprint = fp;
+    if(coatStage){stageBody.x=sample.x-coatPhase;stageBody.y=sample.y;stageBody.z=p.z/scale;}
     const mode = hook.mode;
     if (mode === 0) {
-      evaluateCoat(genome, sample, coatOut, 0);
+      if(coatStage)evaluateFaunaStageCoat(genome,coatStage,sample,stageBody,coatOut);else evaluateCoat(genome, sample, coatOut, 0);
       hook.calls++;
       hook.ok = region !== 'eye' && region !== 'horn' && region !== 'armor' && !(CRISP_OFF_LIMBS.has(genome.pattern) && LIMB_REGIONS.has(region));
-    } else evaluateCoatWithMask(genome, sample, coatOut, 0, mode === 1 ? 0 : 1, mode === 3 ? 1 : 0);
+    } else if(coatStage)evaluateFaunaStageCoat(genome,coatStage,sample,stageBody,coatOut,mode===1?0:1,mode===3?1:0);else evaluateCoatWithMask(genome, sample, coatOut, 0, mode === 1 ? 0 : 1, mode === 3 ? 1 : 0);
     let c: RGB = [coatOut[0]!, coatOut[1]!, coatOut[2]!];
     // body bands continued as rings down every leg read as a striped sock (toy-like); reptile limbs carry the
     // banding faintly, as scale-row shading, so it fades to 40% strength there
     if (plainGenome && (region === 'limb-upper' || region === 'limb-lower' || region === 'foot')) {
-      evaluateCoat(plainGenome, sample, coatOut, 0);
+      if(coatStage)evaluateFaunaStageCoat(plainGenome,coatStage,sample,stageBody,coatOut);else evaluateCoat(plainGenome, sample, coatOut, 0);
       c = mixC([coatOut[0]!, coatOut[1]!, coatOut[2]!], c, 0.4);
     }
     if (region === 'eye' || region === 'horn' || region === 'armor') return c;
@@ -1006,11 +1009,13 @@ export function buildComposerSkin(graph: ComposerGraph, options: ComposerSkinOpt
   const torsoEdges = loftEdgeLengths(axialRings, axialRadial, i => axialMetas[i]!.region === 'torso' && axialMetas[i + 1]!.region === 'torso');
   torsoEdges.sort();
   const torsoEdge = torsoEdges.length ? torsoEdges[torsoEdges.length >> 1]! : 0;
+  if(coatStage)stageBody.cell=torsoEdge/scale;
   const cells = COAT_CELLS_PER_BODY[genome.pattern];
   if (cells > 0 && genome.pattern !== 'roan' && torsoEdge > 0) {
     const maxScale = scale / (4 * 1.08 * cells * torsoEdge);
     if (genome.scale > maxScale) genome = {...genome, scale: maxScale};
   }
+  if(coatStage){Object.freeze(genome);if(plainGenome)Object.freeze(plainGenome);}
   // the end cap closes the neck inside the head (whose first station is the neck's last ring)
   loft(s, axialRings, axialRadial, tail.length ? 0.25 : 0.85, 0.25, 2);
   report('axial', axialRings, axialMetas);

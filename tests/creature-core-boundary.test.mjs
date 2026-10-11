@@ -14,6 +14,7 @@ import ts from 'typescript';
 
 export const CREATURE_CORE_MODULES = Object.freeze([
   'fauna-coat-fields.ts',
+  'fauna-coat-juvenile.ts',
   'fauna-coat-crisp-glsl.ts',
   'fauna-coat-vocab.ts',
   'fauna-composer-eye-catalogue.ts',
