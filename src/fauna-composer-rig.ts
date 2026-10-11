@@ -12,11 +12,13 @@ import {COMPOSER_FACE_GEOMETRY, PROBOSCIS_TRUNK_BASE, PROBOSCIS_TRUNK_LENGTH, co
  * +Z to the animal's right, ground at y = 0. */
 export const COMPOSER_GRAPH_VERSION = 'fauna-composer-graph-4';
 export const COMPOSER_TRUNK_MOTION_VERSION = 'fauna-composer-trunk-motion-1';
-export interface ComposerGroundContact {position: Vec3; normal?: Vec3}
+export interface ComposerGroundContact {position: Vec3; normal?: Vec3; forward?: Vec3; pitch?: number; stance?: boolean}
 /** Optional caller-owned terrain/path context. The same Composer IK handles
  * authored previews and dated planetary movement; no world controller is imported. */
 export interface ComposerPoseEnvironment {
-  cycle?: number; clock?: number; stride?: number; speed?: number;
+  cycle?: number; clock?: number; stride?: number; speed?: number; cycleLength?: number;
+  /** Closed-form startup/settling blend; omitted on unchanged authored clips. */
+  walkWeight?: number; idleWeight?: number;
   rootHeight?: number; rootRotation?: Quat;
   ground?: (x: number, z: number) => number;
   contact?: (limb: ComposerLimb, phase: number, stance: boolean, target: Vec3) => ComposerGroundContact;
@@ -749,8 +751,8 @@ function liftDirection(dir: THREE.Vector3, y0: number, length: number, floor: nu
 interface Solved {points: THREE.Vector3[]; frames: THREE.Quaternion[]; reachError: number; extension?: number}
 /** Leg IK: socket -> [knee] -> [hock] -> ankle above the contact. Lengths are exact
  * whenever the target is reachable; otherwise the leg extends straight and reports the error. */
-function solveLeg(limb: ComposerLimb, socket: THREE.Vector3, contact: THREE.Vector3, heading: THREE.Quaternion, footPitch = 0, groundNormal?: Vec3): Solved {
-  const up = groundNormal ? v3(groundNormal).normalize() : UP.clone(), fwd = V(1, 0, 0).applyQuaternion(heading);
+function solveLeg(limb: ComposerLimb, socket: THREE.Vector3, contact: THREE.Vector3, heading: THREE.Quaternion, footPitch = 0, groundNormal?: Vec3, groundForward?: Vec3): Solved {
+  const up = groundNormal ? v3(groundNormal).normalize() : UP.clone(), fwd = groundForward ? v3(groundForward) : V(1, 0, 0).applyQuaternion(heading);
   if (groundNormal) fwd.addScaledVector(up, -fwd.dot(up)); else fwd.y = 0;
   fwd.normalize();
   const ankle = contact.clone().addScaledVector(up, limb.footHeight);
@@ -827,9 +829,11 @@ export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time:
   if (options.trunkMotion !== undefined && options.trunkMotion !== 'legacy' && options.trunkMotion !== 'wave-1') throw new Error('Unknown Composer trunk motion');
   const environment = options.environment;
   if (environment) {
-    for (const key of ['cycle', 'clock', 'stride', 'speed', 'rootHeight'] as const) if (environment[key] !== undefined && !Number.isFinite(environment[key])) throw new Error(`Invalid Composer environment ${key}`);
+    for (const key of ['cycle', 'clock', 'stride', 'speed', 'cycleLength', 'walkWeight', 'idleWeight', 'rootHeight'] as const) if (environment[key] !== undefined && !Number.isFinite(environment[key])) throw new Error(`Invalid Composer environment ${key}`);
     if (environment.clock !== undefined && (environment.clock < 0 || environment.clock > 1e6)) throw new Error('Composer runtime clock must be bounded to one million seconds');
     if ((environment.stride ?? 0) < 0 || (environment.speed ?? 0) < 0) throw new Error('Composer path stride/speed must be nonnegative');
+    if ((environment.cycleLength ?? 0) < 0 || [environment.walkWeight,environment.idleWeight].some(x=>x!==undefined&&(x<0||x>1))) throw new Error('Invalid Composer motion blend/cycle length');
+    if (environment.contact && !environment.ground) throw new Error('Composer terrain contacts require a ground diagnostic sampler');
     if (environment.rootRotation && (!environment.rootRotation.every(Number.isFinite) || Math.abs(Math.hypot(...environment.rootRotation) - 1) > 1e-6)) throw new Error('Invalid Composer environment rotation');
   }
   const t = environment?.clock ?? clamp(Number.isFinite(time) ? time : 0, 0, 120);
@@ -841,7 +845,8 @@ export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time:
   const desync = graph.traits.motion;
   const cycle = environment?.cycle ?? t / loco.period + desync.phase;
   const stride = environment?.stride ?? loco.stride, speed = environment?.speed ?? loco.speed;
-  const moving = motion === 'walk', idle = motion === 'idle', display = motion === 'display';
+  const walkWeight = environment?.walkWeight ?? (motion === 'walk' ? 1 : 0), idleWeight = environment?.idleWeight ?? (motion === 'idle' ? 1 : 0);
+  const moving = motion === 'walk' || walkWeight > 0, idle = motion === 'idle' || idleWeight > 0, display = motion === 'display';
   const add = (i: number, q: THREE.Quaternion) => { offsets[i] = offsets[i] ? offsets[i]!.multiply(q) : q; };
   const pitchQ = (a: number) => axisQ(Z_AXIS, a), yawQ = (a: number) => axisQ(Y_AXIS, a), rollQ = (a: number) => axisQ(X_AXIS, a);
   const {torso, tail, neck, head, trunk} = graph.chains;
@@ -858,22 +863,22 @@ export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time:
   if (moving && !limbless) {
     travel = environment ? 0 : loco.speed * t;
     const twoStep = Math.cos(TAU * cycle * 2);
-    if (recipe.layout === 'biped') { rootP.y += -loco.bob * twoStep; rootQ.multiply(rollQ(0.035 * Math.sin(TAU * cycle))).multiply(yawQ(0.04 * Math.sin(TAU * cycle))); }
-    else if (recipe.layout === 'quadruped') { rootP.y += -loco.bob * twoStep; rootQ.multiply(rollQ(0.015 * Math.sin(TAU * cycle))); }
-    if (loco.sway) torso.forEach((bi, i) => { if (i) add(bi, yawQ(loco.sway * Math.sin(TAU * cycle - i * 0.9))); });
+    if (recipe.layout === 'biped') { rootP.y += -loco.bob * twoStep * walkWeight; rootQ.multiply(rollQ(0.035 * Math.sin(TAU * cycle) * walkWeight)).multiply(yawQ(0.04 * Math.sin(TAU * cycle) * walkWeight)); }
+    else if (recipe.layout === 'quadruped') { rootP.y += -loco.bob * twoStep * walkWeight; rootQ.multiply(rollQ(0.015 * Math.sin(TAU * cycle) * walkWeight)); }
+    if (loco.sway) torso.forEach((bi, i) => { if (i) add(bi, yawQ(loco.sway * Math.sin(TAU * cycle - i * 0.9) * walkWeight)); });
     const bob = recipe.head === 'beak' && recipe.layout === 'biped' ? 0.16 : 0.05;
-    neck.forEach((bi, i) => add(bi, pitchQ((i % 2 ? -1 : 1) * bob * Math.sin(TAU * cycle * 2) / Math.max(1, neck.length * 0.6))));
-    add(head, pitchQ(-0.5 * bob * Math.sin(TAU * cycle * 2)));
-    tail.forEach((bi, i) => add(bi, yawQ(0.07 * Math.sin(TAU * cycle - 0.7 * (i + 1)))));
+    neck.forEach((bi, i) => add(bi, pitchQ((i % 2 ? -1 : 1) * bob * Math.sin(TAU * cycle * 2) / Math.max(1, neck.length * 0.6) * walkWeight)));
+    add(head, pitchQ(-0.5 * bob * Math.sin(TAU * cycle * 2) * walkWeight));
+    tail.forEach((bi, i) => add(bi, yawQ(0.07 * Math.sin(TAU * cycle - 0.7 * (i + 1)) * walkWeight)));
   }
   if (idle || display) {
     // Breathing slows with size (about L^0.25: 2.3 s for a 0.2 m bird, 4 s for a 2 m rhino).
     const breathPeriod = 3.4 * clamp(Math.pow(graph.dims.bodyLength, 0.25), 0.6, 1.8);
-    const breath = 1 + 0.012 * Math.sin(TAU * (t / breathPeriod + desync.breathPhase));
+    const breath = 1 + 0.012 * Math.sin(TAU * (t / breathPeriod + desync.breathPhase)) * (display ? 1 : idleWeight);
     for (const bi of torso) radialScale[bi] = breath;
     const lp = desync.lookPhase;
-    const look = idle ? 0.22 * Math.sin(TAU * (t / 7.3 + lp)) : 0.12 * Math.sin(TAU * (t / 4.1 + lp));
-    const nod = idle ? 0.07 * Math.sin(TAU * (t / 5.2 + lp)) : -0.12 - 0.05 * Math.sin(TAU * (t / 2.7 + lp));
+    const look = idle ? 0.22 * Math.sin(TAU * (t / 7.3 + lp)) * idleWeight : 0.12 * Math.sin(TAU * (t / 4.1 + lp));
+    const nod = idle ? 0.07 * Math.sin(TAU * (t / 5.2 + lp)) * idleWeight : -0.12 - 0.05 * Math.sin(TAU * (t / 2.7 + lp));
     // The look turns about world up (gravity), shared along the neck: each neck bone turns by look/n about the vertical
     // expressed in its own rest frame. A bone-local yaw would mostly roll a raised neck (a giraffe turned its head ~6 deg).
     const nNeck = Math.max(1, neck.length);
@@ -882,7 +887,7 @@ export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time:
       add(bi, axisQ(vertical, look / nNeck).multiply(pitchQ((display ? 0.1 : 0) + nod / nNeck)));
     });
     add(head, pitchQ(display ? 0.18 : nod * 0.5));
-    tail.forEach((bi, i) => add(bi, yawQ((idle ? 0.1 : 0.16) * Math.sin(TAU * (t / (idle ? 3.1 : 1.9) + lp) - 0.6 * i)).multiply(pitchQ(display && i < 3 ? 0.12 : 0))));
+    tail.forEach((bi, i) => add(bi, yawQ((idle ? 0.1 * idleWeight : 0.16) * Math.sin(TAU * (t / (idle ? 3.1 : 1.9) + lp) - 0.6 * i)).multiply(pitchQ(display && i < 3 ? 0.12 : 0))));
   }
   const lowestTorso = () => torso.reduce((lo, bi) => Math.min(lo, world[bi]!.p.y - graph.bones[bi]!.start.h), Infinity);
   // trunk curl
@@ -896,13 +901,13 @@ export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time:
         // the base retains its small unamplified offset. A small relaxed curl
         // biases the free tip upward; clearance corrections remain measurable.
         const gain = i ? 1.45 : 1, relaxedCurl = i && !display ? 0.035 : 0;
-        const curl = display ? 0.38 + 0.12 * Math.sin(TAU * (t / 2.4 + lp) - lag) : relaxedCurl + gain * (moving ? 0.05 * Math.sin(TAU * cycle - lag) : 0.08 * Math.sin(TAU * (t / 4.6 + lp) - lag));
-        const sway = gain * (moving ? 0.12 * Math.sin(TAU * cycle + 1 - lag) : 0.1 * Math.sin(TAU * (t / 3.3 + lp) - lag));
+        const curl = display ? 0.38 + 0.12 * Math.sin(TAU * (t / 2.4 + lp) - lag) : relaxedCurl + gain * (environment ? walkWeight*.05*Math.sin(TAU*cycle-lag)+idleWeight*.08*Math.sin(TAU*(t/4.6+lp)-lag) : moving ? 0.05 * Math.sin(TAU * cycle - lag) : 0.08 * Math.sin(TAU * (t / 4.6 + lp) - lag));
+        const sway = gain * (environment ? walkWeight*.12*Math.sin(TAU*cycle+1-lag)+idleWeight*.1*Math.sin(TAU*(t/3.3+lp)-lag) : moving ? 0.12 * Math.sin(TAU * cycle + 1 - lag) : 0.1 * Math.sin(TAU * (t / 3.3 + lp) - lag));
         add(bi, pitchQ(curl * curlWeights[i]!).multiply(yawQ(sway * swayWeights[i]!)));
       });
     } else {
-      const curl = display ? 0.38 + 0.12 * Math.sin(TAU * (t / 2.4 + lp)) : moving ? 0.05 * Math.sin(TAU * cycle) : 0.08 * Math.sin(TAU * (t / 4.6 + lp));
-      const sway = (moving ? 0.12 * Math.sin(TAU * cycle + 1) : 0.1 * Math.sin(TAU * (t / 3.3 + lp)));
+      const curl = display ? 0.38 + 0.12 * Math.sin(TAU * (t / 2.4 + lp)) : environment ? walkWeight*.05*Math.sin(TAU*cycle)+idleWeight*.08*Math.sin(TAU*(t/4.6+lp)) : moving ? 0.05 * Math.sin(TAU * cycle) : 0.08 * Math.sin(TAU * (t / 4.6 + lp));
+      const sway = environment ? walkWeight*.12*Math.sin(TAU*cycle+1)+idleWeight*.1*Math.sin(TAU*(t/3.3+lp)) : (moving ? 0.12 * Math.sin(TAU * cycle + 1) : 0.1 * Math.sin(TAU * (t / 3.3 + lp)));
       trunk.forEach((bi, i) => add(bi, pitchQ(curl * (0.4 + i * 0.25)).multiply(yawQ(sway * (i ? 0.4 : 1)))));
     }
   }
@@ -974,7 +979,7 @@ export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time:
         // y = lift 16u^2(1-u)^2 has zero vertical velocity at touchdown. Pitch: toe down (heel up) through push-off,
         // toe up before heel strike; both factors vanish at u = 0.5, so the asymmetric scale introduces no jump.
         const u = (phase - loco.duty) / (1 - loco.duty), u3 = u * u * u;
-        const carried = speed * (1 - loco.duty) * loco.period, s = u3 * (10 + u * (6 * u - 15));
+        const carried = environment?.cycleLength !== undefined ? (1-loco.duty)*environment.cycleLength : speed * (1 - loco.duty) * loco.period, s = u3 * (10 + u * (6 * u - 15));
         contact.x = rest.x - stride * 0.5 + (stride + carried) * s - carried * u;
         contact.y = loco.lift * 16 * u * u * (1 - u) * (1 - u); stance = false;
         footPitch = recipe.feet === 'spike' ? 0 : -0.35 * Math.sin(TAU * u) * Math.sin(Math.PI * u) * (u < 0.5 ? 1 : 0.4);
@@ -983,13 +988,17 @@ export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time:
         footPitch = Math.sign(footPitch) * Math.min(Math.abs(footPitch), Math.asin(Math.min(1, contact.y / Math.max(1e-9, reach))));
       }
     }
-    let groundNormal: Vec3 | undefined;
+    let groundNormal: Vec3 | undefined, groundForward: Vec3 | undefined;
     if (environment?.contact) {
       const target = environment.contact(limb, phase, stance, arr3(contact));
       if (!target.position.every(Number.isFinite) || (target.normal && (!target.normal.every(Number.isFinite) || Math.hypot(...target.normal) < 1e-6))) throw new Error('Invalid Composer terrain contact');
       contact.fromArray(target.position); groundNormal = target.normal;
+      if(target.forward&&(!target.forward.every(Number.isFinite)||Math.hypot(...target.forward)<1e-6))throw new Error('Invalid Composer foot heading');
+      groundForward=target.forward;
+      if(target.pitch!==undefined){if(!Number.isFinite(target.pitch))throw new Error('Invalid Composer foot pitch');footPitch=target.pitch;}
+      if(target.stance!==undefined)stance=target.stance;
     } else if (environment?.ground) contact.y += environment.ground(contact.x, contact.z);
-    const solved = solveLeg(limb, sock, contact, heading, footPitch, groundNormal);
+    const solved = solveLeg(limb, sock, contact, heading, footPitch, groundNormal, groundForward);
     maxReach = Math.max(maxReach, solved.reachError);
     limb.bones.forEach((bi, k) => { world[bi] = {p: solved.points[Math.min(k, solved.points.length - 1)]!, q: solved.frames[k]!}; });
     // foot origin is the ankle; sole sits footHeight below it
