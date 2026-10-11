@@ -16,7 +16,7 @@ test('terrain frame rotates the local root and axial motion before external grou
    const q=new T.Quaternion().fromArray(original.quaternions,b.index*4).premultiply(rotation),r=new T.Quaternion().fromArray(transformed.quaternions,b.index*4);assert.ok(1-Math.abs(q.dot(r))<1e-12);
   }
  }
- assert.equal(PLANET_COMPOSER_POSE_VERSION,'planet-composer-pose-3');
+ assert.equal(PLANET_COMPOSER_POSE_VERSION,'planet-composer-pose-4');
 });
 
 test('captured Daunune hoof2R stays planted across its actual idle/walk clock, source and far tiers',t=>{

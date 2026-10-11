@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import {poseComposer, type ComposerGraph, type ComposerLimb, type ComposerPose, type ComposerPoseOptions, type Quat, type Vec3} from './fauna-composer-rig.ts';
 import type {PlanetFaunaActivity, PlanetFaunaPathMember} from './planet-v1/caller-contract.ts';
 
-export const PLANET_COMPOSER_POSE_VERSION = 'planet-composer-pose-3';
+export const PLANET_COMPOSER_POSE_VERSION = 'planet-composer-pose-4';
 export type PlanetComposerGround = (x: number, z: number) => number;
 export interface PlanetComposerPose extends ComposerPose {
   planet: {version: typeof PLANET_COMPOSER_POSE_VERSION; memberId: string; cyclesPerRevolution: number; cycle: number; strideM: number; speedMps: number; root: Vec3; yaw: number};
@@ -110,7 +110,7 @@ export function posePlanetComposer(
   const side=new THREE.Vector3().crossVectors(forward,up).normalize();forward.crossVectors(up,side).normalize();
   const attitude=new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(forward,up,side));
   const pose=poseComposer(graph,moving?'walk':'idle',rigSeconds,{...options,environment:{cycle,clock:rigSeconds,stride,speed,cycleLength:circumference/cycles,walkWeight,idleWeight,
-    rootHeight:lift,rootRotation:attitude.toArray() as Quat,ground:bodyGround,contact}});
+    rootHeight:lift,rootRotation:attitude.toArray() as Quat,supportHeight:'reachable-1',ground:bodyGround,contact}});
   for (const foot of pose.contacts) {
     const p=toWorld(foot.contact[0],foot.contact[2]);foot.world=[p[0],foot.contact[1]+rootHeight,p[1]];
   }

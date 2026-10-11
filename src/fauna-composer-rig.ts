@@ -20,6 +20,9 @@ export interface ComposerPoseEnvironment {
   /** Closed-form startup/settling blend; omitted on unchanged authored clips. */
   walkWeight?: number; idleWeight?: number;
   rootHeight?: number; rootRotation?: Quat;
+  /** Fit vertical support to the exact two-bone reach intervals of all requested
+   * leg targets. Leaves the caller's X/Z anchor and every foot target intact. */
+  supportHeight?: 'reachable-1';
   ground?: (x: number, z: number) => number;
   contact?: (limb: ComposerLimb, phase: number, stance: boolean, target: Vec3) => ComposerGroundContact;
 }
@@ -107,7 +110,8 @@ export interface ComposerPose {
   /** Extra local-Z scale on top of `radialScale`; folded wings furl their membrane chord toward the leading-edge spar. */
   chordScale: Float64Array;
   travel: number; contacts: ComposerContact[];
-  diagnostics: {maxBoneLengthError: number; maxReachError: number; maxStancePenetration: number; minSwingClearance: number; minBodyClearance: number; jointCount: number};
+  diagnostics: {maxBoneLengthError: number; maxReachError: number; maxStancePenetration: number; minSwingClearance: number; minBodyClearance: number; jointCount: number;
+    supportHeight?: {version:'composer-support-height-1';requested:number;applied:number;delta:number;feasible:boolean;intervals:[number,number][]}};
 }
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
@@ -749,16 +753,22 @@ function liftDirection(dir: THREE.Vector3, y0: number, length: number, floor: nu
 }
 
 interface Solved {points: THREE.Vector3[]; frames: THREE.Quaternion[]; reachError: number; extension?: number}
-/** Leg IK: socket -> [knee] -> [hock] -> ankle above the contact. Lengths are exact
- * whenever the target is reachable; otherwise the leg extends straight and reports the error. */
-function solveLeg(limb: ComposerLimb, socket: THREE.Vector3, contact: THREE.Vector3, heading: THREE.Quaternion, footPitch = 0, groundNormal?: Vec3, groundForward?: Vec3): Solved {
+/** Shared by the height fit and IK: a three-segment foot first fixes its ankle
+ * and metatarsal orientation, leaving the upper two segments to reach the hock. */
+function legTargetFrame(limb: ComposerLimb, contact: THREE.Vector3, heading: THREE.Quaternion, groundNormal?: Vec3, groundForward?: Vec3) {
   const up = groundNormal ? v3(groundNormal).normalize() : UP.clone(), fwd = groundForward ? v3(groundForward) : V(1, 0, 0).applyQuaternion(heading);
   if (groundNormal) fwd.addScaledVector(up, -fwd.dot(up)); else fwd.y = 0;
   fwd.normalize();
-  const ankle = contact.clone().addScaledVector(up, limb.footHeight);
-  const s = limb.segments, pole = v3(limb.pole).applyQuaternion(heading);
+  const ankle = contact.clone().addScaledVector(up, limb.footHeight), s = limb.segments;
   let hock = ankle;
   if (s.length === 3) hock = ankle.clone().addScaledVector(up, s[2]! * Math.cos(limb.metaTilt)).addScaledVector(fwd, -s[2]! * Math.sin(limb.metaTilt));
+  return {up,fwd,ankle,hock};
+}
+/** Leg IK: socket -> [knee] -> [hock] -> ankle above the contact. Lengths are exact
+ * whenever the target is reachable; otherwise the leg extends straight and reports the error. */
+function solveLeg(limb: ComposerLimb, socket: THREE.Vector3, contact: THREE.Vector3, heading: THREE.Quaternion, footPitch = 0, groundNormal?: Vec3, groundForward?: Vec3): Solved {
+  const {up,fwd,ankle,hock} = legTargetFrame(limb,contact,heading,groundNormal,groundForward);
+  const s = limb.segments, pole = v3(limb.pole).applyQuaternion(heading);
   const {joint, end, reachError} = composerTwoBone(socket, hock, s[0]!, s[1]!, pole);
   const points = [socket.clone(), joint, end];
   if (s.length === 3) points.push(end.clone().add(ankle.clone().sub(hock)));
@@ -834,6 +844,7 @@ export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time:
     if ((environment.stride ?? 0) < 0 || (environment.speed ?? 0) < 0) throw new Error('Composer path stride/speed must be nonnegative');
     if ((environment.cycleLength ?? 0) < 0 || [environment.walkWeight,environment.idleWeight].some(x=>x!==undefined&&(x<0||x>1))) throw new Error('Invalid Composer motion blend/cycle length');
     if (environment.contact && !environment.ground) throw new Error('Composer terrain contacts require a ground diagnostic sampler');
+    if (environment.supportHeight !== undefined && environment.supportHeight !== 'reachable-1') throw new Error('Invalid Composer support-height policy');
     if (environment.rootRotation && (!environment.rootRotation.every(Number.isFinite) || Math.abs(Math.hypot(...environment.rootRotation) - 1) > 1e-6)) throw new Error('Invalid Composer environment rotation');
   }
   const t = environment?.clock ?? clamp(Number.isFinite(time) ? time : 0, 0, 120);
@@ -962,17 +973,13 @@ export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time:
     travel = crawl(graph, motion, t, world, radialScale, neckTurn);
     for (let i = 0; i < n; i++) { const part = graph.bones[i]!.part; if (graph.bones[i]!.driver === 'fk' && part !== 'torso' && part !== 'tail') fkBone(i); }
   } else for (let i = 0; i < n; i++) if (graph.bones[i]!.driver === 'fk') fkBone(i);
-  // wings: raise the whole wing about its shoulder when the spar or membrane would reach the ground
-  for (const limb of wingLimbs) liftWing(graph, limb, world, chordScale, 0.004 * graph.dims.bodyLength);
-
   // ---- legs
   const contacts: ComposerContact[] = [];
   let maxReach = 0;
   const heading = new THREE.Quaternion();
+  const legTargets: {limb:ComposerLimb;contact:THREE.Vector3;stance:boolean;footPitch:number;groundNormal?:Vec3;groundForward?:Vec3}[] = [];
   for (const limb of graph.limbs) {
     if (limb.kind !== 'leg') continue;
-    const carrier = world[limb.socketBone]!;
-    const sock = v3(limb.socket).applyQuaternion(carrier.q).add(carrier.p);
     const rest = v3(limb.rest);
     let stance = true, footPitch = 0;
     const phase = ((cycle + limb.phase) % 1 + 1) % 1;
@@ -1007,6 +1014,41 @@ export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time:
       if(target.pitch!==undefined){if(!Number.isFinite(target.pitch))throw new Error('Invalid Composer foot pitch');footPitch=target.pitch;}
       if(target.stance!==undefined)stance=target.stance;
     } else if (environment?.ground) contact.y += environment.ground(contact.x, contact.z);
+    legTargets.push({limb,contact,stance,footPitch,groundNormal,groundForward});
+  }
+  let supportHeight: ComposerPose['diagnostics']['supportHeight'];
+  if (environment?.supportHeight === 'reachable-1' && legTargets.length) {
+    // For fixed X/Z, each leg's reach shell cuts the vertical root line into
+    // one or two closed intervals. Intersect ALL targets, including swing, so
+    // removing a support at toe-off cannot create a body-height jump. The
+    // nearest point preserves the authored bob whenever it remains feasible.
+    let intervals:[number,number][] = [[-Infinity,Infinity]];
+    for (const target of legTargets) {
+      const {limb,contact,groundNormal,groundForward} = target, carrier = world[limb.socketBone]!;
+      const socket = v3(limb.socket).applyQuaternion(carrier.q).add(carrier.p);
+      const {hock} = legTargetFrame(limb,contact,heading,groundNormal,groundForward);
+      const horizontal = (socket.x-hock.x)**2+(socket.z-hock.z)**2, centre = hock.y-socket.y;
+      // These are exactly composerTwoBone's numerical reach limits, not a
+      // displacement chosen to hide a measured foot gap.
+      const outer = (limb.segments[0]!+limb.segments[1]!-1e-6)**2-horizontal;
+      const inner = (Math.abs(limb.segments[0]!-limb.segments[1]!)+1e-6)**2-horizontal;
+      const outerY = Math.sqrt(Math.max(0,outer)), innerY = Math.sqrt(Math.max(0,inner));
+      const allowed:[number,number][] = outer<0?[]:inner>0?[[centre-outerY,centre-innerY],[centre+innerY,centre+outerY]]:[[centre-outerY,centre+outerY]];
+      intervals = intervals.flatMap(([lo,hi])=>allowed.map(([a,b])=>[Math.max(lo,a),Math.min(hi,b)] as [number,number]).filter(([a,b])=>a<=b));
+    }
+    let delta = 0;
+    if (intervals.length) delta = intervals.map(([lo,hi])=>clamp(0,lo,hi)).reduce((best,x)=>Math.abs(x)<Math.abs(best)?x:best,Infinity);
+    supportHeight = {version:'composer-support-height-1',requested:environment.rootHeight??0,applied:(environment.rootHeight??0)+delta,delta,feasible:intervals.length>0,intervals};
+    if (delta) {
+      rootP.y += delta;
+      for (let i=0;i<n;i++) if(graph.bones[i]!.driver==='fk') fkBone(i);
+    }
+  }
+  // wings: raise the whole wing about its final shoulder after support fitting
+  for (const limb of wingLimbs) liftWing(graph, limb, world, chordScale, 0.004 * graph.dims.bodyLength);
+  for (const {limb,contact,stance,footPitch,groundNormal,groundForward} of legTargets) {
+    const carrier = world[limb.socketBone]!;
+    const sock = v3(limb.socket).applyQuaternion(carrier.q).add(carrier.p);
     const solved = solveLeg(limb, sock, contact, heading, footPitch, groundNormal, groundForward);
     maxReach = Math.max(maxReach, solved.reachError);
     limb.bones.forEach((bi, k) => { world[bi] = {p: solved.points[Math.min(k, solved.points.length - 1)]!, q: solved.frames[k]!}; });
@@ -1073,7 +1115,7 @@ export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time:
   }
   minBody = limbless ? Math.min(...torso.map(bi => world[bi]!.p.y - graph.bones[bi]!.start.h * radialScale[bi]! + graph.bones[bi]!.start.yc)) : lowestTorso();
   return {motion, time: t, positions, quaternions, radialScale, chordScale, travel, contacts,
-    diagnostics: {maxBoneLengthError: maxLen, maxReachError: maxReach, maxStancePenetration: maxPen, minSwingClearance: Number.isFinite(minSwing) ? minSwing : 0, minBodyClearance: minBody, jointCount: n}};
+    diagnostics: {maxBoneLengthError: maxLen, maxReachError: maxReach, maxStancePenetration: maxPen, minSwingClearance: Number.isFinite(minSwing) ? minSwing : 0, minBodyClearance: minBody, jointCount: n,...(supportHeight?{supportHeight}:{})}};
 }
 
 /** Serpentine or peristaltic crawl. Body segments follow a sinuous track that

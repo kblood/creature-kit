@@ -17,17 +17,17 @@ export function recordedGround(x,z){
  const {rawGrid:g,n,halfM,stepM,relief}=fixture.ground,fx=Math.max(0,Math.min(n-1,(x+halfM)/stepM)),fz=Math.max(0,Math.min(n-1,(z+halfM)/stepM)),ix=Math.min(n-2,Math.floor(fx)),iz=Math.min(n-2,Math.floor(fz)),u=fx-ix,v=fz-iz;
  return ((g[iz*n+ix]*(1-u)+g[iz*n+ix+1]*u)*(1-v)+(g[(iz+1)*n+ix]*(1-u)+g[(iz+1)*n+ix+1]*u)*v)*relief;
 }
-function palette(graph,pose){
+export function palette(graph,pose){
  const data=new Float32Array(graph.bones.length*16),p=new T.Vector3(),q=new T.Quaternion(),scale=new T.Vector3(),rest=new T.Matrix4(),posed=new T.Matrix4();
  for(const b of graph.bones){rest.compose(p.fromArray(b.restPosition),q.fromArray(b.restQuaternion),scale.set(1,1,1)).invert();posed.compose(p.fromArray(pose.positions,b.index*3),q.fromArray(pose.quaternions,b.index*4),scale.set(1,pose.radialScale[b.index],pose.radialScale[b.index]*pose.chordScale[b.index])).multiply(rest).toArray(data,b.index*16);}
  return data;
 }
-function vertex(mesh,v,matrices,packed=false){
+export function vertex(mesh,v,matrices,packed=false){
  const out=[0,0,0],weights=Array.from(mesh.skinWeight.subarray(v*4,v*4+4),w=>packed?Math.round(w*65535):w),sum=packed?weights.reduce((a,b)=>a+b,0):1;
  for(let k=0;k<4;k++){const w=weights[k]/sum;if(!w)continue;const j=mesh.skinIndex[v*4+k]*16,x=mesh.positions[v*3],y=mesh.positions[v*3+1],z=mesh.positions[v*3+2];for(let a=0;a<3;a++)out[a]+=(matrices[j+a]*x+matrices[j+4+a]*y+matrices[j+8+a]*z+matrices[j+12+a])*w;}
  return out;
 }
-const world=(activity,ground,p)=>{const a=activity.pose,c=Math.cos(a.yaw),s=Math.sin(a.yaw);return [a.x+c*p[0]+s*p[2],ground(a.x,a.z)+p[1],a.z+s*p[0]-c*p[2]];};
+export const world=(activity,ground,p)=>{const a=activity.pose,c=Math.cos(a.yaw),s=Math.sin(a.yaw);return [a.x+c*p[0]+s*p[2],ground(a.x,a.z)+p[1],a.z+s*p[0]-c*p[2]];};
 
 export function terrainRegression(){
  const source=buildPlanetComposerSource(fixture.definition),graph=source.graph,skin=source.skin,before=sourceDigests(source),far=buildComposerLodChain(skin,[1000],composerAnatomyLodConstraints(skin,graph)).levels[0];
