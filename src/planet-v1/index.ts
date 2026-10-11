@@ -12,5 +12,6 @@ export * from './definition.ts';
 export type {PlanetFaunaPathMember,PlanetFaunaActivity} from './caller-contract.ts';
 /** Current Composer migration entry; the historical planetary APIs above remain explicit compatibility exports. */
 export * from '../planet-composer.ts';
+export * from '../planet-composer-pose.ts';
 
 export {COAT_PATTERN_CRISP_GLSL, COAT_PATTERN_CRISP_GLSL_VERSION} from '../fauna-coat-crisp-glsl.ts';
