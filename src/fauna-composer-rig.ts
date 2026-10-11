@@ -12,7 +12,16 @@ import {COMPOSER_FACE_GEOMETRY, PROBOSCIS_TRUNK_BASE, PROBOSCIS_TRUNK_LENGTH, co
  * +Z to the animal's right, ground at y = 0. */
 export const COMPOSER_GRAPH_VERSION = 'fauna-composer-graph-4';
 export const COMPOSER_TRUNK_MOTION_VERSION = 'fauna-composer-trunk-motion-1';
-export interface ComposerPoseOptions {trunkMotion?: 'legacy' | 'wave-1'}
+export interface ComposerGroundContact {position: Vec3; normal?: Vec3}
+/** Optional caller-owned terrain/path context. The same Composer IK handles
+ * authored previews and dated planetary movement; no world controller is imported. */
+export interface ComposerPoseEnvironment {
+  cycle?: number; clock?: number; stride?: number; speed?: number;
+  rootHeight?: number; rootRotation?: Quat;
+  ground?: (x: number, z: number) => number;
+  contact?: (limb: ComposerLimb, phase: number, stance: boolean, target: Vec3) => ComposerGroundContact;
+}
+export interface ComposerPoseOptions {trunkMotion?: 'legacy' | 'wave-1'; environment?: ComposerPoseEnvironment}
 /** Desktop preview budget. Not a Quest qualification. */
 export const COMPOSER_BUDGET = Object.freeze({maxBones: 160, maxVertices: 48000, maxTriangles: 80000, drawCallsPerCreature: 2});
 export const COMPOSER_MOTIONS = ['neutral', 'idle', 'walk', 'display'] as const;
@@ -712,8 +721,10 @@ function liftDirection(dir: THREE.Vector3, y0: number, length: number, floor: nu
 interface Solved {points: THREE.Vector3[]; frames: THREE.Quaternion[]; reachError: number; extension?: number}
 /** Leg IK: socket -> [knee] -> [hock] -> ankle above the contact. Lengths are exact
  * whenever the target is reachable; otherwise the leg extends straight and reports the error. */
-function solveLeg(limb: ComposerLimb, socket: THREE.Vector3, contact: THREE.Vector3, heading: THREE.Quaternion, footPitch = 0): Solved {
-  const up = UP.clone(), fwd = V(1, 0, 0).applyQuaternion(heading); fwd.y = 0; fwd.normalize();
+function solveLeg(limb: ComposerLimb, socket: THREE.Vector3, contact: THREE.Vector3, heading: THREE.Quaternion, footPitch = 0, groundNormal?: Vec3): Solved {
+  const up = groundNormal ? v3(groundNormal).normalize() : UP.clone(), fwd = V(1, 0, 0).applyQuaternion(heading);
+  if (groundNormal) fwd.addScaledVector(up, -fwd.dot(up)); else fwd.y = 0;
+  fwd.normalize();
   const ankle = contact.clone().addScaledVector(up, limb.footHeight);
   const s = limb.segments, pole = v3(limb.pole).applyQuaternion(heading);
   let hock = ankle;
@@ -786,14 +797,22 @@ const TAU = Math.PI * 2;
 /** Deterministic pose for a motion at `time` seconds (bounded 0..120). */
 export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time: number, options: ComposerPoseOptions = {}): ComposerPose {
   if (options.trunkMotion !== undefined && options.trunkMotion !== 'legacy' && options.trunkMotion !== 'wave-1') throw new Error('Unknown Composer trunk motion');
-  const t = clamp(Number.isFinite(time) ? time : 0, 0, 120);
+  const environment = options.environment;
+  if (environment) {
+    for (const key of ['cycle', 'clock', 'stride', 'speed', 'rootHeight'] as const) if (environment[key] !== undefined && !Number.isFinite(environment[key])) throw new Error(`Invalid Composer environment ${key}`);
+    if (environment.clock !== undefined && (environment.clock < 0 || environment.clock > 1e6)) throw new Error('Composer runtime clock must be bounded to one million seconds');
+    if ((environment.stride ?? 0) < 0 || (environment.speed ?? 0) < 0) throw new Error('Composer path stride/speed must be nonnegative');
+    if (environment.rootRotation && (!environment.rootRotation.every(Number.isFinite) || Math.abs(Math.hypot(...environment.rootRotation) - 1) > 1e-6)) throw new Error('Invalid Composer environment rotation');
+  }
+  const t = environment?.clock ?? clamp(Number.isFinite(time) ? time : 0, 0, 120);
   const n = graph.bones.length, recipe = graph.recipe, loco = graph.locomotion;
   const positions = new Float64Array(n * 3), quaternions = new Float64Array(n * 4), radialScale = new Float64Array(n).fill(1), chordScale = new Float64Array(n).fill(1);
   const world: {p: THREE.Vector3; q: THREE.Quaternion}[] = new Array(n);
   const offsets: (THREE.Quaternion | undefined)[] = new Array(n);
   // individual desync: a herd started together does not step, breathe or look around in lockstep
   const desync = graph.traits.motion;
-  const cycle = t / loco.period + desync.phase;
+  const cycle = environment?.cycle ?? t / loco.period + desync.phase;
+  const stride = environment?.stride ?? loco.stride, speed = environment?.speed ?? loco.speed;
   const moving = motion === 'walk', idle = motion === 'idle', display = motion === 'display';
   const add = (i: number, q: THREE.Quaternion) => { offsets[i] = offsets[i] ? offsets[i]!.multiply(q) : q; };
   const pitchQ = (a: number) => axisQ(Z_AXIS, a), yawQ = (a: number) => axisQ(Y_AXIS, a), rollQ = (a: number) => axisQ(X_AXIS, a);
@@ -802,10 +821,14 @@ export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time:
   let travel = 0;
   const rootBone = graph.bones[torso[0]!]!;
   const rootP = v3(rootBone.offset), rootQ = q4(rootBone.restLocal);
+  if (environment) {
+    rootP.y += environment.rootHeight ?? 0;
+    if (environment.rootRotation) rootQ.premultiply(q4(environment.rootRotation));
+  }
 
   // ---- axial motion offsets
   if (moving && !limbless) {
-    travel = loco.speed * t;
+    travel = environment ? 0 : loco.speed * t;
     const twoStep = Math.cos(TAU * cycle * 2);
     if (recipe.layout === 'biped') { rootP.y += -loco.bob * twoStep; rootQ.multiply(rollQ(0.035 * Math.sin(TAU * cycle))).multiply(yawQ(0.04 * Math.sin(TAU * cycle))); }
     else if (recipe.layout === 'quadruped') { rootP.y += -loco.bob * twoStep; rootQ.multiply(rollQ(0.015 * Math.sin(TAU * cycle))); }
@@ -884,7 +907,7 @@ export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time:
       const under = (x: ComposerSection) => x.h - x.yc, carriesHead = limbless && bone.part === 'neck' && i === neck[neck.length - 1];
       const dir = V(1, 0, 0).applyQuaternion(q), end = p.clone().addScaledVector(dir, bone.length);
       const tipCap = bone.part === 'trunk' && i === trunk[trunk.length - 1] ? COMPOSER_TRUNK_TIP_CLEARANCE * bone.end.h : 0;
-      const floor = Math.max(under(bone.start), under(bone.end), carriesHead ? under(graph.bones[head]!.start) : 0, tipCap) * 1.06;
+      const floor = Math.max(under(bone.start), under(bone.end), carriesHead ? under(graph.bones[head]!.start) : 0, tipCap) * 1.06 + (environment?.ground?.(end.x, end.z) ?? 0);
       if (end.y < floor) q = new THREE.Quaternion().setFromUnitVectors(dir, liftDirection(dir, p.y, bone.length, floor)).multiply(q).normalize();
       if (i === tail[tail.length - 1]) q = liftTip(p, q, bone.length, composerTailTipBounds(recipe, graph.dims.bodyLength, bone), 0.004 * graph.dims.bodyLength);
     }
@@ -910,10 +933,10 @@ export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time:
     const sock = v3(limb.socket).applyQuaternion(carrier.q).add(carrier.p);
     const rest = v3(limb.rest);
     let stance = true, footPitch = 0;
+    const phase = ((cycle + limb.phase) % 1 + 1) % 1;
     const contact = rest.clone();
     if (moving) {
-      const phase = ((cycle + limb.phase) % 1 + 1) % 1;
-      if (phase < loco.duty) { const u = phase / loco.duty; contact.x = rest.x + loco.stride * (0.5 - u); }
+      if (phase < loco.duty) { const u = phase / loco.duty; contact.x = rest.x + stride * (0.5 - u); }
       else {
         // Swing, in the body frame, from -stride/2 to +stride/2. The world foot follows a minimum-jerk path: it covers
         // stride + speed x swing time with the quintic 6u^5 - 15u^4 + 10u^3, so it leaves and meets the ground with zero
@@ -923,8 +946,8 @@ export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time:
         // y = lift 16u^2(1-u)^2 has zero vertical velocity at touchdown. Pitch: toe down (heel up) through push-off,
         // toe up before heel strike; both factors vanish at u = 0.5, so the asymmetric scale introduces no jump.
         const u = (phase - loco.duty) / (1 - loco.duty), u3 = u * u * u;
-        const carried = loco.speed * (1 - loco.duty) * loco.period, s = u3 * (10 + u * (6 * u - 15));
-        contact.x = rest.x - loco.stride * 0.5 + (loco.stride + carried) * s - carried * u;
+        const carried = speed * (1 - loco.duty) * loco.period, s = u3 * (10 + u * (6 * u - 15));
+        contact.x = rest.x - stride * 0.5 + (stride + carried) * s - carried * u;
         contact.y = loco.lift * 16 * u * u * (1 - u) * (1 - u); stance = false;
         footPitch = recipe.feet === 'spike' ? 0 : -0.35 * Math.sin(TAU * u) * Math.sin(Math.PI * u) * (u < 0.5 ? 1 : 0.4);
         // Toe-down pitch rotates the front of the sole down by front*sin(pitch); never more than the current lift.
@@ -932,13 +955,19 @@ export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time:
         footPitch = Math.sign(footPitch) * Math.min(Math.abs(footPitch), Math.asin(Math.min(1, contact.y / Math.max(1e-9, reach))));
       }
     }
-    const solved = solveLeg(limb, sock, contact, heading, footPitch);
+    let groundNormal: Vec3 | undefined;
+    if (environment?.contact) {
+      const target = environment.contact(limb, phase, stance, arr3(contact));
+      if (!target.position.every(Number.isFinite) || (target.normal && (!target.normal.every(Number.isFinite) || Math.hypot(...target.normal) < 1e-6))) throw new Error('Invalid Composer terrain contact');
+      contact.fromArray(target.position); groundNormal = target.normal;
+    } else if (environment?.ground) contact.y += environment.ground(contact.x, contact.z);
+    const solved = solveLeg(limb, sock, contact, heading, footPitch, groundNormal);
     maxReach = Math.max(maxReach, solved.reachError);
     limb.bones.forEach((bi, k) => { world[bi] = {p: solved.points[Math.min(k, solved.points.length - 1)]!, q: solved.frames[k]!}; });
     // foot origin is the ankle; sole sits footHeight below it
     const footBone = limb.bones[limb.bones.length - 1]!;
     world[footBone]!.p = solved.points[solved.points.length - 1]!.clone();
-    const sole = world[footBone]!.p.clone().addScaledVector(UP, -limb.footHeight);
+    const sole = world[footBone]!.p.clone().addScaledVector(groundNormal ? v3(groundNormal).normalize() : UP, -limb.footHeight);
     contacts.push({limb: limb.index, side: limb.side, pair: limb.pair, stance, contact: arr3(sole), world: [sole.x + travel, sole.y, sole.z], reachError: solved.reachError, extension: solved.extension ?? 0});
   }
   // ---- arms
@@ -992,7 +1021,10 @@ export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time:
       maxLen = Math.max(maxLen, Math.abs(a.distanceTo(c) - limb.segments[k]!));
     }
   }
-  for (const c of contacts) { if (c.stance) maxPen = Math.max(maxPen, Math.max(0, -c.contact[1]), Math.abs(c.contact[1])); else minSwing = Math.min(minSwing, c.contact[1]); }
+  for (const c of contacts) {
+    const floor = environment?.ground?.(c.contact[0], c.contact[2]) ?? 0, clearance = c.contact[1] - floor;
+    if (c.stance) maxPen = Math.max(maxPen, Math.max(0, -clearance), Math.abs(clearance)); else minSwing = Math.min(minSwing, clearance);
+  }
   minBody = limbless ? Math.min(...torso.map(bi => world[bi]!.p.y - graph.bones[bi]!.start.h * radialScale[bi]! + graph.bones[bi]!.start.yc)) : lowestTorso();
   return {motion, time: t, positions, quaternions, radialScale, chordScale, travel, contacts,
     diagnostics: {maxBoneLengthError: maxLen, maxReachError: maxReach, maxStancePenetration: maxPen, minSwingClearance: Number.isFinite(minSwing) ? minSwing : 0, minBodyClearance: minBody, jointCount: n}};
