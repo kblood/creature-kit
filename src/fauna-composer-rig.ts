@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {composerConstraints, composerWingSpanLimit, normalizeComposerRecipe, type ComposerConstraint, type ComposerRecipe} from './fauna-composer-recipe.ts';
 import {composerIndividualTraits, type ComposerIndividualTraits} from './fauna-composer-individual.ts';
+import {cloneComposerBuildPhenotype, assertComposerResolvedRecipe, type ComposerBuildPhenotype} from './fauna-composer-phenotype.ts';
 import {COMPOSER_FACE_GEOMETRY, PROBOSCIS_TRUNK_BASE, PROBOSCIS_TRUNK_LENGTH, composerFaceTip, composerHeadPitch, composerTrunkRadius, composerTrunkRestShape} from './fauna-composer-face-geometry.ts';
 
 /** Variable articulated body-plan graph for the modular composer. It is
@@ -62,6 +63,8 @@ export interface ComposerLocomotion {
 }
 export interface ComposerGraph {
   version: typeof COMPOSER_GRAPH_VERSION;
+  /** Additive, explicit measured-anatomy input. Absent on historical graphs. */
+  phenotype?: ComposerBuildPhenotype;
   recipe: ComposerRecipe;
   constraints: ComposerConstraint[];
   bones: ComposerBone[];
@@ -162,30 +165,34 @@ const boneEnd = (bone: ComposerBone) => v3(bone.restPosition).add(V(bone.length,
 const toBone = (bone: ComposerBone, local: Vec3) => v3(local).applyQuaternion(q4(bone.restQuaternion)).add(v3(bone.restPosition));
 
 /** Builds the bind-pose graph. Pure and deterministic. */
-export function buildComposerGraph(input: ComposerRecipe): ComposerGraph {
+export function buildComposerGraph(input: ComposerRecipe, options: {phenotype?: ComposerBuildPhenotype} = {}): ComposerGraph {
   const recipe = normalizeComposerRecipe(input).recipe;
+  const phenotype = options.phenotype ? cloneComposerBuildPhenotype(options.phenotype) : undefined, measured = phenotype?.dimensions;
+  if (phenotype) assertComposerResolvedRecipe(recipe);
   const constraints = composerConstraints(recipe);
   // The individual: rest-pose terms below are exact identities (x * 1, x + 0) for neutral traits.
   const traits = composerIndividualTraits(recipe), variability = recipe.variability;
   const b: Builder = {bones: []};
-  const layout = recipe.layout, L = recipe.bodyLength;
+  const layout = recipe.layout, L = measured?.bodyLength ?? recipe.bodyLength;
   const axialLong = layout === 'limbless' || layout === 'many-legged';
   const legged = layout !== 'limbless';
   const sprawl = layout === 'sprawled' || (legged && recipe.legs === 'arthropod');
   const shape = TORSO[recipe.torso], radial = (axialLong ? 0.42 : 1) * recipe.girth * L;
-  let w = shape.w * radial, h = shape.h * radial;
+  let w = measured ? measured.torsoWidth / 2 : shape.w * radial, h = measured ? measured.torsoHeight / 2 : shape.h * radial;
   const scaleBody = Math.cbrt(L * w * h);
   // per-face skull proportions (fauna-composer-face-geometry-1): the legacy faces keep their graph-2 numbers
   const face = recipe.head, faceGeo = COMPOSER_FACE_GEOMETRY[face];
-  const headLength = recipe.headSize * faceGeo.headScale * scaleBody * (axialLong ? 1 : 1.25);
-  const craniumH = headLength * faceGeo.craniumHeight;
-  const craniumW = craniumH * faceGeo.craniumWidth;
+  const headLength = measured?.headLength ?? recipe.headSize * faceGeo.headScale * scaleBody * (axialLong ? 1 : 1.25);
+  const craniumH = measured ? measured.headWidth / (2 * faceGeo.craniumWidth) : headLength * faceGeo.craniumHeight;
+  const craniumW = measured ? measured.headWidth / 2 : craniumH * faceGeo.craniumWidth;
   const snoutLength = headLength * recipe.snoutLength * faceGeo.snout;
 
   // ---- legs: dimensions decide body height
-  let legReach = legged ? recipe.legLength * L : 0;
+  let legReach = legged ? measured?.legReach ?? recipe.legLength * L : 0;
   if (layout === 'many-legged' && recipe.legs !== 'arthropod') legReach = Math.min(legReach, 0.45 * L);
-  const legSpec = LEG[recipe.legs], footSpec = FOOT[recipe.feet];
+  const inheritedLegSpec = LEG[recipe.legs], footSpec = FOOT[recipe.feet];
+  const metaShare = inheritedLegSpec.seg[2] ?? 0;
+  const legSpec = measured ? {...inheritedLegSpec, seg: [measured.upperLegFraction * (1 - metaShare), (1 - measured.upperLegFraction) * (1 - metaShare), ...(metaShare ? [metaShare] : [])]} : inheritedLegSpec;
   // Individual segment proportions: each segment fraction x (1 + jitter), renormalised to the original sum so the
   // leg's reach is unchanged. Fore and hind legs jitter independently.
   const jitteredSeg = (jitter: readonly number[]): number[] => {
@@ -197,13 +204,14 @@ export function buildComposerGraph(input: ComposerRecipe): ComposerGraph {
   const segs = (reach: number, fore = false) => (fore ? segFore : segHind).map(f => f * reach);
   // Individual metapodial tilt (three-segment legs): +-0.04 rad per unit of the limb latent.
   const hindTilt = legSpec.tilt + (legSpec.seg.length === 3 ? 0.04 * variability * traits.limb : 0);
-  const footHeight = (reach: number) => footSpec.h * reach, footLength = (reach: number) => footSpec.l * reach;
+  const footHeight = (reach: number) => measured ? measured.footWidth * .42 : footSpec.h * reach, footLength = (reach: number) => measured?.footLength ?? footSpec.l * reach;
   /** Socket height above ground for a leg of `reach` at rest, and lateral foot offset. */
   const legRest = (reach: number, fore = false) => {
     const s = segs(reach, fore), two = s[0]! + s[1]!, meta = s[2] ?? 0, tilt = sprawl ? 0 : hindTilt;
     if (sprawl) { const lateral = 0.55 * two, ext = 0.8 * two; return {height: footHeight(reach) + meta + Math.sqrt(ext * ext - lateral * lateral), lateral}; }
     const back = meta * Math.sin(tilt), ext = legSpec.ext * two;
-    return {height: footHeight(reach) + meta * Math.cos(tilt) + Math.sqrt(Math.max(0, ext * ext - back * back)), lateral: 0};
+    const lateral = measured ? Math.max(0, measured.stanceWidth / 2 - .68 * w * .85) : 0;
+    return {height: footHeight(reach) + meta * Math.cos(tilt) + Math.sqrt(Math.max(0, ext * ext - back * back - lateral * lateral)), lateral: 0};
   };
   const legRestHeightPerReach = legged ? legRest(1, true).height : 0;
 
@@ -211,10 +219,10 @@ export function buildComposerGraph(input: ComposerRecipe): ComposerGraph {
   const nTorso = layout === 'many-legged' ? recipe.legPairs : layout === 'limbless' ? 12 : 4;
   const torsoLength = layout === 'many-legged' ? L * 0.88 : layout === 'limbless' ? L * 0.8 : L;
   const segLen = torsoLength / nTorso;
-  const neckLength = layout === 'limbless' ? L * (0.12 + 0.1 * recipe.neckLength) : layout === 'many-legged' ? Math.max(0.25 * segLen, recipe.neckLength * 0.3 * L) : Math.max(0.05 * L, recipe.neckLength * 0.9 * L);
+  const neckLength = measured?.neckLength ?? (layout === 'limbless' ? L * (0.12 + 0.1 * recipe.neckLength) : layout === 'many-legged' ? Math.max(0.25 * segLen, recipe.neckLength * 0.3 * L) : Math.max(0.05 * L, recipe.neckLength * 0.9 * L));
   const nNeck = layout === 'limbless' ? 2 : clamp(Math.round(1 + recipe.neckLength * 3.4), 1, 6);
-  const tailLength = recipe.tail === 'none' ? 0 : recipe.tail === 'stub' ? L * (0.08 + 0.08 * recipe.tailLength) * (axialLong ? 0.5 : 1)
-    : Math.max(0.1 * L, recipe.tailLength * L * (axialLong ? 0.4 : 1)) * (recipe.tail === 'feather-fan' ? 0.25 : 1);
+  const tailLength = recipe.tail === 'none' ? 0 : measured?.tailLength ?? (recipe.tail === 'stub' ? L * (0.08 + 0.08 * recipe.tailLength) * (axialLong ? 0.5 : 1)
+    : Math.max(0.1 * L, recipe.tailLength * L * (axialLong ? 0.4 : 1)) * (recipe.tail === 'feather-fan' ? 0.25 : 1));
   const nTail = recipe.tail === 'none' ? 0 : recipe.tail === 'stub' || recipe.tail === 'feather-fan' ? 2 : recipe.tail === 'tufted' ? 5 : 7;
 
   // Individual torso profile terms (latents already scaled by variability): a deeper or shallower brisket, a sagging
@@ -274,7 +282,7 @@ export function buildComposerGraph(input: ComposerRecipe): ComposerGraph {
     for (let k = 0; k < 24; k++) {
       const f = allowed(); if (f >= 1) break;
       // modest depth reduction first; a body that would need more is raised on longer legs instead
-      if (h * f >= originalH * 0.6) h *= Math.min(f, 0.995);
+      if (!measured && h * f >= originalH * 0.6) h *= Math.min(f, 0.995);
       else { legReach *= 1.2; socketHeight = legRest(legReach).height; }
       placeRoot();
     }
@@ -339,6 +347,7 @@ export function buildComposerGraph(input: ComposerRecipe): ComposerGraph {
   }
   // individual carriage: a raised or lowered neck, and a head pitch that partly compensates (traits correlate them)
   neckElev0 += traits.carriage.neck; neckElev1 += traits.carriage.neck; headPitch += traits.carriage.headPitch;
+  if (measured) neckElev0 = neckElev1 = measured.neckElevation;
   {
     let pos = neckBase.clone(); const nl = neckLength / nNeck;
     for (let i = 0; i < nNeck; i++) {
@@ -365,7 +374,7 @@ export function buildComposerGraph(input: ComposerRecipe): ComposerGraph {
   // (PROBOSCIS_TRUNK_LENGTH), a fast taper from a thicker base (composerTrunkRadius), and a hanging rest shape whose
   // distal bones curl forward just enough to clear the ground (composerTrunkRestAngles) instead of lying on it
   const trunk: number[] = [];
-  const trunkLength = recipe.trunk === 'trunk' ? recipe.trunkLength * PROBOSCIS_TRUNK_LENGTH * headLength : 0;
+  const trunkLength = recipe.trunk === 'trunk' ? measured?.trunkLength ?? recipe.trunkLength * PROBOSCIS_TRUNK_LENGTH * headLength : 0;
   if (trunkLength > 0) {
     const hb = b.bones[head]!, n = 6, tl = trunkLength / n;
     const tip = composerFaceTip(face, {headLength, craniumWidth: craniumW, craniumHeight: craniumH, snoutLength});
@@ -414,16 +423,18 @@ export function buildComposerGraph(input: ComposerRecipe): ComposerGraph {
       const s2 = segs(reach, foreStyle), two = s2[0]! + s2[1]!, meta = s2[2] ?? 0, tilt = sprawl ? 0 : foreStyle ? 0 : hindTilt;
       const back = meta * Math.sin(tilt), dy = sock.y - (footHeight(reach) + meta * Math.cos(tilt)), limit = 0.95 * two;
       if (sprawl) rest = {...rest, lateral: Math.min(rest.lateral, Math.sqrt(Math.max(0, limit * limit - dy * dy - back * back)))};
-      if (Math.hypot(dy, back, sprawl ? rest.lateral : 0) <= limit * 1.0001) break;
+      const lateral = measured ? measured.stanceWidth * .5 - Math.abs(sock.z) : sprawl ? rest.lateral : 0;
+      if (Math.hypot(dy, back, lateral) <= limit * 1.0001) break;
       reach *= Math.min(1.5, Math.hypot(dy, back) / limit * 1.01); rest = legRest(reach, foreStyle); lengthened = true;
     }
     const s = segs(reach, foreStyle), fh = footHeight(reach), fl = footLength(reach);
     const r0 = legRadius * (frontLimb && layout === 'quadruped' ? 0.92 : 1);
     const radii = s.length === 3 ? [r0, r0 * 0.6, r0 * 0.36, r0 * 0.3] : recipe.legs === 'arthropod' ? [r0, r0 * 0.8, r0 * 0.5] : recipe.legs === 'pillar' ? [r0, r0 * 0.86, r0 * 0.8] : [r0, r0 * 0.66, r0 * 0.5];
+    if (measured) radii[s.length] = measured.footWidth / (2 * 1.24);
     const radii0 = (i: number) => radii[i]!;
     // the thigh carries a proximal muscle mass that tapers to the knee (a drumstick, not a constant-width stalk)
     const thigh = r0 * composerLimbMass(recipe, 'leg');
-    const contact = V(sock.x, 0, sprawl ? sock.z + side * rest.lateral : sock.z);
+    const contact = V(sock.x, 0, measured ? side * measured.stanceWidth * .5 : sprawl ? sock.z + side * rest.lateral : sock.z);
     const pole = sprawl ? V(0, 1, 0.35 * side) : foreStyle ? V(-1, 0, 0) : V(1, 0, 0);
     const tilt = sprawl ? 0 : foreStyle ? 0 : hindTilt;
     const limb: ComposerLimb = {index: limbs.length, kind: 'leg', side, pair, front: frontLimb, socketBone, socket, bones: [], segments: s, pole: arr3(pole), metaTilt: tilt, footHeight: fh, footLength: fl,
@@ -439,11 +450,17 @@ export function buildComposerGraph(input: ComposerRecipe): ComposerGraph {
     limbs.push(limb);
   };
   const locomotion = locomotionFor(recipe, legReach, socketHeight, legSpec, sprawl, L, traits);
+  if (phenotype) {locomotion.stride = phenotype.motion.strideLength; locomotion.speed = phenotype.motion.walkSpeed; locomotion.period = locomotion.stride / (locomotion.duty * locomotion.speed);}
   if (layout === 'biped') {
     for (const side of [-1, 1] as const) addLeg(0, side, torso[0]!, hipSocketLocal(side), legReach, false, side < 0 ? 0 : 0.5);
   } else if (layout === 'quadruped' || layout === 'sprawled') {
     const frontSocket = toBone(front, shoulderSocketLocal(1));
     frontLegReach = layout === 'quadruped' ? clamp(frontSocket.y / legRestHeightPerReach, legReach * 0.5, legReach * 2) : legReach;
+    if (measured && layout === 'quadruped') {
+      let lo = legReach * .25, hi = legReach * 3;
+      for (let i = 0; i < 40; i++) {const mid = (lo + hi) / 2; if (legRest(mid, true).height < frontSocket.y) lo = mid; else hi = mid;}
+      frontLegReach = (lo + hi) / 2;
+    }
     if (layout === 'quadruped' && Math.abs(frontLegReach - legReach) > 0.03 * legReach) constraints.push({part: 'Front legs', chosen: recipe.legLength.toFixed(2), effect: `${frontLegReach > legReach ? 'Lengthened' : 'Shortened'} to ${(frontLegReach / L).toFixed(2)} body lengths so both pairs reach the ground with this shoulder height.`});
     // Stance starts at phase 0 and phase = cycle + limb.phase, so a foot touches down at cycle = 1 - limb.phase.
     // Quadrupeds walk a lateral sequence (LH 0, LF 0.25, RH 0.5, RF 0.75), as most mammals and fauna-locomotion's
@@ -486,7 +503,7 @@ export function buildComposerGraph(input: ComposerRecipe): ComposerGraph {
   }
 
   // wings: rest/bind pose is spread so the skin is never folded in bind
-  const wingSemiSpan = recipe.wings === 'none' ? 0 : Math.min(recipe.wingSpan, composerWingSpanLimit(recipe)) * L * (axialLong ? 0.45 : 0.5);
+  const wingSemiSpan = recipe.wings === 'none' ? 0 : measured ? measured.wingSpan / 2 : Math.min(recipe.wingSpan, composerWingSpanLimit(recipe)) * L * (axialLong ? 0.45 : 0.5);
   if (wingSemiSpan > 0) {
     const carrierIndex = layout === 'many-legged' || layout === 'limbless' ? torso[Math.max(0, Math.floor(nTorso * 0.7))]! : torso[nTorso - 1]!;
     const carrier = b.bones[carrierIndex]!, s = layout === 'many-legged' || layout === 'limbless' ? profile(0.75) : frontSec;
@@ -512,12 +529,14 @@ export function buildComposerGraph(input: ComposerRecipe): ComposerGraph {
   if (b.bones.length > COMPOSER_BUDGET.maxBones) throw new Error(`Composer graph uses ${b.bones.length} bones; budget is ${COMPOSER_BUDGET.maxBones}.`);
   const graph: ComposerGraph = {
     version: COMPOSER_GRAPH_VERSION, recipe, constraints, bones: b.bones, limbs,
+    ...(phenotype ? {phenotype} : {}),
     chains: {torso, tail, neck, head, trunk},
     dims: {bodyLength: L, torsoWidth: w, torsoHeight: h, legReach, frontLegReach, socketHeight, headLength, craniumWidth: craniumW, craniumHeight: craniumH, snoutLength,
       neckLength, tailLength, trunkLength, wingSemiSpan, armLength, legRadius, armRadius, torsoPitch: pitch},
     locomotion, traits,
   };
   if (legged) fitStride(graph);
+  if (phenotype && graph.locomotion.stride > 0) {graph.locomotion.speed = phenotype.motion.walkSpeed; graph.locomotion.period = graph.locomotion.stride / (graph.locomotion.duty * graph.locomotion.speed);}
   return graph;
 }
 

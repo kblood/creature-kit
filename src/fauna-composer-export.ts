@@ -39,6 +39,7 @@
  * a browser too.
  */
 import * as THREE from 'three';
+import type {ComposerBuildPhenotype} from './fauna-composer-phenotype.ts';
 import {createComposerCreature} from './fauna-composer.ts';
 import {COMPOSER_RECIPE_VERSION, decodeComposerRecipe, encodeComposerRecipe, normalizeComposerRecipe, type ComposerRecipe} from './fauna-composer-recipe.ts';
 import {COMPOSER_BUDGET, COMPOSER_GRAPH_VERSION, COMPOSER_MOTIONS, COMPOSER_TRUNK_MOTION_VERSION, poseComposer, type ComposerGraph, type ComposerMotion, type ComposerPose, type ComposerPoseOptions} from './fauna-composer-rig.ts';
@@ -126,6 +127,8 @@ export const COMPOSER_EXPORT_SEAM_TOLERANCE = Object.freeze({position: 5e-4, ang
 
 export interface ComposerClipRequest {motion: ComposerMotion; fps?: number; duration?: number}
 export interface ComposerExportOptions extends ComposerPoseOptions {
+  /** Already resolved metre anatomy and coat; recipe text alone cannot replay it. */
+  phenotype?: ComposerBuildPhenotype;
   /** Surface revision, independent of recipe identity. Omitted exports skin-5. */
   presentation?: ComposerSkinPresentation;
   /** Motions (or explicit clip windows) to bake; default every COMPOSER_MOTIONS entry. */
@@ -178,6 +181,7 @@ export interface ComposerExportReport {
   version: typeof COMPOSER_EXPORT_V3_VERSION;
   recipeText: string; speciesKey: string;
   versions: Record<string, string | number>;
+  phenotype?: ComposerBuildPhenotype;
   individual: {deltas: string[]; effectiveRecipeText: string};
   axes: {units: 'metres'; up: '+Y'; handedness: 'right'; forward: ComposerExportForward};
   mesh: {vertices: number; triangles: number; bones: number; parts: {part: string; label: string; firstTriangle: number; triangles: number}[];
@@ -724,7 +728,7 @@ export function exportCreatureGlb(input: ComposerRecipe | string, options: Compo
   if (new Set(requests.map(r => r.motion)).size !== requests.length) throw new Error('composer export: a motion is listed twice');
   const v2 = resolveV2(options);
 
-  const creature = createComposerCreature(recipe, {presentation: options.presentation, trunkMotion: options.trunkMotion});
+  const creature = createComposerCreature(recipe, {presentation: options.presentation, trunkMotion: options.trunkMotion, phenotype: options.phenotype});
   try {
     const {graph, skin} = creature;
     const geometry = creature.mesh.geometry;
@@ -779,6 +783,7 @@ export function exportCreatureGlb(input: ComposerRecipe | string, options: Compo
     const effectiveRecipeText = encodeComposerRecipe(creature.individual.effectiveRecipe);
     const versions: Record<string, string | number> = v2 ? {...composerExportVersions(), lod: COMPOSER_LOD_VERSION} : composerExportVersions();
     versions.skin = skin.version;
+    if (graph.phenotype) versions.phenotype = graph.phenotype.version;
     if (options.trunkMotion === 'wave-1' && graph.chains.trunk.length && requests.some(r => r.motion !== 'neutral')) versions.trunkMotion = COMPOSER_TRUNK_MOTION_VERSION;
     if (v2?.lods && skin.version === COMPOSER_REALISM_SKIN_VERSION) versions.lodFeet = COMPOSER_FOOT_LOD_VERSION;
     if (reduction) versions.skeleton = COMPOSER_SKELETON_VERSION;
@@ -876,18 +881,20 @@ export function exportCreatureGlb(input: ComposerRecipe | string, options: Compo
     }));
     const glb = b.finish({
       asset: {version: '2.0', generator: `${COMPOSER_EXPORT_GENERATOR} ${exportVersion}`, extras: {composer: {recipeText, speciesKey: composerSpeciesKey(recipe), versions,
+        ...(graph.phenotype ? {phenotype: graph.phenotype} : {}),
         ...(reduction ? {skeleton: {version: reduction.version, fullJoints: reduction.fullJoints, joints: reduction.joints, collapsed: reduction.collapsed.map(c => [c.joint, c.into])}} : {})}}},
       ...(levels.length > 1 ? {extensionsUsed: ['MSFT_lod']} : {}),
       scene: 0,
       scenes: [{name: rootName, nodes: [SKIN_NODE, ROOT_NODE]}],
       nodes,
       meshes,
-      materials: [{name: 'composer-coloured', pbrMetallicRoughness: {baseColorFactor: [1, 1, 1, 1], metallicFactor: 0, roughnessFactor: 0.82}}],
+      materials: [{name: 'composer-coloured', pbrMetallicRoughness: {baseColorFactor: [1, 1, 1, 1], metallicFactor: 0, roughnessFactor: graph.phenotype?.roughness ?? 0.82}}],
       skins: [{name: 'composer-skeleton', inverseBindMatrices: ibmAccessor, skeleton: ROOT_NODE, joints: joints.map((_, k) => FIRST_JOINT + k)}],
       ...(animations.length ? {animations} : {}),
     });
     const report: ComposerExportReport = {
       version: exportVersion, recipeText, speciesKey: composerSpeciesKey(recipe), versions,
+      ...(graph.phenotype ? {phenotype: structuredClone(graph.phenotype)} : {}),
       individual: {deltas: creature.individual.deltas, effectiveRecipeText},
       axes: {units: 'metres', up: '+Y', handedness: 'right', forward},
       mesh: {vertices: levels[0]!.vertexCount, triangles: levels[0]!.index.length / 3, bones: jointCount, parts, restBounds},

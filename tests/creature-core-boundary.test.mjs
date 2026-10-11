@@ -22,9 +22,11 @@ export const CREATURE_CORE_MODULES = Object.freeze([
   'fauna-composer-face.ts',
   'fauna-composer-individual.ts',
   'fauna-composer-mesh.ts',
+  'fauna-composer-phenotype.ts',
   'fauna-composer-recipe.ts',
   'fauna-composer-rig.ts',
   'fauna-composer-species.ts',
+  'fauna-composer-source.ts',
   'fauna-composer.ts',
 ]);
 const ALLOWED_EXTERNAL = new Set(['three']);

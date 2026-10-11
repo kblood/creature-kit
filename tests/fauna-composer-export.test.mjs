@@ -225,7 +225,7 @@ const specifiers = (path, kind) => {
   return out;
 };
 const CORE = new Set(['fauna-coat-fields.ts', 'fauna-coat-vocab.ts', 'fauna-composer-eye-catalogue.ts', 'fauna-composer-eye.ts', 'fauna-composer-face-geometry.ts',
-  'fauna-composer-face.ts', 'fauna-composer-individual.ts', 'fauna-composer-mesh.ts', 'fauna-composer-recipe.ts', 'fauna-composer-rig.ts', 'fauna-composer-species.ts', 'fauna-composer.ts']);
+  'fauna-composer-face.ts', 'fauna-composer-individual.ts', 'fauna-composer-mesh.ts', 'fauna-composer-phenotype.ts', 'fauna-composer-source.ts', 'fauna-composer-recipe.ts', 'fauna-composer-rig.ts', 'fauna-composer-species.ts', 'fauna-composer.ts']);
 
 test('export: the export path imports only the composer core, the LOD reducer and three (the CLI adds node: builtins)', () => {
   // the core itself is closed (tests/creature-core-boundary.test.mjs); so the export path never reaches an Atlas module

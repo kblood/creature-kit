@@ -20,7 +20,7 @@
  * resolves to 'none'. With maturity 1, condition 0 and allometry 0 the derivation
  * is the identity, so v1 recipes build exactly as before.
  *
- * Only createComposerCreature may call deriveComposerIndividual: derivation is not
+ * Only buildComposerSource may call deriveComposerIndividual: derivation is not
  * idempotent (deriving an effective recipe again would apply the deltas twice).
  * Code that holds an effective recipe (rig, skin) calls composerIndividualTraits. */
 import {COMPOSER_RANGES, composerHash, composerRandom, normalizeComposerRecipe, type ComposerNumberKey, type ComposerRecipe} from './fauna-composer-recipe.ts';

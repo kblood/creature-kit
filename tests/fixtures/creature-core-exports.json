@@ -318,6 +318,16 @@
         "ComposerSkinRing"
       ]
     },
+    "fauna-composer-phenotype.ts": {
+      "values": [
+        "COMPOSER_BUILD_PHENOTYPE_VERSION",
+        "assertComposerResolvedRecipe",
+        "cloneComposerBuildPhenotype"
+      ],
+      "types": [
+        "ComposerBuildPhenotype"
+      ]
+    },
     "fauna-composer-recipe.ts": {
       "values": [
         "COMPOSER_CHOICES",
@@ -421,6 +431,15 @@
         "CoherentComposerSpecies",
         "ComposerArchetype",
         "ComposerBalance"
+      ]
+    },
+    "fauna-composer-source.ts": {
+      "values": [
+        "buildComposerSource"
+      ],
+      "types": [
+        "ComposerSource",
+        "ComposerSourceOptions"
       ]
     },
     "fauna-composer.ts": {
