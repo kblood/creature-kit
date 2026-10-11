@@ -37,6 +37,7 @@
           <label>Show <select id="composer-herd"></select><small id="composer-herd-why" class="composer-why" hidden>Comparison shows one animal per recipe; turn it off to show a herd.</small></label>
           <label hidden>Edit which animal <select id="composer-edit-target"><option value="first">First (left)</option><option value="second">Second (right)</option></select></label>
           <p id="composer-edit-hint" role="status"></p>
+          <div id="composer-resolved" hidden></div>
           <div id="composer-parts"></div>
           <fieldset class="composer-group"><legend>Motion and view</legend>
             <label>Motion <select id="composer-motion"></select></label>
@@ -56,6 +57,8 @@
       <section><h2 id="species-heading">Composed creature</h2><div id="species-detail" class="detail"></div></section>
       <section><h2>Live diagnostics</h2><div id="metrics" class="metrics"></div></section>
       <button id="share-specimen" class="wide">Copy specimen link</button><p id="share-status" role="status"></p><label id="share-fallback" hidden>Specimen link <input id="share-link" readonly aria-label="Specimen link"></label>
+      <button id="import-json" class="wide" type="button">Import planet animal / lab JSON</button><input id="import-file" type="file" accept="application/json,.json" hidden><p id="import-status" role="status"></p>
+      <p class="composer-hint">A planet animal file replaces the selected comparison side. A complete lab file restores both animals and the view.</p>
       <button id="export-json" class="wide">Export complete lab JSON</button>
       <button id="export-glb" class="wide">Export animal GLB</button>
       <p class="composer-hint">Exports the edited animal, or the first herd member, for desktop use. Fine shader coat detail uses the stored vertex colours.</p>

@@ -7,7 +7,8 @@
 // 2. REVIEW_SKY_COLOR / REVIEW_GROUND_ALBEDO equal Atlas's SURFACE_SKY_COLOR / SURFACE_GROUND_ALBEDO, the presets are
 //    equal, and planet-noon's ground bounce still equals Atlas's SurfaceLighting (moved here from
 //    fauna-review-environment.test, the only part of it that needs Atlas).
-// 3. The panel differs only by its enumerated app surface adapter; the lighting modules remain unchanged.
+// 3. The shared recipe controls, eye helpers and lighting remain unchanged. The app-owned actor/state host now
+//    handles complete planet definitions; tests/lab/planet-composer-replay.test.mjs covers that intentional extension.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -109,18 +110,14 @@ test('creature lab parity: planet-noon ground bounce equals Atlas SurfaceLightin
   closeColor(lab.hemisphere.color, surface.sky.color, 1e-9, 'sky colour');
 });
 
-test('creature lab parity: the copied panel and lighting modules match ATLAS_DIR (import paths aside)', {skip}, () => {
-  const kitImports = text => text.replace(/from "\.\.\/\.\.\/\.\.\/src\/(fauna-[a-z-]+\.ts)"/g, 'from "./$1"');
-  // Enumerate the app-owned surface adapter/export metadata explicitly. Everything else in the copied panel stays checked.
-  const withoutPresentation = text => text
-    .replace('import type {ComposerSkinPresentation} from "../../../src/fauna-composer-mesh.ts";\n','')
-    .replace(" /** App-only surface choice. Omitting it preserves the factory's skin-5 default. */\n getPresentation?():ComposerSkinPresentation;\n",'')
-    .replace(' exportSpecimen():{recipe:ComposerRecipe;presentation:ComposerSkinPresentation;skinVersion:string;graphVersion:string}|null;\n','')
-    .replace('createComposerCreature(recipe,{presentation:host.getPresentation?.()})','createComposerCreature(recipe)')
-    .replace(/^  exportSpecimen\(\)\{.*\n/m,'')
-    .replace("presentation:host.getPresentation?.()??'skin-5',",'')
-    .replace('skinVersion:a.creature.skin.version,graphVersion:a.creature.graph.version,','');
-  assert.equal(kitImports(withoutPresentation(lf(resolve(KIT, 'apps/creature-lab/src/creature-lab-composer.ts')))), lf(resolve(ATLAS, 'src/creature-lab-composer.ts')), 'creature-lab-composer.ts drifted beyond the documented presentation adapter');
+test('creature lab parity: shared recipe controls, eye helpers and lighting modules match ATLAS_DIR', {skip}, () => {
+  // The complete planet-definition actor/state host is intentionally app-owned.
+  // Preserve the unchanged ordinary recipe UI and camera/eye helpers as exact source,
+  // rather than pretending the evolved host remains a byte-for-byte Atlas copy.
+  const sharedControls = text => text.slice(text.indexOf('const GROUPS:'),text.indexOf('export interface ComposerLab{'));
+  const controls=sharedControls(lf(resolve(KIT,'apps/creature-lab/src/creature-lab-composer.ts')));
+  assert.ok(controls.length>10000,'the shared recipe/eye helper boundary must remain present');
+  assert.equal(controls,sharedControls(lf(resolve(ATLAS,'src/creature-lab-composer.ts'))),'ordinary recipe controls or eye helpers drifted from Atlas');
   assert.equal(lf(resolve(KIT, 'apps/creature-lab/src/fauna-review-lighting.ts')), lf(resolve(ATLAS, 'src/fauna-review-lighting.ts')), 'fauna-review-lighting.ts drifted from Atlas');
   assert.equal(lf(resolve(KIT, 'apps/creature-lab/src/creature-lab.css')), lf(resolve(ATLAS, 'src/creature-lab.css')), 'creature-lab.css drifted from Atlas');
   const inlined = text => text.replace(/\/\*\* The planet surface's sky-dome[\s\S]*?export const REVIEW_GROUND_ALBEDO = [^\n]*\n\n/, '')

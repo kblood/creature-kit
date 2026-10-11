@@ -1,6 +1,7 @@
 import {COMPOSER_RECIPE_MAX_TEXT} from '../../../src/fauna-composer-recipe.ts';
 import {FAUNA_REVIEW_PRESET_IDS, type FaunaReviewPresetId} from './fauna-review-environment.ts';
 import type {ComposerSkinPresentation} from '../../../src/fauna-composer-mesh.ts';
+import {LAB_PLANET_DEFINITION_MAX_BYTES,parseLabPlanetDefinition,serializeLabPlanetDefinition,parseLabJson} from './creature-lab-planet.ts';
 /** Composer slice of universe-atlas src/creature-lab-state.ts (universe-atlas 7419733; see apps/creature-lab/PROVENANCE.md).
  * The kit's Creature Lab app is the composer mode only, so this keeps exactly the keys a composer link writes and parses
  * them exactly as Atlas does (tests/lab/creature-lab-atlas-parity.test.mjs compares both parsers on a link corpus).
@@ -31,6 +32,8 @@ export interface CreatureLabState {
   compare: boolean; neutral: boolean; skeleton: boolean;
   /** Encoded recipes are decoded and validated by the Lab. */
   recipe: string; compareRecipe: string; composerSeed: string; motion: ComposerLabMotion;
+  /** Complete resolved planet inputs; absent on ordinary v1-v4 Composer links. */
+  planetDefinition?: string; comparePlanetDefinition?: string;
   /** Composer herd size (comparison always shows one animal per recipe). */
   herd: ComposerHerdSize;
   /** Review lighting preset. */
@@ -42,11 +45,19 @@ export const DEFAULT_LAB_STATE: Readonly<CreatureLabState> = Object.freeze({
   recipe: '', compareRecipe: '', composerSeed: 'composer-1', motion: 'walk', herd: 1, light: 'studio', presentation: 'realism-1',
 });
 /** Composer-only keys: repeated values reject a composer link. */
-const COMPOSER_KEYS = ['recipe', 'compareRecipe', 'composerSeed', 'motion', 'herd', 'presentation'] as const;
+const COMPOSER_KEYS = ['recipe', 'compareRecipe', 'composerSeed', 'motion', 'herd', 'presentation', 'planetDefinition', 'comparePlanetDefinition'] as const;
 /** Keys a composer link writes. */
 const COMPOSER_URL_KEYS = ['mode', ...COMPOSER_KEYS, 'compare', 'time', 'view', 'neutral', 'skeleton', 'light'] as const;
 const isHerdSize = (value: string | null) => (COMPOSER_HERD_SIZES as readonly number[]).some(n => String(n) === value);
 const query = (search: string | URLSearchParams) => typeof search === 'string' ? new URLSearchParams(search) : search;
+/** Large resolved definitions travel in the fragment, which is not sent as an
+ * HTTP request target. Query imports remain supported; duplicates across both
+ * locations deliberately survive merging so validation rejects ambiguity. */
+export function creatureLabLocationQuery(location:Pick<Location,'search'|'hash'>|URL):URLSearchParams{
+  const q=new URLSearchParams(location.search),fragment=new URLSearchParams(location.hash.replace(/^#/,''));
+  for(const [key,value] of fragment)if(key==='planetDefinition'||key==='comparePlanetDefinition')q.append(key,value);
+  return q;
+}
 /** A link opens composer mode when it names composer mode or no mode at all. */
 const isComposerLink = (q: URLSearchParams) => !q.has('mode') || q.get('mode') === 'composer';
 export function parseCreatureLabState(search: string | URLSearchParams): CreatureLabState {
@@ -68,6 +79,8 @@ export function parseCreatureLabState(search: string | URLSearchParams): Creatur
     compare: q.get('compare') === '1', neutral: q.get('neutral') === '1', skeleton: q.get('skeleton') === '1',
     // One character over the limit is kept so the decoder can reject oversize text visibly instead of truncating it into another animal.
     recipe: (q.get('recipe') || '').slice(0, COMPOSER_RECIPE_MAX_TEXT + 1), compareRecipe: (q.get('compareRecipe') || '').slice(0, COMPOSER_RECIPE_MAX_TEXT + 1),
+    ...(q.has('planetDefinition')?{planetDefinition:q.get('planetDefinition')!.slice(0,LAB_PLANET_DEFINITION_MAX_BYTES+1)}:{}),
+    ...(q.has('comparePlanetDefinition')?{comparePlanetDefinition:q.get('comparePlanetDefinition')!.slice(0,LAB_PLANET_DEFINITION_MAX_BYTES+1)}:{}),
     composerSeed: clean('composerSeed', DEFAULT_LAB_STATE.composerSeed, 160),
     motion: choice('motion', COMPOSER_LAB_MOTIONS, 'walk'),
     herd: isHerdSize(q.get('herd')) ? Number(q.get('herd')) as ComposerHerdSize : 1,
@@ -97,16 +110,36 @@ export function creatureLabComposerInputError(search: string | URLSearchParams):
   const q = query(search);
   if (!isComposerLink(q)) return `Unsupported link: mode "${q.get('mode')!.slice(0, 24)}" is not part of the Creature Lab app (composer mode only); the planetary modes are in Universe Atlas's Creature Lab`;
   for (const key of [...COMPOSER_KEYS, 'light']) if (q.getAll(key).length > 1) return `Invalid composer link: repeated ${key}`;
+  for(const [key,recipe] of [['planetDefinition','recipe'],['comparePlanetDefinition','compareRecipe']] as const)if(q.has(key)){
+    if(q.get(recipe))return `Invalid composer link: ${key} and ${recipe} are ambiguous`;
+    try{parseLabPlanetDefinition(q.get(key));}catch(e){return `Invalid ${key}: ${e instanceof Error?e.message:String(e)}`;}
+  }
   if (q.has('motion') && !(COMPOSER_LAB_MOTIONS as readonly string[]).includes(q.get('motion')!)) return `Invalid composer link: unknown motion "${q.get('motion')!.slice(0, 24)}"`;
   if (q.has('presentation') && !isComposerLabPresentation(q.get('presentation'))) return `Invalid composer link: unknown presentation "${q.get('presentation')!.slice(0, 32)}"`;
   return null;
 }
 export function creatureLabUrl(base: string, state: CreatureLabState): string {
   const url = new URL(base); url.search = ''; url.hash = '';
+  const definitions=new URLSearchParams();
   for (const [key, value] of Object.entries(state)) {
     if (!(COMPOSER_URL_KEYS as readonly string[]).includes(key)) continue;
-    if (key === 'compareRecipe' && !state.compare) continue;
+    if ((key === 'compareRecipe'||key==='comparePlanetDefinition') && !state.compare) continue;
+    if((key==='recipe'&&state.planetDefinition)||(key==='compareRecipe'&&state.comparePlanetDefinition))continue;
+    if(key==='planetDefinition'||key==='comparePlanetDefinition'){if(!value)continue;definitions.set(key,serializeLabPlanetDefinition(parseLabPlanetDefinition(value)));continue;}
     url.searchParams.set(key, typeof value === 'boolean' ? (value ? '1' : '0') : String(value));
   }
-  return url.href;
+  url.hash=definitions.toString();return url.href;
+}
+/** Complete Lab files may include diagnostics; each definition still has its
+ * own strict 64 KiB limit. Importing never follows the file's specimen URL. */
+export function parseCreatureLabFile(text:string){
+  const data=parseLabJson(text,2*1024*1024) as Record<string,unknown>;
+  if(!data||typeof data!=='object'||Array.isArray(data))throw new Error('Choose a planet definition or a complete Lab JSON file');
+  if(data.schema==='planet-composer-definition-1')return {kind:'planet' as const,definition:parseLabPlanetDefinition(data)};
+  const state=data.state as Record<string,unknown>;
+  if(!state||typeof state!=='object'||Array.isArray(state)||state.mode!=='composer')throw new Error('Complete Lab JSON must include its Composer state');
+  const q=new URLSearchParams();
+  for(const key of COMPOSER_URL_KEYS){const value=state[key];if(value===undefined)continue;const expected=key in DEFAULT_LAB_STATE?typeof DEFAULT_LAB_STATE[key as keyof typeof DEFAULT_LAB_STATE]:'string';if(typeof value!==expected)throw new Error(`Invalid Lab state field: ${key}`);q.set(key,typeof value==='boolean'?(value?'1':'0'):String(value));}
+  const error=creatureLabComposerInputError(q);if(error)throw new Error(error);
+  return {kind:'lab' as const,state:parseCreatureLabState(q)};
 }

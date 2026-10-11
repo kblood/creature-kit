@@ -5,7 +5,11 @@ import {COMPOSER_CHOICES, COMPOSER_PRESET_IDS, COMPOSER_PRESET_LABELS, COMPOSER_
 import {coherentComposerSpecies, type ComposerArchetype} from "../../../src/fauna-composer-species.ts";
 import {COAT_MARK_BITS, COAT_MARK_NAMES, resolveCoatPattern, type CoatMarkName} from "../../../src/fauna-coat-vocab.ts";
 import {COMPOSER_MOTIONS, type ComposerMotion} from "../../../src/fauna-composer-rig.ts";
-import {createComposerCreature, type ComposerCreature} from "../../../src/fauna-composer.ts";
+import {type ComposerCreature} from "../../../src/fauna-composer.ts";
+import {PLANET_COMPOSER_SOURCE_VERSION, type PlanetComposerDefinition} from "../../../src/planet-composer.ts";
+import {COAT_GENOME_RANGES} from "../../../src/fauna-coat-fields.ts";
+import {COAT_PATTERNS, COAT_ROLES} from "../../../src/fauna-coat-vocab.ts";
+import {createLabComposerActor,parseLabPlanetDefinition,serializeLabPlanetDefinition,editLabPlanetRecipe,editLabPlanetDimension,editLabPlanetCoat,labPlanetColourHex,labPlanetColourLinear,LAB_PLANET_DIMENSIONS,LAB_PLANET_OVERRIDDEN_KEYS} from "./creature-lab-planet.ts";
 import type {ComposerSkinPresentation} from "../../../src/fauna-composer-mesh.ts";
 import {FACE_EYE_PROFILE, FACE_HEADGEAR, COMPOSER_IRIS_RGB, composerEyeProfileId, composerIrisBands, composerIrisKind, resolveComposerEyes, type ComposerEyeKind, type BuiltIrisId, type ComposerHorn} from "../../../src/fauna-composer-face.ts";
 import {COMPOSER_EYE_KINDS, EYE_PRESETS, composerEyeNative, isFaceRoundEyeKind, type EyeCatalogueFace, type EyeGroup} from "../../../src/fauna-composer-eye-catalogue.ts";
@@ -38,7 +42,7 @@ export interface ComposerLabHost{
  /** Herd build progress: called after each asynchronously built animal; `done` after the last. */
  progress(done:boolean):void;
 }
-interface Actor{side:Side;index:number;recipe:ComposerRecipe;creature:ComposerCreature;offset:THREE.Vector3;envelope:THREE.Box3;track:Track|null;skinDigest:string;colorDigest:string}
+interface Actor{side:Side;index:number;recipe:ComposerRecipe;planetDefinition?:PlanetComposerDefinition;creature:ComposerCreature;offset:THREE.Vector3;envelope:THREE.Box3;track:Track|null;skinDigest:string;colorDigest:string}
 interface Track{group:THREE.Group;cross:THREE.LineSegments;spacing:number;dispose():void}
 
 const $=<T extends HTMLElement>(id:string)=>document.getElementById(id) as T;
@@ -434,7 +438,8 @@ export interface ComposerLab{
   * Review/diagnostic use (casts one ray per vertex). Null without an eye frame. */
  eyeView(camera:THREE.PerspectiveCamera):{heightFraction:number;widthFraction:number;visibleVertices:number;vertices:number;inside:boolean}|null;
  viewDirection():THREE.Vector3;
- state():Pick<CreatureLabState,"recipe"|"compareRecipe"|"composerSeed"|"motion"|"compare"|"view"|"herd">;
+ state():Pick<CreatureLabState,"recipe"|"compareRecipe"|"planetDefinition"|"comparePlanetDefinition"|"composerSeed"|"motion"|"compare"|"view"|"herd">;
+ importDefinition(definition:unknown):void;
  text():{title:string;description:string;captionTitle:string;captionCopy:string;detail:string};
  metrics():string;
  /** Footer status line; `drawCalls` is the last frame's renderer count. */
@@ -442,7 +447,7 @@ export interface ComposerLab{
  /** Number of shadow-casting meshes (each costs one shadow-pass draw call). */
  shadowCasters():number;
  details():unknown;
- exportSpecimen():{recipe:ComposerRecipe;presentation:ComposerSkinPresentation;skinVersion:string;graphVersion:string}|null;
+ exportSpecimen():{recipe:ComposerRecipe;planetDefinition?:PlanetComposerDefinition;presentation:ComposerSkinPresentation;skinVersion:string;graphVersion:string}|null;
 }
 
 export function createComposerLab(host:ComposerLabHost):ComposerLab{
@@ -459,14 +464,17 @@ export function createComposerLab(host:ComposerLabHost):ComposerLab{
  /** Plausible species generated in this session (or recovered from a link's seed), by seed. */
  const plausible=new Map<string,{recipe:ComposerRecipe;archetype:ComposerArchetype}>();
  const recipes:Record<Side,ComposerRecipe>={first:composerPreset("dinosaur"),second:composerPreset("giraffe")};
+ const definitions:Partial<Record<Side,PlanetComposerDefinition>>={};
+ let secondConfigured=!!(init.compareRecipe||init.comparePlanetDefinition);
  const decode=(text:string,side:Side)=>{
   if(!text)return;const result=decodeComposerRecipe(text);
   if(result.error){error??=`${side==="first"?"Recipe":"Second recipe"}: ${result.error}`;return;}
   recipes[side]=result.recipe!;issues.push(...result.issues.map(i=>side==="first"?i:`Second animal: ${i}`));
  };
- if(init.mode==="composer"){decode(init.recipe,"first");if(init.compare)decode(init.compareRecipe,"second");}
+ const loadSide=(side:Side,text:string|undefined,recipe:string)=>{if(text){try{const d=parseLabPlanetDefinition(text);definitions[side]=d;recipes[side]=d.recipe;}catch(e){error??=String(e);}}else decode(recipe,side);};
+ if(init.mode==="composer"){loadSide("first",init.planetDefinition,init.recipe);if(init.compare)loadSide("second",init.comparePlanetDefinition,init.compareRecipe);}
  // A shared animal opens paused at its captured time; a fresh composer page starts walking.
- playing=!(init.mode==="composer"&&init.recipe);
+ playing=!(init.mode==="composer"&&(init.recipe||init.planetDefinition));
  seedInput.value=init.composerSeed;compareBox.checked=init.mode==="composer"&&init.compare;viewSelect.value=init.view;
  herdSelect.innerHTML=COMPOSER_HERD_SIZES.map(n=>`<option value="${n}">${HERD_LABEL[n]}</option>`).join("");
  herdSelect.value=String(init.mode==="composer"&&!compareBox.checked?init.herd:1);
@@ -486,7 +494,7 @@ export function createComposerLab(host:ComposerLabHost):ComposerLab{
  const field=(key:Exclude<Key,"marks">)=>$<HTMLInputElement|HTMLSelectElement>(`composer-${key}`);
  const markBoxes=COAT_MARK_NAMES.map(name=>({name,el:$<HTMLInputElement>(`composer-mark-${name}`)}));
  const editing=():Side=>compareBox.checked&&target.value==="second"?"second":"first";
- const herd=():ComposerHerdSize=>compareBox.checked?1:(COMPOSER_HERD_SIZES.find(n=>String(n)===herdSelect.value)??1);
+ const herd=():ComposerHerdSize=>compareBox.checked||definitions.first?1:(COMPOSER_HERD_SIZES.find(n=>String(n)===herdSelect.value)??1);
 
  /** Species label: preset, plausible random species of a known seed, or a custom combination. */
  function speciesLabel(r:ComposerRecipe){
@@ -499,6 +507,7 @@ export function createComposerLab(host:ComposerLabHost):ComposerLab{
   try{const s=coherentComposerSpecies(init.composerSeed);if(composerSpeciesEqual(s.recipe,recipes.first)){plausible.set(init.composerSeed,{recipe:s.recipe,archetype:s.archetype});generator="plausible";}}catch{/* label only */}
  }
  function individualPhrase(a:Actor){
+  if(a.planetDefinition){const d=a.planetDefinition,p=d.phenotype.identity;return [d.genome.appearance?.growth.stage??(p.maturity<.75?'juvenile':p.maturity<1?'subadult':'adult'),p.sex==='none'?'':p.sex,p.individualId?`individual ${p.individualId}`:'resolved individual'].filter(Boolean);}
   const t=a.creature.individual.traits,parts:string[]=[];
   if(t.individualSeed>0)parts.push(`individual ${t.individualSeed}`);
   const age=t.maturity<.75?"juvenile":t.maturity<1?"subadult":"adult",sex=t.sex==="none"?"":t.sex;
@@ -511,8 +520,33 @@ export function createComposerLab(host:ComposerLabHost):ComposerLab{
   return [`herd of ${building?`${n}/${herdTarget}`:n}`,young?`${young} young`:"",female?`${female} female`:"",male?`${male} male`:""].filter(Boolean).join(" · ");
  }
 
+ const resolved=$('composer-resolved');
+ const coatNumbers=[...Object.entries(COAT_GENOME_RANGES).filter(([key])=>key!=='marks').map(([key,[min,max]])=>({key,min,max,step:.01})),{key:'seed',min:0,max:4294967295,step:1},{key:'roughness',min:0,max:1,step:.01},{key:'phase',min:-10,max:10,step:.01},{key:'lateral',min:.01,max:100,step:.01}];
+ const coatLabels:Record<string,string>={scale:'Pattern scale',contrast:'Pattern contrast',countershade:'Pale belly strength',bellyLine:'Belly line',warp:'Pattern distortion',threshold:'Pattern coverage',juvenileSpots:'Juvenile spots strength',greying:'Muzzle greying',seed:'Pattern placement seed',roughness:'Surface roughness',phase:'Pattern phase',lateral:'Pattern lateral scale'};
+ resolved.innerHTML=`<fieldset class="composer-group"><legend>Resolved planet animal</legend><p id="composer-resolved-identity" class="composer-hint"></p><p class="composer-hint">Dimensions already include age and individual variation. Edits keep the original genome as provenance and change the current resolved animal. Choosing a starting animal or a random animal leaves this definition.</p><button id="composer-leave-resolved" type="button">Use ordinary Composer controls</button><p id="composer-resolved-status" class="composer-why" role="status"></p></fieldset>
+ <fieldset class="composer-group"><legend>Resolved dimensions</legend>${LAB_PLANET_DIMENSIONS.map(({key,label,min,max,step,unit})=>`<label>${label} (${unit})<input id="composer-resolved-${key}" type="number" min="${min}" max="${max}" step="${step}"><small id="composer-resolved-${key}-why" class="composer-why" hidden></small></label>`).join('')}<p class="composer-hint">These are anatomical inputs, not an outer bounding box. Joint fitting and the chosen surface can change the visible extent; fitted constraints are listed below.</p></fieldset>
+ <fieldset class="composer-group"><legend>Resolved coat</legend><p class="composer-hint">Pickers display sRGB. Imported linear colour values stay exact until you edit that colour. Fine patterns may be limited by mesh resolution.</p>${COAT_ROLES.map(role=>`<label>${role[0]!.toUpperCase()+role.slice(1)} colour<input id="composer-resolved-colour-${role}" type="color"></label>`).join('')}<label>Pattern<select id="composer-resolved-pattern">${COAT_PATTERNS.filter(x=>x!=='auto').map(x=>`<option value="${x}">${VALUE[`pattern:${x}`]??x}</option>`).join('')}</select></label><label>Mark colour role<select id="composer-resolved-markRole"><option value="accent">Accent</option><option value="belly">Belly</option></select></label>${COAT_MARK_NAMES.map(name=>`<label class="check"><input id="composer-resolved-mark-${name}" type="checkbox">${MARK_LABEL[name]}</label>`).join('')}${coatNumbers.map(({key,min,max,step})=>`<label>${coatLabels[key]}<input id="composer-resolved-coat-${key}" type="number" min="${min}" max="${max}" step="${step}"></label>`).join('')}</fieldset>`;
+ function resolvedError(e:unknown){$('composer-resolved-status').textContent=e instanceof Error?e.message:String(e);}
+ function resolvedEdit(change:(d:PlanetComposerDefinition)=>PlanetComposerDefinition){const side=editing(),d=definitions[side];if(!d)return;try{definitions[side]=change(d);if(side==='second')secondConfigured=true;error=null;issues=[];host.rebuild();}catch(e){resolvedError(e);}}
+ for(const {key} of LAB_PLANET_DIMENSIONS)$<HTMLInputElement>(`composer-resolved-${key}`).onchange=e=>{const el=e.currentTarget as HTMLInputElement;if(!el.value.trim()||!Number.isFinite(el.valueAsNumber)){resolvedError('Enter a finite dimension.');return;}resolvedEdit(d=>editLabPlanetDimension(d,key,el.valueAsNumber));};
+ for(const role of COAT_ROLES)$<HTMLInputElement>(`composer-resolved-colour-${role}`).onchange=e=>resolvedEdit(d=>editLabPlanetCoat(d,`colour:${role}`,labPlanetColourLinear((e.currentTarget as HTMLInputElement).value)));
+ for(const key of ['pattern','markRole'])$<HTMLSelectElement>(`composer-resolved-${key}`).onchange=e=>resolvedEdit(d=>editLabPlanetCoat(d,key,(e.currentTarget as HTMLSelectElement).value));
+ for(const {key} of coatNumbers)$<HTMLInputElement>(`composer-resolved-coat-${key}`).onchange=e=>{const el=e.currentTarget as HTMLInputElement;if(!el.value.trim()||!Number.isFinite(el.valueAsNumber)){resolvedError('Enter a finite coat value.');return;}resolvedEdit(d=>editLabPlanetCoat(d,key,el.valueAsNumber));};
+ for(const name of COAT_MARK_NAMES)$<HTMLInputElement>(`composer-resolved-mark-${name}`).onchange=e=>resolvedEdit(d=>editLabPlanetCoat(d,'marks',(e.currentTarget as HTMLInputElement).checked?d.phenotype.coat.marks|COAT_MARK_BITS[name]:d.phenotype.coat.marks&~COAT_MARK_BITS[name]));
+ $('composer-leave-resolved').onclick=()=>editOrdinary(editing(),recipes[editing()]);
+ function showResolvedControls(d:PlanetComposerDefinition|undefined){
+  resolved.hidden=!d;if(!d)return;const p=d.phenotype,r=d.recipe;
+  $('composer-resolved-identity').textContent=`${d.ledger.family} · ${d.genome.appearance?.growth.stage??'resolved stage'} · maturity ${p.identity.maturity} · ${p.identity.sex}${p.identity.individualId?` · individual ${p.identity.individualId}`:''}${p.identity.speciesId?` · species ${p.identity.speciesId}`:''}`;
+  $('composer-resolved-status').textContent='';
+  for(const {key} of LAB_PLANET_DIMENSIONS){const el=$<HTMLInputElement>(`composer-resolved-${key}`);el.value=String(p.dimensions[key]);const reason=key==='tailLength'&&r.tail==='none'?'Choose a tail to use this length.':key==='trunkLength'&&r.head!=='proboscis'?'Choose the Proboscis face to use this length.':key==='wingSpan'&&r.wings==='none'?'Choose wings to use this span.':key==='earLength'&&!['muzzle','proboscis'].includes(r.head)?'This face does not build external ears.':key==='hornLength'&&FACE_HEADGEAR[r.head][r.horns].built!=='paired'?'This dimension applies to paired horns.':'';el.disabled=!!reason;el.title=reason;const why=$(`composer-resolved-${key}-why`);why.hidden=!reason;why.textContent=reason;}
+  for(const role of COAT_ROLES)$<HTMLInputElement>(`composer-resolved-colour-${role}`).value=labPlanetColourHex(p.coat.colours[role]);
+  $<HTMLSelectElement>('composer-resolved-pattern').value=p.coat.pattern;$<HTMLSelectElement>('composer-resolved-markRole').value=p.coat.markRole;
+  for(const name of COAT_MARK_NAMES)$<HTMLInputElement>(`composer-resolved-mark-${name}`).checked=!!(p.coat.marks&COAT_MARK_BITS[name]);
+  for(const {key} of coatNumbers)$<HTMLInputElement>(`composer-resolved-coat-${key}`).value=String(key==='roughness'?p.roughness:key==='phase'||key==='lateral'?p.coatFrame[key]:p.coat[key as keyof typeof COAT_GENOME_RANGES|'seed']);
+ }
  function showControls(){
-  const r=recipes[editing()],id=composerPresetOf(r),h=herd();presetSelect.value=id??"custom";
+  const r=recipes[editing()],definition=definitions[editing()],id=composerPresetOf(r),h=herd();presetSelect.value=definition?"custom":id??"custom";
+  showResolvedControls(definition);
   // The skin clamps a pattern finer than its mesh can draw (spots would break into triangles): say so, since
   // pattern scales above the limit then look the same. Read from the edited animal's built skin.
   const coat=actors.find(a=>a.side===editing())?.creature.skin.coatScale;
@@ -522,7 +556,7 @@ export function createComposerLab(host:ComposerLabHost):ComposerLab{
    return `This body's mesh can draw this ${coat.pattern} pattern only up to scale ${limit.toFixed(2)}`+(limit<COMPOSER_RANGES.patternScale[0]?" (below this range, so every setting looks the same here).":"; finer settings look the same.");
   };
   for(const key of CONTROL_KEYS){
-   const reason=why(r,key),info=reason?"":note(r,key,h)||clampNote(key),noteEl=$(`composer-${key}-why`);
+   const reason=definition&&(LAB_PLANET_OVERRIDDEN_KEYS.has(key)||key==='layout')?(key==='layout'?'Choose “Use ordinary Composer controls” to leave this resolved planet definition and change layout.':'Already resolved in the planet definition. Use the metre and coat controls above; growth is not applied twice.'):why(r,key),info=reason?"":note(r,key,h)||clampNote(key),noteEl=$(`composer-${key}-why`);
    noteEl.hidden=!(reason||info);noteEl.textContent=reason||info;noteEl.classList.toggle("composer-info",!reason&&!!info);
    if(key==="marks"){for(const m of markBoxes){m.el.checked=!!(r.marks&COAT_MARK_BITS[m.name]);m.el.disabled=!!reason;}continue;}
    const el=field(key);
@@ -532,8 +566,9 @@ export function createComposerLab(host:ComposerLabHost):ComposerLab{
   }
   const colour=composerIrisSwatch(r);$("composer-iris-built").hidden=!colour;$("composer-iris-swatch").style.background=colour??"";$("composer-iris-name").textContent=colour?irisShort(resolveComposerEyes(r).irisBuilt):"";
   target.closest("label")!.hidden=!compareBox.checked;
-  herdSelect.disabled=compareBox.checked;herdSelect.title=compareBox.checked?"Comparison shows one animal per recipe.":"";
-  $("composer-herd-why").hidden=!compareBox.checked;
+  herdSelect.disabled=compareBox.checked||!!definitions.first;herdSelect.value=String(h);herdSelect.title=definitions.first?'A planet definition represents one resolved individual.':compareBox.checked?"Comparison shows one animal per recipe.":"";
+  $("composer-herd-why").hidden=!herdSelect.disabled;$("composer-herd-why").textContent=herdSelect.title;
+  $<HTMLButtonElement>('composer-next-individual').disabled=!!definition;
   $("composer-edit-hint").textContent=compareBox.checked?`Part controls edit the ${editing()==="first"?"first (left)":"second (right)"} animal.`:"";
   playButton.textContent=playing?"Pause":"Play";
   const list=$("composer-issues");list.hidden=!issues.length;list.innerHTML=issues.length?`<b>This link was adjusted:</b><ul>${issues.slice(0,12).map(i=>`<li>${esc(i)}</li>`).join("")}</ul>`:"";
@@ -543,7 +578,8 @@ export function createComposerLab(host:ComposerLabHost):ComposerLab{
   for(const option of el.options){const text=composerOptionText(r,key,option.value);if(option.textContent!==text)option.textContent=text;}
   hintRenders++;
  }
- function edit(side:Side,next:ComposerRecipe){recipes[side]=normalizeComposerRecipe(next).recipe;error=null;issues=[];host.rebuild();}
+ function edit(side:Side,next:ComposerRecipe){try{if(definitions[side])definitions[side]=editLabPlanetRecipe(definitions[side]!,next);recipes[side]=normalizeComposerRecipe(next).recipe;if(side==='second')secondConfigured=true;error=null;issues=[];host.rebuild();}catch(e){resolvedError(e);}}
+ function editOrdinary(side:Side,next:ComposerRecipe){const had=!!definitions[side];delete definitions[side];recipes[side]=normalizeComposerRecipe(next).recipe;if(side==='second')secondConfigured=true;error=null;issues=had?['Left the resolved planet definition for this animal. Ordinary Composer controls now determine its dimensions, coat and individual.']:[];host.rebuild();}
  for(const key of CONTROL_KEYS){
   if(key==="marks")continue;
   const el=field(key);
@@ -551,18 +587,19 @@ export function createComposerLab(host:ComposerLabHost):ComposerLab{
   el.addEventListener("change",()=>{const side=editing();edit(side,{...recipes[side],[key]:isChoice(key)?el.value:Number(el.value)});});
  }
  for(const m of markBoxes)m.el.addEventListener("change",()=>{const side=editing(),bit=COAT_MARK_BITS[m.name];edit(side,{...recipes[side],marks:m.el.checked?recipes[side].marks|bit:recipes[side].marks&~bit});});
- $("composer-next-individual").onclick=()=>{const side=editing(),seed=recipes[side].individualSeed;edit(side,{...recipes[side],individualSeed:seed>=9999?1:seed+1});};
- presetSelect.onchange=()=>{if(isComposerPresetId(presetSelect.value))edit(editing(),composerPreset(presetSelect.value));};
+ $("composer-next-individual").onclick=()=>{const side=editing();if(definitions[side])return;const seed=recipes[side].individualSeed;edit(side,{...recipes[side],individualSeed:seed>=9999?1:seed+1});};
+ presetSelect.onchange=()=>{if(isComposerPresetId(presetSelect.value))editOrdinary(editing(),composerPreset(presetSelect.value));};
  const seedValue=()=>seedInput.value.trim().slice(0,160)||"composer-1";
- const wild=()=>{generator="wild";edit(editing(),randomComposerRecipe(seedInput.value));};
- const plausibleSpecies=()=>{generator="plausible";const s=coherentComposerSpecies(seedInput.value);plausible.set(seedInput.value,{recipe:s.recipe,archetype:s.archetype});edit(editing(),s.recipe);};
+ const wild=()=>{generator="wild";editOrdinary(editing(),randomComposerRecipe(seedInput.value));};
+ const plausibleSpecies=()=>{generator="plausible";const s=coherentComposerSpecies(seedInput.value);plausible.set(seedInput.value,{recipe:s.recipe,archetype:s.archetype});editOrdinary(editing(),s.recipe);};
  $("composer-randomize").onclick=()=>{seedInput.value=seedValue();wild();};
  $("composer-random-species").onclick=()=>{seedInput.value=seedValue();plausibleSpecies();};
  $("composer-next-seed").onclick=()=>{seedInput.value=nextSeed(seedInput.value.trim()||"composer-1");if(generator==="plausible")plausibleSpecies();else wild();};
  seedInput.onkeydown=e=>{if(e.key==="Enter")(generator==="plausible"?$("composer-random-species"):$("composer-randomize")).click();};
  compareBox.onchange=()=>{
   if(compareBox.checked){const id=composerPresetOf(recipes.first),next=ANIMAL_PRESETS[(ANIMAL_PRESETS.indexOf(id as ComposerPresetId)+1)%ANIMAL_PRESETS.length]!;
-   if(composerRecipesEqual(recipes.first,recipes.second))recipes.second=composerPreset(id===null?"giraffe":next);
+   if(definitions.first&&!secondConfigured){definitions.second=parseLabPlanetDefinition(definitions.first);recipes.second=definitions.second.recipe;secondConfigured=true;}
+   else if(!definitions.second&&composerRecipesEqual(recipes.first,recipes.second))recipes.second=composerPreset(id===null?"giraffe":next);
    herdSelect.value="1";}
   else target.value="first";
   host.rebuild();
@@ -589,9 +626,9 @@ export function createComposerLab(host:ComposerLabHost):ComposerLab{
   return box;
  }
  function makeActor(side:Side,index:number,recipe:ComposerRecipe,options:{skeleton:boolean;neutral:boolean},track:boolean):Actor{
-  const creature=createComposerCreature(recipe,{presentation:host.getPresentation?.()}),envelope=sampleEnvelope(creature);
+  const planetDefinition=definitions[side],creature=createLabComposerActor(recipe,planetDefinition,host.getPresentation?.()??'skin-5'),envelope=sampleEnvelope(creature);
   creature.setSkeletonVisible(options.skeleton);creature.setNeutral(options.neutral);
-  const actor:Actor={side,index,recipe,creature,offset:new THREE.Vector3(),envelope,track:track?makeTrack(envelope):null,skinDigest:digest(creature.skin.positions),colorDigest:digest(creature.skin.colors)};
+  const actor:Actor={side,index,recipe,planetDefinition,creature,offset:new THREE.Vector3(),envelope,track:track?makeTrack(envelope):null,skinDigest:digest(creature.skin.positions),colorDigest:digest(creature.skin.colors)};
   if(actor.track)host.group.add(actor.track.group);host.group.add(creature.group);
   return actor;
  }
@@ -655,6 +692,7 @@ export function createComposerLab(host:ComposerLabHost):ComposerLab{
   const phrase=individualPhrase(a);return actors.length>1?`Animal ${a.index+1}${phrase.length?`: ${phrase.join(", ")}`:""}`:"";
  }
  function deltaList(a:Actor){
+  if(a.planetDefinition)return `<p>Resolved planet individual: ${esc(individualPhrase(a).join(' · '))}. Original genome preserved; current dimensions and coat are stored in the definition. No additional growth or individual draw.</p>`;
   const deltas=a.creature.individual.deltas;
   return deltas.length?`<ul class="composer-deltas">${deltas.map(d=>`<li>${esc(d)}</li>`).join("")}</ul>`:"<p>Type specimen: built exactly as the species recipe.</p>";
  }
@@ -728,10 +766,11 @@ export function createComposerLab(host:ComposerLabHost):ComposerLab{
   setActive(active){$("composer-controls").hidden=!active;if(active)showControls();},
   build,disposeActors,update,syncTime,envelope,headEnvelope,focus,eyeFrame,eyeView,
   viewDirection:()=>viewDirection(viewSelect.value as View),
-  state:()=>({recipe:encodeComposerRecipe(recipes.first),compareRecipe:compareBox.checked?encodeComposerRecipe(recipes.second):"",composerSeed:seedValue(),motion:motion(),compare:compareBox.checked,view:viewSelect.value as View,herd:herd()}),
+  state:()=>({recipe:definitions.first?'':encodeComposerRecipe(recipes.first),compareRecipe:compareBox.checked&&!definitions.second?encodeComposerRecipe(recipes.second):"",...(definitions.first?{planetDefinition:serializeLabPlanetDefinition(definitions.first)}:{}),...(compareBox.checked&&definitions.second?{comparePlanetDefinition:serializeLabPlanetDefinition(definitions.second)}:{}),composerSeed:seedValue(),motion:motion(),compare:compareBox.checked,view:viewSelect.value as View,herd:herd()}),
+  importDefinition(input){const d=parseLabPlanetDefinition(input),side=editing();definitions[side]=d;recipes[side]=d.recipe;if(side==='second')secondConfigured=true;error=null;issues=[];herdSelect.value='1';setPlaying(false);host.rebuild();},
   text(){
    const cmp=compareBox.checked,herdView=herd()>1&&!cmp;
-   const caption=(a:Actor|undefined,r:ComposerRecipe)=>[speciesLabel(r),...(a?individualPhrase(a):[])].join(" · ");
+   const caption=(a:Actor|undefined,r:ComposerRecipe)=>[a?.planetDefinition?`Planet ${a.planetDefinition.phenotype.identity.speciesId??a.planetDefinition.ledger.family}`:speciesLabel(r),...(a?individualPhrase(a):[])].join(" · ");
    const firstActor=actors.find(a=>a.side==="first"),secondActor=actors.find(a=>a.side==="second");
    const detail=herdView?(()=>{const t=totals(),size=envelope().getSize(new THREE.Vector3());
     return `<div><b>${esc(speciesLabel(recipes.first))}</b><br>${esc(herdSummary())}<br>Herd spread ${size.x.toFixed(1)} × ${size.z.toFixed(1)} m · ${thousands(t.triangles)} triangles (desktop preview)</div>`;})():
@@ -757,7 +796,7 @@ export function createComposerLab(host:ComposerLabHost):ComposerLab{
    const t=totals();return `${base} | ${thousands(t.triangles)} triangles · ${thousands(t.vertices)} vertices${drawCalls?` · ${drawCalls} draw calls`:""} | desktop preview`;
   },
   shadowCasters:()=>actors.filter(a=>a.creature.mesh.castShadow&&a.creature.group.visible).length,
-  exportSpecimen(){if(error||building)return null;const a=actors.find(a=>a.side===editing());return a?{recipe:{...a.recipe},presentation:host.getPresentation?.()??'skin-5',skinVersion:a.creature.skin.version,graphVersion:a.creature.graph.version}:null;},
+  exportSpecimen(){if(error||building)return null;const a=actors.find(a=>a.side===editing());return a?{recipe:{...a.recipe},...(a.planetDefinition?{planetDefinition:structuredClone(a.planetDefinition)}:{}),presentation:host.getPresentation?.()??'skin-5',skinVersion:a.creature.skin.version,graphVersion:a.creature.graph.version}:null;},
   details(){
    // the eye frame only in the eye close-up (it skins every visible-eye vertex)
    const box=envelope(),head=headEnvelope(),t=totals(),eye=focus()==="eyes"?eyeFrame():null;
@@ -766,8 +805,8 @@ export function createComposerLab(host:ComposerLabHost):ComposerLab{
     herd:herd(),building,herdBuilt:actors.length,generator,species:speciesLabel(recipes.first),
     herdStats:{animals:actors.length,vertices:t.vertices,triangles:t.triangles,buildMs:t.buildMs,maxBuildMs:t.maxBuildMs,wallMs:buildFinished?buildFinished-buildStarted:null},
     envelope:box.isEmpty()?null:{min:v3(box.min),max:v3(box.max)},
-    actors:actors.map(a=>{const p=a.creature.lastPose,b=a.creature.bounds(),ind=a.creature.individual;return {side:a.side,index:a.index,encoded:encodeComposerRecipe(a.recipe),recipe:{...a.recipe},preset:composerPresetOf(a.recipe),offset:v3(a.offset),envelope:{min:v3(a.envelope.min),max:v3(a.envelope.max)},skinDigest:a.skinDigest,colorDigest:a.colorDigest,skinVersion:a.creature.skin.version,graphVersion:a.creature.graph.version,details:a.creature.details(),
-     individual:{seed:ind.traits.individualSeed,sex:ind.traits.sex,maturity:ind.traits.maturity,condition:ind.traits.condition,neutral:ind.traits.neutral,deltas:ind.deltas,effectiveBodyLength:ind.effectiveRecipe.bodyLength,effectiveHeadSize:ind.effectiveRecipe.headSize,phrase:individualPhrase(a)},
+    actors:actors.map(a=>{const p=a.creature.lastPose,b=a.creature.bounds(),ind=a.creature.individual;return {side:a.side,index:a.index,...(a.planetDefinition?{planetDefinition:structuredClone(a.planetDefinition),sourceVersion:PLANET_COMPOSER_SOURCE_VERSION}:{}),encoded:encodeComposerRecipe(a.recipe),recipe:{...a.recipe},preset:composerPresetOf(a.recipe),offset:v3(a.offset),envelope:{min:v3(a.envelope.min),max:v3(a.envelope.max)},skinDigest:a.skinDigest,colorDigest:a.colorDigest,skinVersion:a.creature.skin.version,graphVersion:a.creature.graph.version,details:a.creature.details(),
+     individual:{seed:ind.traits.individualSeed,sex:a.planetDefinition?.phenotype.identity.sex??ind.traits.sex,maturity:a.planetDefinition?.phenotype.identity.maturity??ind.traits.maturity,...(a.planetDefinition?{resolvedIdentity:a.planetDefinition.phenotype.identity,stage:a.planetDefinition.genome.appearance?.growth.stage}:{}),condition:ind.traits.condition,neutral:ind.traits.neutral,deltas:ind.deltas,effectiveBodyLength:a.planetDefinition?.phenotype.dimensions.bodyLength??ind.effectiveRecipe.bodyLength,effectiveHeadSize:ind.effectiveRecipe.headSize,phrase:individualPhrase(a)},
      pose:p?{time:p.time,travel:p.travel,positions:Array.from(p.positions),contacts:structuredClone(p.contacts),diagnostics:{...p.diagnostics}}:null,bounds:{min:v3(b.min),max:v3(b.max)}};})};
   },
  };

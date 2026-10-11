@@ -1,5 +1,43 @@
 # Creature Lab app: provenance
 
+## Exact planet Composer definitions (2026-10-11)
+
+The primary Composer now replays `PlanetComposerDefinition` through its ordinary
+factory with the definition's exact `phenotype`. The optional `planetDefinition`
+and `comparePlanetDefinition` fields are independently validated, limited
+to 64 KiB each, and reject repeated query, fragment or JSON keys. Generated links
+put full definitions in the fragment to avoid HTTP request-target limits; query
+imports remain supported. Body-guide navigation preserves the payload. A definition-backed side
+omits its companion recipe query field. No second growth or individual draw is
+applied; original genomes and IDs remain provenance when resolved values change.
+
+Native metre and coat controls edit resolved values. Colour pickers convert to
+sRGB for display only; untouched float colours remain exact. Overridden recipe
+ratios and growth controls are disabled. Presets, random generation or the
+explicit ordinary-Composer button leave the definition for that side. Layout
+changes then use the ordinary multi-layout Composer. Two definitions can share
+the same categorical recipe while retaining different dimensions or coats.
+
+Complete Lab JSON stores both definitions and can be imported with a file picker;
+a plain definition file replaces only the selected comparison side. Actual GLB
+export passes the selected phenotype to the shared exporter, which stores that
+phenotype and its IDs in GLB metadata. The downloadable export report also keeps
+the full definition and source genome. GLB still uses the exporter's vertex-coat
+fallback. `creature-lab-planet.ts` is an app adapter, not a geometry generator.
+
+`tests/lab/planet-composer-replay.test.mjs` checks actual actor/source arrays,
+colours and bones for six families at adult/juvenile stages, strict URL/file
+replay, isolated edits, actual GLB bytes and ordinary Composer compatibility.
+After `npm run lab:build`, `node tests/browser/planet-composer-lab.browser.mjs`
+checks the production build's metre/coat controls, independent comparison,
+share reload, JSON file imports and the selected downloaded GLB/report. It uses
+the shared GPU lock and makes no physical-headset acceptance claim.
+
+The historical Atlas parity test continues to compare the ordinary recipe
+controls, eye/camera helpers, lighting and legacy URLs. The complete actor/state
+host is now intentionally app-owned; the new replay tests validate its behavior
+instead of masking its changes to claim whole-panel byte parity.
+
 ## Explicit composer surface selection (2026-10-11)
 
 The Animal Lab now selects `realism-1` (composer skin 6) by default and retains

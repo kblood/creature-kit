@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import {OrbitControls} from "three/addons/controls/OrbitControls.js";
-import {parseCreatureLabState, creatureLabUrl, creatureLabComposerInputError, creatureLabInputNotices, isComposerLabPresentation, type CreatureLabState} from "./creature-lab-state.ts";
+import {parseCreatureLabState, creatureLabUrl, creatureLabComposerInputError, creatureLabInputNotices, isComposerLabPresentation, parseCreatureLabFile, creatureLabLocationQuery, type CreatureLabState} from "./creature-lab-state.ts";
+import {labComposerBuildOptions} from './creature-lab-planet.ts';
 import {createComposerLab, type ComposerEyeFrame} from "./creature-lab-composer.ts";
 import {fitFaunaReviewShadow, FAUNA_REVIEW_SHADOWS} from "./fauna-review-lighting.ts";
 import {applyFaunaReviewLighting, FAUNA_REVIEW_PRESETS, FAUNA_REVIEW_PRESET_IDS, faunaReviewFillKeyRatio, isFaunaReviewPresetId, type FaunaReviewPresetId} from "./fauna-review-environment.ts";
@@ -16,7 +17,8 @@ import "./animal-lab-entry.css";
  * documented in apps/creature-lab/PROVENANCE.md. */
 const $=<T extends HTMLElement>(id:string)=>document.getElementById(id) as T;
 const esc=(s:string)=>s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]!));
-const initialState=parseCreatureLabState(location.search);
+const initialQuery=creatureLabLocationQuery(location),initialState=parseCreatureLabState(initialQuery);
+window.addEventListener('hashchange',event=>{const hasDefinition=(url:string)=>{const q=new URLSearchParams(new URL(url).hash.slice(1));return q.has('planetDefinition')||q.has('comparePlanetDefinition');};if(hasDefinition(event.newURL)||hasDefinition(event.oldURL))location.reload();});
 const presentationSelect=$<HTMLSelectElement>("composer-presentation");presentationSelect.value=initialState.presentation;
 function effectivePresentation(){if(!isComposerLabPresentation(presentationSelect.value))throw new Error('Choose a supported body surface');return presentationSelect.value;}
 const skeleton=$<HTMLInputElement>("skeleton"),neutral=$<HTMLInputElement>("neutral");
@@ -28,7 +30,7 @@ const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:"high-per
 const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.075;controls.minDistance=2;controls.maxDistance=180;controls.maxPolarAngle=Math.PI*.49;
 // Review lighting: 'studio' is the original Lab rig; planet presets match the in-game surface light.
 const lightSelect=$<HTMLSelectElement>("lighting");lightSelect.innerHTML=FAUNA_REVIEW_PRESET_IDS.map(id=>`<option value="${id}">${esc(FAUNA_REVIEW_PRESETS[id].label)}</option>`).join("");lightSelect.value=initialState.light;
-const inputNotices=creatureLabInputNotices(location.search);
+const inputNotices=creatureLabInputNotices(initialQuery);
 let lighting=applyFaunaReviewLighting(scene,"studio"),key=lighting.key;renderer.toneMappingExposure=lighting.preset.exposure;
 function effectiveLight():FaunaReviewPresetId{return isFaunaReviewPresetId(lightSelect.value)?lightSelect.value:"studio";}
 /** Swaps the light rig when the preset changes; keeps shadow casting and refits the shadow frustum. */
@@ -41,7 +43,7 @@ function applyLighting(){
 const worldGroup=new THREE.Group();scene.add(worldGroup);const actorGroup=new THREE.Group();worldGroup.add(actorGroup);
 let terrainMesh:THREE.Mesh|undefined,grid:THREE.LineSegments|undefined;
 let ready=false,error="",time=initialState.time,cpuMs=0,lastFrame=performance.now(),fps=0,frameN=0,lastFps=lastFrame,metricsPending=true;
-const composer=createComposerLab({group:actorGroup,initial:initialState,inputError:creatureLabComposerInputError(location.search),notices:inputNotices,getPresentation:effectivePresentation,getTime:()=>time,setTime:t=>{time=t;composer.syncTime(t);},rebuild:()=>rebuild(),refresh:()=>{updateRigs();metricsPending=true;},fit:()=>fitCamera(),
+const composer=createComposerLab({group:actorGroup,initial:initialState,inputError:creatureLabComposerInputError(initialQuery),notices:inputNotices,getPresentation:effectivePresentation,getTime:()=>time,setTime:t=>{time=t;composer.syncTime(t);},rebuild:()=>rebuild(),refresh:()=>{updateRigs();metricsPending=true;},fit:()=>fitCamera(),
  progress:done=>{updateRigs();if(done){fitCamera();applyComposerText();}$("status").textContent=composer.status();metricsPending=true;}});
 
 function disposeActors(){composer.disposeActors();actorGroup.clear();}
@@ -109,7 +111,7 @@ function followEye(){
 }
 function lightingDetails(){const p=lighting.preset;return {preset:p.id,label:p.label,fillKeyRatio:faunaReviewFillKeyRatio(p),exposure:renderer.toneMappingExposure,shadows:key.castShadow,keyIntensity:key.intensity,hemisphereIntensity:lighting.hemisphere.intensity,ambientIntensity:lighting.ambient.intensity,background:p.background,ground:p.ground};}
 function downloadBlob(blob:Blob,name:string){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
-function exportJson(){const out={specimenUrl:creatureLabUrl(location.href,specimenState()),composer:composer.details(),mode:"composer",time,presentation:effectivePresentation(),settings:{neutral:neutral.checked,skeleton:skeleton.checked,presentation:effectivePresentation()},renderer:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,memory:{...renderer.info.memory}},lighting:lightingDetails(),cpuMs};downloadBlob(new Blob([JSON.stringify(out,null,2)],{type:'application/json'}),'creature-lab-composer.json');}
+function exportJson(){if(!ready||error)return;const out={state:specimenState(),specimenUrl:creatureLabUrl(location.href,specimenState()),composer:composer.details(),mode:"composer",time,presentation:effectivePresentation(),settings:{neutral:neutral.checked,skeleton:skeleton.checked,presentation:effectivePresentation()},renderer:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,memory:{...renderer.info.memory}},lighting:lightingDetails(),cpuMs};downloadBlob(new Blob([JSON.stringify(out,null,2)],{type:'application/json'}),'creature-lab-composer.json');}
 let lastExportReport:unknown=null;
 async function exportGlb(){
  const button=$<HTMLButtonElement>('export-glb'),specimen=composer.exportSpecimen();
@@ -118,21 +120,23 @@ async function exportGlb(){
  try{
   // Capture this visible actor before the asynchronous import; style/recipe changes cannot silently change the export.
   const {exportCreatureGlb}=await import('../../../src/fauna-composer-export.ts');
-  const result=exportCreatureGlb(specimen.recipe,{presentation:specimen.presentation,target:'desktop-web',clips:['idle','walk','display'],seamless:true});
+  const result=exportCreatureGlb(specimen.recipe,{...labComposerBuildOptions(specimen.recipe,specimen.planetDefinition,specimen.presentation),target:'desktop-web',clips:['idle','walk','display'],seamless:true});
   if(result.report.versions.skin!==specimen.skinVersion)throw new Error('Export skin version does not match the selected animal');
-  lastExportReport={...result.report,presentation:specimen.presentation};
+  lastExportReport={...result.report,presentation:specimen.presentation,...(specimen.planetDefinition?{planetDefinition:specimen.planetDefinition}:{})};
   downloadBlob(new Blob([result.glb.slice().buffer],{type:'model/gltf-binary'}),`animal-${specimen.presentation}.glb`);
   $('export-status').textContent=`Exported ${specimen.skinVersion}: ${result.report.mesh.triangles.toLocaleString()} triangles. Desktop budget passed.`;$('export-report').hidden=false;
  }catch(e){$('export-status').textContent=`Export failed: ${e instanceof Error?e.message:String(e)}`;}finally{button.disabled=false;}
 }
 /** Same key order as Atlas's specimenState (mode, view, time, compare, neutral, skeleton, then the composer keys), so a
  * shared link lists its parameters exactly as Atlas's composer mode does. */
-function specimenState():CreatureLabState{const s=composer.state();return {mode:"composer",view:s.view,time,compare:s.compare,neutral:neutral.checked,skeleton:skeleton.checked,recipe:s.recipe,compareRecipe:s.compareRecipe,composerSeed:s.composerSeed,motion:s.motion,herd:s.herd,light:effectiveLight(),presentation:effectivePresentation()};}
+function specimenState():CreatureLabState{const s=composer.state();return {mode:"composer",view:s.view,time,compare:s.compare,neutral:neutral.checked,skeleton:skeleton.checked,recipe:s.recipe,compareRecipe:s.compareRecipe,...(s.planetDefinition?{planetDefinition:s.planetDefinition}:{}),...(s.comparePlanetDefinition?{comparePlanetDefinition:s.comparePlanetDefinition}:{}),composerSeed:s.composerSeed,motion:s.motion,herd:s.herd,light:effectiveLight(),presentation:effectivePresentation()};}
 $("share-specimen").onclick=async()=>{if(!ready||error){$("share-status").textContent="Load a valid specimen before copying its link.";return;}composer.setPlaying(false);const url=creatureLabUrl(location.href,specimenState());history.replaceState(null,"",url);try{await navigator.clipboard.writeText(url);$("share-status").textContent="Specimen link copied.";$("share-fallback").hidden=true;}catch{$<HTMLInputElement>("share-link").value=url;$("share-fallback").hidden=false;$<HTMLInputElement>("share-link").select();$("share-status").textContent="Select and copy this specimen link.";}};
 lightSelect.onchange=()=>applyLighting();
 presentationSelect.onchange=rebuild;
 skeleton.onchange=rebuild;neutral.onchange=rebuild;$("export-json").onclick=exportJson;$('export-glb').onclick=exportGlb;
 $('export-report').onclick=()=>{if(lastExportReport)downloadBlob(new Blob([JSON.stringify(lastExportReport,null,2)],{type:'application/json'}),'animal-export-report.json');};
+$('import-json').onclick=()=>$<HTMLInputElement>('import-file').click();
+$<HTMLInputElement>('import-file').onchange=async event=>{const input=event.currentTarget as HTMLInputElement,file=input.files?.[0];if(!file)return;try{if(file.size>2*1024*1024)throw new Error('Lab JSON exceeds 2 MiB');const imported=parseCreatureLabFile(await file.text());if(imported.kind==='planet'){composer.importDefinition(imported.definition);$('import-status').textContent='Loaded the planet animal on the selected side. Its resolved dimensions, colours and identity are preserved.';}else{history.replaceState(null,'',creatureLabUrl(location.href,imported.state));location.reload();}}catch(e){$('import-status').textContent=`Import failed: ${e instanceof Error?e.message:String(e)}`;}finally{input.value='';}};
 function layout(){const vp=$("viewport"),panel=document.querySelector<HTMLElement>(".side-panel"),header=document.querySelector<HTMLElement>(".topbar"),bottom=innerWidth<=850&&panel?`${Math.ceil(panel.getBoundingClientRect().height)}px`:"32px",top=`${Math.ceil(header?.getBoundingClientRect().height||82)}px`;vp.style.top=top;vp.style.bottom=bottom;camera.aspect=Math.max(1,vp.clientWidth)/Math.max(1,vp.clientHeight);camera.updateProjectionMatrix();renderer.setSize(Math.max(1,vp.clientWidth),Math.max(1,vp.clientHeight));if(ready)fitCamera();}addEventListener("resize",layout);const layoutObserver=new ResizeObserver(()=>layout());layoutObserver.observe(document.querySelector<HTMLElement>(".side-panel")!);layoutObserver.observe(document.querySelector<HTMLElement>(".topbar")!);
 Object.defineProperty(window,"__creatureLab",{configurable:false,writable:false,value:{get ready(){return ready;},get error(){return error||null;},get mode(){return "composer";},get time(){return time;},get specimenState(){return specimenState();},get specimenUrl(){return creatureLabUrl(location.href,specimenState());},get renderer(){return {calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,memory:{...renderer.info.memory}};},get cpuMs(){return cpuMs;},get fps(){return fps;},get composer(){return composer.details();},get eyeView(){return composer.focus()==="eyes"?composer.eyeView(camera):null;},get camera(){camera.updateMatrixWorld();return {position:camera.position.toArray(),target:controls.target.toArray(),fov:camera.fov,aspect:camera.aspect,near:camera.near,projectionMatrix:camera.projectionMatrix.toArray(),matrixWorldInverse:camera.matrixWorldInverse.toArray()};},get lighting(){return lightingDetails();}}});
 function frame(now:number){const start=performance.now(),dt=Math.min(.1,(now-lastFrame)/1000);lastFrame=now;if(composer.playing){time=(time+dt)%120;composer.syncTime(time);}updateRigs();controls.update();renderer.render(scene,camera);cpuMs=performance.now()-start;if(metricsPending){metricsPending=false;updateMetrics();}frameN++;if(now-lastFps>500){fps=frameN*1000/(now-lastFps);frameN=0;lastFps=now;updateMetrics();}requestAnimationFrame(frame);}
