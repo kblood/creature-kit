@@ -61,7 +61,7 @@ export const CREATURE_EXPORT_GENERATOR_SOURCES = Object.freeze([
   'src/fauna-composer-mesh.ts', 'src/fauna-composer-recipe.ts', 'src/fauna-composer-rig.ts', 'src/fauna-composer-species.ts', 'src/fauna-composer.ts',
 ]);
 /** A v2 export also depends on the LOD reducer. */
-export const CREATURE_EXPORT_GENERATOR_SOURCES_V2 = Object.freeze([...CREATURE_EXPORT_GENERATOR_SOURCES, 'src/fauna-composer-lod.ts'].sort());
+export const CREATURE_EXPORT_GENERATOR_SOURCES_V2 = Object.freeze([...CREATURE_EXPORT_GENERATOR_SOURCES, 'src/fauna-composer-lod.ts', 'src/fauna-composer-lod-volume.ts'].sort());
 const REPO = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const hex8 = n => (n >>> 0).toString(16).padStart(8, '0');
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');

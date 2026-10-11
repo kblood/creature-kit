@@ -174,11 +174,14 @@ test('lod: skinning keeps the reduced surface on the posed source surface', () =
   }
 });
 
-test('lod: the reducer imports nothing and no composer core module imports it', () => {
+test('lod: reducer helpers remain pure and no composer core module imports them', () => {
   const lod = readFileSync(new URL('../src/fauna-composer-lod.ts', import.meta.url), 'utf8');
-  assert.doesNotMatch(lod, /^\s*import\s/m, 'fauna-composer-lod.ts is self-contained');
+  assert.deepEqual([...lod.matchAll(/^\s*import\s.*from ['"](.+)['"];?/gm)].map(m=>m[1]),['./fauna-composer-lod-volume.ts']);
+  const volume = readFileSync(new URL('../src/fauna-composer-lod-volume.ts', import.meta.url), 'utf8');
+  assert.doesNotMatch(volume, /^\s*import\s(?!type\s)/m, 'volume helper has no runtime imports');
+  assert.doesNotMatch(volume, /\b(?:THREE|window|document|process)\b|from ['"](?:node:|three)/, 'pure numeric helper');
   const core = ['fauna-coat-fields.ts', 'fauna-coat-vocab.ts', 'fauna-composer-eye-catalogue.ts', 'fauna-composer-eye.ts', 'fauna-composer-face-geometry.ts', 'fauna-composer-face.ts',
     'fauna-composer-individual.ts', 'fauna-composer-mesh.ts', 'fauna-composer-recipe.ts', 'fauna-composer-rig.ts', 'fauna-composer-species.ts', 'fauna-composer.ts'];
   for (const f of core) assert.doesNotMatch(readFileSync(new URL(`../src/${f}`, import.meta.url), 'utf8'), /fauna-composer-lod/, f);
-  assert.ok(!/Math\.random\(|Date\.now\(|performance\.now\(/.test(lod), 'no randomness or clock in the reducer');
+  assert.ok(!/Math\.random\(|Date\.now\(|performance\.now\(/.test(lod+volume), 'no randomness or clock in the reducer');
 });

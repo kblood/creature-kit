@@ -231,7 +231,8 @@ test('export: the export path imports only the composer core, the LOD reducer an
   // the core itself is closed (tests/creature-core-boundary.test.mjs); so the export path never reaches an Atlas module
   const leaks = specifiers('src/fauna-composer-export.ts', ts.ScriptKind.TS).filter(s => s !== 'three' && s !== './fauna-composer-lod.ts' && !CORE.has(/^\.\/([^/]+\.ts)$/.exec(s)?.[1]));
   assert.deepEqual(leaks, []);
-  assert.deepEqual(specifiers('src/fauna-composer-lod.ts', ts.ScriptKind.TS), [], 'the LOD reducer imports nothing');
+  assert.deepEqual(specifiers('src/fauna-composer-lod.ts', ts.ScriptKind.TS), ['./fauna-composer-lod-volume.ts'], 'LOD imports its pure numeric volume helper only');
+  assert.deepEqual(specifiers('src/fauna-composer-lod-volume.ts', ts.ScriptKind.TS), ['./fauna-composer-lod.ts'], 'volume helper imports only reducer types');
   const cli = specifiers('scripts/export-creature.mjs', ts.ScriptKind.JS).filter(s => !s.startsWith('node:') && !(s === '../src/fauna-composer-export.ts' || CORE.has(/^\.\.\/src\/([^/]+\.ts)$/.exec(s)?.[1])));
   assert.deepEqual(cli, []);
 });
@@ -758,6 +759,7 @@ test('export v2 CLI: brief options, sidecar-2 with the LOD chain, budget failure
   assert.equal(sidecar.schema, CREATURE_EXPORT_SIDECAR_SCHEMA_V3);
   assert.deepEqual(sidecar.generator.sources, CREATURE_EXPORT_GENERATOR_SOURCES_V2);
   assert.ok(sidecar.generator.sources.includes('src/fauna-composer-lod.ts'));
+  assert.ok(sidecar.generator.sources.includes('src/fauna-composer-lod-volume.ts'));
   assert.equal(sidecar.generator.sourceSha256, generatorSourceHash(undefined, CREATURE_EXPORT_GENERATOR_SOURCES_V2));
   assert.equal(sidecar.target, 'quest-3');
   assert.match(sidecar.status, /^experimental/);
