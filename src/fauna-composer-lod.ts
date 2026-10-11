@@ -28,8 +28,9 @@
 
 export const COMPOSER_LOD_VERSION = 'fauna-composer-lod-1';
 /** Additive opt-in constraints; absent options preserve the original reducer. */
-export const COMPOSER_LOD_CONSTRAINTS_VERSION='fauna-composer-lod-constraints-1';
+export const COMPOSER_LOD_CONSTRAINTS_VERSION='fauna-composer-lod-constraints-2';
 export const COMPOSER_FOOT_LOD_VERSION = 'fauna-composer-foot-lod-1';
+export const COMPOSER_ANATOMY_LOD_VERSION = 'fauna-composer-anatomy-lod-1';
 
 /** Default attribute weights (dimensionless; multiplied by the body diagonal) and the largest allowed face turn. */
 export const COMPOSER_LOD_DEFAULTS = Object.freeze({colour: 0.02, gloss: 0.05, skin: 0.08, boundary: 10, minFaceCosine: 0.3});
@@ -41,6 +42,13 @@ export interface ComposerLodSource {
   index: Uint32Array | Uint16Array;
   normals?: Float32Array; gloss?: Float32Array;
   parts?: readonly ComposerLodPart[];
+}
+/** Structural subset of ComposerGraph; keeps this reducer module independent
+ * of the rig/three module at both its runtime and declaration boundaries. */
+export interface ComposerLodAnatomyGraph {
+  bones: readonly {restPosition: readonly [number, number, number]; restQuaternion: readonly [number, number, number, number]; length: number;
+    start: {h: number; w: number}; end: {h: number; w: number}}[];
+  chains: {head: number; trunk: readonly number[]};
 }
 export interface ComposerLodOptions {
   /** Keep the z = 0 mirror symmetry (default true). */
@@ -57,13 +65,16 @@ export interface ComposerLodOptions {
  * regions, and spend more of the remaining error budget on these contours.
  * Explicit opt-in: historical skin-5 reductions remain byte-identical. */
 export function composerFootLodConstraints(source: ComposerLodSource): Pick<ComposerLodOptions, 'protectedVertices' | 'vertexImportance'> {
+  return footLodConstraints(source, /^(pad|hoof|claw) /);
+}
+function footLodConstraints(source: ComposerLodSource, footKinds: RegExp): Pick<ComposerLodOptions, 'protectedVertices' | 'vertexImportance'> {
   const count = source.positions.length / 3;
   const protectedVertices = new Uint8Array(count), vertexImportance = new Float32Array(count).fill(1);
   const legCount = source.parts?.filter(part => part.part === 'leg').length ?? 0;
   for (const part of source.parts ?? []) {
     if (part.part === 'leg') {
       const next = source.parts?.[(source.parts.indexOf(part)) + 1];
-      if (!next || !/^(pad|hoof|claw) /.test(next.label)) continue;
+      if (!next || !footKinds.test(next.label)) continue;
       // A surviving sole is insufficient if reduction removes the shank above
       // it. Keep the spatial extrema of each dominant joint region as well.
       const groups = new Map<number, number[]>();
@@ -80,7 +91,7 @@ export function composerFootLodConstraints(source: ComposerLodSource): Pick<Comp
         if (best >= 0) protectedVertices[best] = 1;
       }
     }
-    if (part.part !== 'foot' || !/^(pad|hoof|claw) /.test(part.label)) continue;
+    if (part.part !== 'foot' || !footKinds.test(part.label)) continue;
     const ids = [...new Set(source.index.slice(part.firstTriangle * 3, (part.firstTriangle + part.triangles) * 3))];
     let low = Infinity, high = -Infinity;
     for (const id of ids) { const y = source.positions[id * 3 + 1]!; low = Math.min(low, y); high = Math.max(high, y); vertexImportance[id] = 8; }
@@ -94,6 +105,111 @@ export function composerFootLodConstraints(source: ComposerLodSource): Pick<Comp
     }
   }
   return {protectedVertices, vertexImportance};
+}
+
+/** Skin-6's shared runtime/export constraints. A fixed number of original
+ * surface samples keeps a curved proboscis tubular, including its head join,
+ * rolled tip and nostrils. Facial extrema retain the head/eye/mouth silhouette.
+ * This does not retain every trunk vertex or synthesize replacement geometry:
+ * an unattainable triangle target remains explicitly unreached. Foot-1 anchors
+ * are a strict subset. Historical skin-5 callers continue to omit this option. */
+export function composerAnatomyLodConstraints(source: ComposerLodSource, graph: ComposerLodAnatomyGraph): Pick<ComposerLodOptions, 'protectedVertices' | 'vertexImportance'> {
+  // Historical foot-1 predates planet phenotypes and excludes the separate
+  // paw mesh. Those legs need the same joint/sole protection: retaining a paw
+  // alone does not stop its supporting shank from collapsing above it.
+  const result = footLodConstraints(source, /^(pad|hoof|claw|paw) /), keep = result.protectedVertices!, importance = result.vertexImportance!;
+  type V3 = readonly [number, number, number];
+  const p = source.positions;
+  const idsOf = (part: ComposerLodPart) => [...new Set(source.index.slice(part.firstTriangle * 3, (part.firstTriangle + part.triangles) * 3))];
+  const axis = (q: readonly number[], i: number): V3 => {
+    const [x, y, z, w] = q as [number, number, number, number];
+    return i === 0 ? [1 - 2 * (y * y + z * z), 2 * (x * y + z * w), 2 * (x * z - y * w)]
+      : i === 1 ? [2 * (x * y - z * w), 1 - 2 * (x * x + z * z), 2 * (y * z + x * w)]
+      : [2 * (x * z + y * w), 2 * (y * z - x * w), 1 - 2 * (x * x + y * y)];
+  };
+  const dot = (v: number, d: V3) => p[v * 3]! * d[0] + p[v * 3 + 1]! * d[1] + p[v * 3 + 2]! * d[2];
+  const extrema = (ids: number[], axes: readonly V3[]) => {
+    for (const d of axes) for (const sign of [-1, 1]) {
+      let best = -1, value = -Infinity;
+      for (const v of ids) { const next = sign * dot(v, d); if (next > value) { value = next; best = v; } }
+      if (best >= 0) keep[best] = 1;
+    }
+  };
+  const nearest = (ids: number[], point: V3) => {
+    let best = -1, distance = Infinity;
+    for (const v of ids) {
+      const d = (p[v * 3]! - point[0]) ** 2 + (p[v * 3 + 1]! - point[1]) ** 2 + (p[v * 3 + 2]! - point[2]) ** 2;
+      if (d < distance) { distance = d; best = v; }
+    }
+    if (best >= 0) keep[best] = 1;
+  };
+  const hb = graph.bones[graph.chains.head]!;
+  const axes = [axis(hb.restQuaternion, 0), axis(hb.restQuaternion, 1), axis(hb.restQuaternion, 2)];
+  for (const part of source.parts ?? []) {
+    if (part.part !== 'head' && part.part !== 'eyes' && part.part !== 'mouth' && part.part !== 'trunk') continue;
+    const ids = idsOf(part);
+    for (const v of ids) importance[v] = Math.max(importance[v]!, part.part === 'trunk' ? 12 : 6);
+    if (part.part === 'eyes') {
+      // Separate left/right eyes: global extrema alone would discard the inner
+      // rims, and one dark sample per side preserves the eye's colour centre.
+      const middle = hb.restPosition[0] * axes[2]![0] + hb.restPosition[1] * axes[2]![1] + hb.restPosition[2] * axes[2]![2];
+      for (const sign of [-1, 1]) {
+        const eye = ids.filter(v => sign * (dot(v, axes[2]!) - middle) > 0);
+        extrema(eye, axes);
+        let dark = -1, lum = Infinity;
+        for (const v of eye) { const l = source.colors[v * 3]! + source.colors[v * 3 + 1]! + source.colors[v * 3 + 2]!; if (l < lum) { lum = l; dark = v; } }
+        if (dark >= 0) keep[dark] = 1;
+      }
+    } else if (part.part !== 'trunk') {
+      extrema(ids, axes);
+    } else {
+      // Eight samples at each bone boundary/midpoint, four at quarter points
+      // to stop a low-budget diagonal spanning two rings from pinching the
+      // tube between them. At most 152 selectors for the six-bone trunk.
+      // The sample points
+      // are only selectors: positions/colour/weights remain original floats.
+      for (const [i, joint] of graph.chains.trunk.entries()) {
+        const b = graph.bones[joint]!, tx = axis(b.restQuaternion, 0), ty = axis(b.restQuaternion, 1), tz = axis(b.restQuaternion, 2);
+        for (const u of (i === graph.chains.trunk.length - 1 ? [0, .25, .5, .75, 1] : [0, .25, .5, .75])) {
+          const ry = b.start.h * (1 - u) + b.end.h * u, rz = b.start.w * (1 - u) + b.end.w * u;
+          const directions = [[1,0],[Math.SQRT1_2,Math.SQRT1_2],[0,1],[-Math.SQRT1_2,Math.SQRT1_2],[-1,0],[-Math.SQRT1_2,-Math.SQRT1_2],[0,-1],[Math.SQRT1_2,-Math.SQRT1_2]];
+          for (let k = 0; k < 8; k += u === .25 || u === .75 ? 2 : 1) {
+            const y = directions[k]![0]! * ry, z = directions[k]![1]! * rz;
+            nearest(ids, [b.restPosition[0] + tx[0] * b.length * u + ty[0] * y + tz[0] * z,
+              b.restPosition[1] + tx[1] * b.length * u + ty[1] * y + tz[1] * z,
+              b.restPosition[2] + tx[2] * b.length * u + ty[2] * y + tz[2] * z]);
+          }
+        }
+      }
+      // Preserve the exact welded head/trunk seam independently of the first
+      // bone's round section (the skin continues the muzzle's ellipse there).
+      const headPositions = new Set<string>();
+      const key = (v: number) => `${p[v * 3]},${p[v * 3 + 1]},${p[v * 3 + 2]}`;
+      for (const h of source.parts ?? []) if (h.part === 'head' && !h.label.endsWith('ears')) for (const v of idsOf(h)) headPositions.add(key(v));
+      extrema(ids.filter(v => headPositions.has(key(v))), axes);
+      // Tip features are separate closed shells. Keep their extrema after
+      // exact-position welding; the main loft is already sampled above.
+      const parent = new Map<number, number>(), byPosition = new Map<string, number>();
+      const find = (v: number): number => { let r = v; while (parent.get(r) !== r) r = parent.get(r)!; while (v !== r) { const next = parent.get(v)!; parent.set(v, r); v = next; } return r; };
+      const join = (a: number, b: number) => { a = find(a); b = find(b); if (a !== b) parent.set(b, a); };
+      for (const v of ids) { parent.set(v, v); const k = key(v), old = byPosition.get(k); if (old !== undefined) join(old, v); else byPosition.set(k, v); }
+      for (let t = part.firstTriangle * 3; t < (part.firstTriangle + part.triangles) * 3; t += 3) { join(source.index[t]!, source.index[t + 1]!); join(source.index[t]!, source.index[t + 2]!); }
+      const components = new Map<number, number[]>();
+      for (const v of ids) { const r = find(v); if (!components.has(r)) components.set(r, []); components.get(r)!.push(v); }
+      const ordered = [...components.values()].sort((a, b) => b.length - a.length);
+      // Composer emits two nostril shells and one finger, not arbitrary scene
+      // components. Bound protection even if a future mesh adds more details.
+      for (const component of ordered.slice(1, 5)) extrema(component, axes);
+      const last = graph.bones[graph.chains.trunk.at(-1)!]!;
+      if (last) {
+        const tx = axis(last.restQuaternion, 0);
+        const origin = last.restPosition[0] * tx[0] + last.restPosition[1] * tx[1] + last.restPosition[2] * tx[2];
+        const tip = ids.filter(v => dot(v, tx) >= origin + last.length);
+        extrema(tip, [tx, axis(last.restQuaternion, 1), axis(last.restQuaternion, 2)]);
+      }
+    }
+  }
+  return result;
 }
 export interface ComposerLodLevel {
   /** Requested triangle target; null for the unreduced source. */

@@ -51,7 +51,7 @@ import {COMPOSER_EYE_VERSION} from './fauna-composer-eye.ts';
 import {COMPOSER_EYE_CATALOGUE_VERSION} from './fauna-composer-eye-catalogue.ts';
 import {COMPOSER_SPECIES_GENERATOR_VERSION} from './fauna-composer-species.ts';
 import {FAUNA_COAT_FIELD_VERSION} from './fauna-coat-fields.ts';
-import {COMPOSER_LOD_VERSION, COMPOSER_FOOT_LOD_VERSION, buildComposerLodChain, composerFootLodConstraints, type ComposerLodLevel} from './fauna-composer-lod.ts';
+import {COMPOSER_LOD_VERSION, COMPOSER_FOOT_LOD_VERSION, COMPOSER_ANATOMY_LOD_VERSION, buildComposerLodChain, composerAnatomyLodConstraints, type ComposerLodLevel} from './fauna-composer-lod.ts';
 
 /** Historical: written by plain exports up to export v2 (kept exported for compatibility; no longer written). */
 export const COMPOSER_EXPORT_VERSION = 'fauna-composer-export-1';
@@ -752,7 +752,7 @@ export function exportCreatureGlb(input: ComposerRecipe | string, options: Compo
       const numeric = v2.lods.filter((l): l is number => l !== 'full');
       const chain = numeric.length ? buildComposerLodChain({positions: skin.positions, normals: normalOut, colors: skin.colors, gloss: skin.gloss,
         skinIndex: skin.skinIndex, skinWeight: skin.skinWeight, index: skin.index, parts: full.parts}, numeric,
-        skin.version === COMPOSER_REALISM_SKIN_VERSION ? composerFootLodConstraints(skin) : undefined) : null;
+        skin.version === COMPOSER_REALISM_SKIN_VERSION ? composerAnatomyLodConstraints(skin, graph) : undefined) : null;
       const reducedLevels: Level[] = (chain?.levels ?? []).map(l => ({positions: l.positions, normals: l.normals!, colors: l.colors, gloss: l.gloss!, skinIndex: l.skinIndex,
         skinWeight: l.skinWeight, index: l.index, vertexCount: l.vertices, parts: l.parts, target: l.target, reduced: l}));
       levels = v2.lods[0] === 'full' ? [levels[0]!, ...reducedLevels] : reducedLevels;
@@ -786,6 +786,7 @@ export function exportCreatureGlb(input: ComposerRecipe | string, options: Compo
     if (graph.phenotype) versions.phenotype = graph.phenotype.version;
     if (options.trunkMotion === 'wave-1' && graph.chains.trunk.length && requests.some(r => r.motion !== 'neutral')) versions.trunkMotion = COMPOSER_TRUNK_MOTION_VERSION;
     if (v2?.lods && skin.version === COMPOSER_REALISM_SKIN_VERSION) versions.lodFeet = COMPOSER_FOOT_LOD_VERSION;
+    if (v2?.lods && skin.version === COMPOSER_REALISM_SKIN_VERSION) versions.lodAnatomy = COMPOSER_ANATOMY_LOD_VERSION;
     if (reduction) versions.skeleton = COMPOSER_SKELETON_VERSION;
     const exportVersion = COMPOSER_EXPORT_V3_VERSION;
 
