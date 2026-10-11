@@ -7,12 +7,15 @@ animals belong here. Proboscis is a head/nose shape with a six-bone trunk.
 
 The library's historical presentation remains available as `skin-5`.
 `realism-1` adds joined, shaped feet and anatomy-aware foot LOD protection.
-Neither changes the encoded recipe or substitutes the planetary quadruped rig.
+Neither changes the encoded recipe. The current planetary Composer adapter uses
+the shared Composer rig with the planet caller's dated activity and terrain.
 See `composer-realism-1.md` for measured evidence and limitations.
 
 `planet-skin.html` is labelled an archived planet inspector. Its compatibility
-tools are preserved because Atlas planets still consume `./planet`. This cleanup
-does not claim that Composer recipes have replaced planetary genomes.
+tools preserve historical compatibility exports from `./planet`. Current Composer
+definitions retain the original planetary genomes and resolved phenotype rather
+than replacing them with a newly seeded recipe. The ordinary Lab edits and replays
+the complete definition; see `planet-composer-migration.md`.
 
 Preserved annotated tags in this repository:
 

@@ -1,19 +1,27 @@
 # creature-kit
 
+Since `0.8.0`, `creature-kit/planet` exposes the same Composer source used by
+**Animal Lab** for existing planetary genomes. The caller supplies the original
+individual/species IDs, resolved metre dimensions and appearance. The adapter
+does not regenerate populations or apply growth and variation a second time.
+Full definition links reproduce the selected planet animal in the visual Lab.
+The shared terrain pose keeps stance feet planted as dated activity changes.
+See [planet Composer contract](docs/planet-composer-migration.md).
+
 Since `0.7.0`, the primary **Animal Lab** opens the advanced Composer at
 `apps/creature-lab/index.html`, with visual controls for snakes, worms, insects,
 turtles, dinosaurs and proboscis faces. Its `realism-1` presentation improves
 joined feet and protects their form in LODs. Historical `skin-5` remains selectable.
-The planet inspector is labelled archived; Atlas planets still use its separate
-quadruped compatibility core. See [current Lab and archives](docs/animal-lab-current.md)
+The old quadruped inspector is labelled archived. Its compatibility exports
+remain available for historical consumers. See [current Lab and archives](docs/animal-lab-current.md)
 and [measured realism changes](docs/composer-realism-1.md).
 
 Since `0.2.0`, `creature-kit/planet` also owns Atlas's canonical planetary
 genome/phenotype, connected quadruped body and terrain-aware pose core. These
 are the original algorithms and data versions, not a composer-preset adapter.
 World population/date/habitat controllers stay in Atlas. The experimental
-composer remains a distinct authoring format while the single-definition
-convergence contract is developed; extraction is not full consolidation.
+composer has its own recipe authoring format; the shared planetary definition
+adds resolved phenotype and provenance to this recipe for source construction.
 
 Since `0.3.0`, `creature-kit/planet` exports `planetAnimalDefinition` and
 `createPlanetAnimalInspector`. The standalone Lab's `planet-skin.html` accepts
@@ -162,8 +170,8 @@ node C:/LLM/IWSDK/universe-atlas/tests/helpers/test-slot.mjs --shared 4 -- npm r
 `universe-atlas` consumes `creature-kit/planet` as a self-contained built package
 with exact commit/version/file hashes. `npm run update:creature-kit -- --kit <checkout>`
 preflights and builds the committed kit before updating Atlas. Composer source
-consumption remains the earlier SHA-pinned sync while definition convergence
-continues. See Atlas's `docs/creature-kit-planet-package-2026-10-10.md`.
+consumption uses the same SHA-pinned sync for renderer types and shaders.
+See Atlas's `docs/creature-kit-planet-package-2026-10-10.md`.
 
 
 ## Planet appearance API 0.4
