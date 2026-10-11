@@ -25,6 +25,13 @@ text at admission; they are not cryptographic proofs. Worker transport and runti
 storage are consumer responsibilities. Atlas verifies complete source receipts and
 packs only runtime arenas; original float source and GLB data remain available.
 
+Anatomy LOD revision 1 protects paw/hoof sole joins, trunk sections and selected
+facial extrema with bounded shared constraints. Both runtime and realism-1 GLB
+export use `composerAnatomyLodConstraints(skin, graph)`. Reduction can stop above
+the requested triangle count when protected anatomy prevents further collapse;
+the reported actual count is authoritative. A distant tier remains visibly
+simplified in enlarged close-up review and is not a substitute for the near mesh.
+
 Historical quadruped geometry/pose and the old inspector remain compatibility
 exports and preserved archives. They do not participate in the Composer builder.
 Historical recipe links and skin-5 fixtures remain pinned.

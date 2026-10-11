@@ -1,13 +1,13 @@
 import {PLANET_COMPOSER_SOURCE_VERSION,serializePlanetComposerDefinition,type PlanetComposerDefinition} from './planet-composer.ts';
 import {COMPOSER_GRAPH_VERSION} from './fauna-composer-rig.ts';
 import {COMPOSER_SKIN_VERSION,COMPOSER_REALISM_SKIN_VERSION,type ComposerSkinPresentation} from './fauna-composer-mesh.ts';
-import {COMPOSER_LOD_VERSION,COMPOSER_LOD_CONSTRAINTS_VERSION,COMPOSER_FOOT_LOD_VERSION} from './fauna-composer-lod.ts';
+import {COMPOSER_LOD_VERSION,COMPOSER_LOD_CONSTRAINTS_VERSION,COMPOSER_FOOT_LOD_VERSION,COMPOSER_ANATOMY_LOD_VERSION} from './fauna-composer-lod.ts';
 
 export const PLANET_COMPOSER_IDENTITY_VERSION='planet-composer-identity-1';
 export interface PlanetComposerSourceIdentityOptions {presentation?:ComposerSkinPresentation;/** Caller release commit/build pin; defaults to the explicit source contract revision. */codePin?:string}
 export interface PlanetComposerSourceIdentity {
   readonly key:string;readonly digest:string;readonly canonical:string;
-  readonly versions:Readonly<{source:string;graph:string;skin:string;lod:string;constraints:string;footLod:string;presentation:ComposerSkinPresentation;codePin:string}>;
+  readonly versions:Readonly<{source:string;graph:string;skin:string;lod:string;constraints:string;footLod:string;anatomyLod:string;presentation:ComposerSkinPresentation;codePin:string}>;
 }
 /** Compact deterministic, non-cryptographic identifier. Equality is always
  * collision-validated with canonical text at cache/worker admission. */
@@ -26,7 +26,7 @@ export function planetComposerSourceIdentity(definition:PlanetComposerDefinition
  if(presentation!=='realism-1'&&presentation!=='skin-5')throw new Error('Unknown planet Composer presentation');
  if(typeof codePin!=='string'||!codePin.trim()||codePin.length>256)throw new Error('Invalid planet Composer code pin');
  const variant=presentation+'/'+codePin,previous=cache.get(definition)?.get(variant);if(previous)return previous;
- const canonical=serializePlanetComposerDefinition(definition),hash=digest(canonical),versions=Object.freeze({source:PLANET_COMPOSER_SOURCE_VERSION,graph:COMPOSER_GRAPH_VERSION,skin:presentation==='realism-1'?COMPOSER_REALISM_SKIN_VERSION:COMPOSER_SKIN_VERSION,lod:COMPOSER_LOD_VERSION,constraints:COMPOSER_LOD_CONSTRAINTS_VERSION,footLod:COMPOSER_FOOT_LOD_VERSION,presentation,codePin});
+ const canonical=serializePlanetComposerDefinition(definition),hash=digest(canonical),versions=Object.freeze({source:PLANET_COMPOSER_SOURCE_VERSION,graph:COMPOSER_GRAPH_VERSION,skin:presentation==='realism-1'?COMPOSER_REALISM_SKIN_VERSION:COMPOSER_SKIN_VERSION,lod:COMPOSER_LOD_VERSION,constraints:COMPOSER_LOD_CONSTRAINTS_VERSION,footLod:COMPOSER_FOOT_LOD_VERSION,anatomyLod:COMPOSER_ANATOMY_LOD_VERSION,presentation,codePin});
  const key=[PLANET_COMPOSER_IDENTITY_VERSION,...Object.values(versions).map(encodeURIComponent),hash].join('/'),token=Object.freeze({key,digest:hash,canonical,versions});
  if(deepFrozen(definition)){let variants=cache.get(definition);if(!variants){variants=new Map();cache.set(definition,variants);}variants.set(variant,token);}return token;
 }
