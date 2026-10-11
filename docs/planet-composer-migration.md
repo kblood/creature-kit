@@ -13,9 +13,17 @@ The old pivot could leave a planted hoof 13.755 mm above even a shallow plane.
 The captured regression retains the original genome, graph, source arrays and
 world footholds. Default poses without terrain environment remain unchanged.
 
+Patch 0.8.2 adds pose revision 4's explicit `supportHeight: 'reachable-1'` terrain
+mode. It intersects the actual two-bone reach intervals for every leg, including
+swing targets, and chooses the nearest feasible support height before refitting
+FK. World footholds, canonical X/Z and source geometry remain unchanged. The
+diagnostic reports the interval, height correction and feasibility; unreachable
+requests remain explicit. This corrects the captured padded-foot walk failures
+without introducing a family-specific offset or changing default Lab poses.
+
 `buildPlanetComposerSource` and `createPlanetComposerAnimal` use the same source
 builder as ordinary Composer authoring. Source revision 2 includes the corrected
-gait units and juvenile coat layers. `posePlanetComposer` revision 3 uses the
+gait units and juvenile coat layers. `posePlanetComposer` revision 4 uses the
 caller's canonical dated orbit/activity and ground samples, with fixed stance
 footholds and heading, smooth swing, and continuous stop/resume transitions.
 The caller retains world generation, populations, navigation and time controls.
