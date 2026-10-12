@@ -56,6 +56,29 @@ try{
   const s=await page.evaluate(()=>window.__creatureLab.composer);assert.equal(s.error,null);assert(s.actors[0].bounds.min[1]<.1);
   assert.match(await page.locator('#composer-constraints').innerText(),/no wings.*remains standing/s);report.checks.push('wingless flight remains grounded with visible explanation');
  });
+ await browserPhase('gallop',async page=>{
+  const recipe=composerPreset('giraffe'),g=buildComposerGraph(recipe),u=new URL(editor);
+  u.searchParams.set('recipe',encodeComposerRecipe(recipe));u.searchParams.set('motion','run');
+  await page.goto(u.href);
+  const settle=async()=>{await page.waitForFunction(()=>window.__creatureLab?.ready&&!window.__creatureLab.composer.building);return page.evaluate(()=>window.__creatureLab.composer);};
+  await settle();
+  for(const lod of ['source','4500','1000']){
+   await page.selectOption('#composer-lod-first',lod);await settle();
+   for(const [name,phase] of [['hind-support',.12],['suspension',.37]]){
+    const time=((phase-g.traits.motion.phase+1)%1)*composerMotionPeriod(g,'run');
+    await page.locator('#composer-time').fill(String(time));await page.locator('#composer-time').dispatchEvent('input');
+    const state=await settle(),actor=state.actors[0];
+    assert.equal(state.motion,'run');assert(actor.pose.positions.every(Number.isFinite));
+    if(name==='suspension'){
+     assert(actor.pose.contacts.every(c=>!c.stance));
+     assert(actor.pose.contacts.every(c=>c.contact[1]>.01));
+     assert(actor.bounds.min[1]>.01,'actual rendered skin leaves the ground');
+    }else assert(actor.pose.contacts.some(c=>c.stance));
+    await page.locator('#viewport').screenshot({path:join(output,`giraffe-run-${lod}-${name}.png`)});
+    report.checks.push({motion:'run',lod,phase,suspension:name==='suspension',bounds:actor.bounds});
+   }
+  }
+ });
  await browserPhase('benchmark',async page=>{
   const settle=()=>page.waitForFunction(()=>window.__animalBenchmark?.ready&&!window.__animalBenchmark.state.building);
   await page.goto(benchmarkUrl);await settle();await page.selectOption('#count','16');await settle();await page.selectOption('#lod','1000');await settle();

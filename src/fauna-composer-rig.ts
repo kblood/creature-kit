@@ -878,14 +878,32 @@ export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time:
   const airborne = (motion === 'fly' || motion === 'glide') && wingLimbs.length > 0;
   const flightFallback = (motion === 'fly' || motion === 'glide') && !airborne;
   const running = motion === 'run', eating = motion === 'eat';
-  const period = composerMotionPeriod(graph, motion), duty = running ? Math.min(loco.duty, recipe.layout === 'biped' ? 0.46 : 0.5) : loco.duty;
+  const springRun = running && (recipe.layout === 'biped' || recipe.layout === 'quadruped');
+  const period = composerMotionPeriod(graph, motion), duty = running ? Math.min(loco.duty, recipe.layout === 'biped' ? 0.38 : recipe.layout === 'quadruped' ? 0.32 : 0.5) : loco.duty;
   const positions = new Float64Array(n * 3), quaternions = new Float64Array(n * 4), radialScale = new Float64Array(n).fill(1), chordScale = new Float64Array(n).fill(1);
   const world: {p: THREE.Vector3; q: THREE.Quaternion}[] = new Array(n);
   const offsets: (THREE.Quaternion | undefined)[] = new Array(n);
   // individual desync: a herd started together does not step, breathe or look around in lockstep
   const desync = graph.traits.motion;
   const cycle = environment?.cycle ?? t / period + desync.phase;
-  const stride = environment?.stride ?? (running ? loco.stride * 0.85 : loco.stride), speed = environment?.speed ?? (running ? stride / (duty * period) : loco.speed);
+  // Gallop: hind pair pushes off first, then the front pair receives the
+  // landing. A small left/right lag makes this distinct from a diagonal trot.
+  const runPhase = (limb: ComposerLimb) => recipe.layout === 'quadruped'
+    ? (limb.front ? 0.5 : 0) + (limb.side < 0 ? 0 : 0.08) : limb.phase;
+  let suspensionLift = 0, supportCompression = 0;
+  if (springRun) {
+    const c = ((cycle % 0.5) + 0.5) % 0.5;
+    const liftOff = duty, touchdown = recipe.layout === 'quadruped' ? 0.42 : 0.5;
+    if (c > liftOff && c < touchdown) {
+      const u = (c-liftOff)/(touchdown-liftOff);
+      suspensionLift = graph.dims.legReach * 0.09 * Math.sin(Math.PI*u) ** 2;
+    }
+    for (const limb of graph.limbs) if (limb.kind === 'leg') {
+      const phase = ((cycle+runPhase(limb)) % 1 + 1) % 1;
+      if (phase < duty) supportCompression = Math.max(supportCompression, Math.sin(Math.PI*phase/duty) ** 2);
+    }
+  }
+  const stride = environment?.stride ?? (running ? loco.stride * (springRun ? 0.7 : 0.85) : loco.stride), speed = environment?.speed ?? (running ? stride / (duty * period) : loco.speed);
   const walkWeight = airborne ? 0 : environment?.walkWeight ?? (motion === 'walk' || running ? 1 : 0), idleWeight = airborne ? 0 : environment?.idleWeight ?? (motion === 'idle' || flightFallback ? 1 : 0);
   const moving = !airborne && (motion === 'walk' || running || walkWeight > 0), idle = motion === 'idle' || flightFallback || idleWeight > 0, display = motion === 'display';
   const add = (i: number, q: THREE.Quaternion) => { offsets[i] = offsets[i] ? offsets[i]!.multiply(q) : q; };
@@ -907,6 +925,17 @@ export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time:
     neck.forEach((bi, i) => add(bi, pitchQ((i % 2 ? -1 : 1) * bob * Math.sin(TAU * cycle * 2) / Math.max(1, neck.length * 0.6) * walkWeight)));
     add(head, pitchQ(-0.5 * bob * Math.sin(TAU * cycle * 2) * walkWeight));
     tail.forEach((bi, i) => add(bi, yawQ(0.07 * Math.sin(TAU * cycle - 0.7 * (i + 1)) * walkWeight)));
+  }
+  if (springRun) {
+    // Load the supporting legs, extend through push-off, then lift the whole
+    // body and the unplanted feet together during the suspension interval.
+    rootP.y += suspensionLift - graph.dims.legReach * (0.04 + 0.045 * supportCompression);
+    const gallop = recipe.layout === 'quadruped';
+    const pitch = gallop ? 0.045 * Math.sin(TAU*cycle) : -0.055 + 0.018 * Math.sin(TAU*cycle*2);
+    rootQ.multiply(pitchQ(pitch));
+    if (gallop) torso.forEach((bi,i) => {if(i) add(bi,pitchQ(0.035*Math.sin(TAU*cycle-i*.45)/Math.max(1,torso.length-1)));});
+    neck.forEach(bi=>add(bi,pitchQ(-pitch*.65/Math.max(1,neck.length))));
+    tail.forEach((bi,i)=>add(bi,pitchQ(0.055*Math.sin(TAU*cycle-i*.45))));
   }
   if (idle || display) {
     // Breathing slows with size (about L^0.25: 2.3 s for a 0.2 m bird, 4 s for a 2 m rhino).
@@ -1038,7 +1067,7 @@ export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time:
     if (limb.kind !== 'leg' || airborne) continue;
     const rest = v3(limb.rest);
     let stance = true, footPitch = 0;
-    const limbPhase = running && recipe.layout === 'quadruped' ? (limb.side < 0 ? 0 : 0.5) + (limb.front ? 0.5 : 0) : limb.phase;
+    const limbPhase = running ? runPhase(limb) : limb.phase;
     const phase = ((cycle + limbPhase) % 1 + 1) % 1;
     const contact = rest.clone();
     if (moving) {
@@ -1054,7 +1083,7 @@ export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time:
         const u = (phase - duty) / (1 - duty), u3 = u * u * u;
         const carried = environment?.cycleLength !== undefined ? (1-duty)*environment.cycleLength : speed * (1 - duty) * period, s = u3 * (10 + u * (6 * u - 15));
         contact.x = rest.x - stride * 0.5 + (stride + carried) * s - carried * u;
-        contact.y = loco.lift * (running ? 1.3 : 1) * 16 * u * u * (1 - u) * (1 - u); stance = false;
+        contact.y = loco.lift * (springRun ? 2.4 : running ? 1.3 : 1) * 16 * u * u * (1 - u) * (1 - u) + suspensionLift; stance = false;
         footPitch = recipe.feet === 'spike' ? 0 : -0.35 * Math.sin(TAU * u) * Math.sin(Math.PI * u) * (u < 0.5 ? 1 : 0.4);
         // Toe-down pitch rotates the front of the sole down by front*sin(pitch); never more than the current lift.
         const reach = footPitch < 0 ? limb.footExtent[1] : limb.footExtent[0];
@@ -1150,7 +1179,8 @@ export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time:
       // Arms swing against the same-side leg: the left hand is furthest back as the left foot touches down. Small
       // (theropod) arms and forward-pitched bodies hold their arms still; upright grasping arms swing fully.
       const swing = recipe.arms === 'small' ? 0 : clamp((recipe.posture - 0.4) / 0.2, 0, 1);
-      if (swing > 0) target.x += swing * 0.22 * reach * Math.cos(TAU * (cycle + limb.phase));
+      if (swing > 0) target.x += swing * (running ? 0.36 : 0.22) * reach * Math.cos(TAU * (cycle + limb.phase));
+      if (running) {target.y += .12*reach; curl = .85 + .2*Math.sin(TAU*(cycle+limb.phase)); wrist = -.1;}
     }
     if (idle) { curl = 0.35 + 0.25 * Math.sin(TAU * t / 2.8 + limb.side); }
     if (eating) { target.add(V(0.05 * reach, 0.22 * reach, 0)); curl = 0.8 + 0.15 * Math.sin(TAU * t / period * 4); wrist = 0.35; }

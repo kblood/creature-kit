@@ -1,5 +1,10 @@
 # creature-kit
 
+Since `0.11.1`, biped running includes loading, push-off and two suspension
+intervals per cycle, with raised knees and bent-arm pumping. Quadrupeds use a
+hind/front gallop sequence with a short left/right lag, spinal flexion and
+whole-body suspension. Planted feet retain their stationary world contacts.
+
 Since `0.11.0`, the shared rig adds `run`, `eat`, `fly` and `glide`.
 Animal Lab exposes all eight motions, including source/middle/far LOD previews,
 and the benchmark can measure the selected motion. Flight articulates the

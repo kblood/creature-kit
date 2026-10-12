@@ -109,6 +109,34 @@ test('run increases travel with planted stance and eat lowers the head without f
   }
 });
 
+test('running has whole-body suspension and a hind/front gallop instead of sped-up walking', () => {
+  for(const recipe of [COMPOSER_PRESETS.giraffe,COMPOSER_PRESETS.rhinoceros,COMPOSER_PRESETS.bird,COMPOSER_PRESETS.ape]){
+    const g=buildComposerGraph(recipe),period=composerMotionPeriod(g,'run');
+    let suspension=0,planted=0,maxSoleClearance=0;
+    for(let k=0;k<200;k++){
+      const p=poseComposer(g,'run',phaseTime(g,'run',k/200));
+      if(p.contacts.every(c=>!c.stance)){
+        suspension++;
+        assert.ok(p.contacts.every(c=>c.contact[1]>=-1e-8),'suspension soles do not penetrate the ground');
+        maxSoleClearance=Math.max(maxSoleClearance,Math.min(...p.contacts.map(c=>c.contact[1])));
+      }else planted++;
+      assert.ok(p.diagnostics.maxReachError<1e-8,'run remains within leg reach');
+    }
+    assert.ok(suspension>=30&&planted>0,'distinct support and suspension intervals');
+    assert.ok(maxSoleClearance>.04*g.dims.legReach,'all soles visibly leave the ground together');
+    if(g.recipe.layout==='quadruped'){
+      const hind=poseComposer(g,'run',phaseTime(g,'run',.12));
+      const front=poseComposer(g,'run',phaseTime(g,'run',.62));
+      assert.ok(hind.contacts.filter(c=>c.stance).every(c=>!g.limbs[c.limb].front));
+      assert.ok(front.contacts.filter(c=>c.stance).every(c=>g.limbs[c.limb].front));
+      const flight=poseComposer(g,'run',phaseTime(g,'run',.37));
+      assert.ok(position(flight,g.chains.torso[0]).y>position(hind,g.chains.torso[0]).y+.04*g.dims.legReach);
+    }
+    const a=poseComposer(g,'run',.21),b=poseComposer(g,'run',.21+period);
+    for(let i=0;i<g.bones.length;i++)assert.ok(position(a,i).distanceTo(position(b,i))<1e-8,'run cycle closes');
+  }
+});
+
 test('new motion poses are deterministic, finite, and keep every limb attached at its original length', () => {
   const recipes = [...Object.values(COMPOSER_PRESETS), ...Array.from({length: 8}, (_, i) => randomComposerRecipe(`new-motion-${i}`))];
   for (const recipe of recipes) {
