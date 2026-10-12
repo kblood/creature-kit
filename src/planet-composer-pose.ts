@@ -20,7 +20,7 @@ const lerpAngle = (a:number,b:number,t:number)=>a+Math.atan2(Math.sin(b-a),Math.
  * No previous frame is read and no quadruped body/pose factory is called. */
 export function posePlanetComposer(
   graph: ComposerGraph, member: PlanetFaunaPathMember, activity: PlanetFaunaActivity,
-  ground: PlanetComposerGround, rigSeconds: number, options: Pick<ComposerPoseOptions, 'trunkMotion'> = {},
+  ground: PlanetComposerGround, rigSeconds: number, options: Pick<ComposerPoseOptions, 'trunkMotion'|'reuseWorkingBuffers'> = {},
 ): PlanetComposerPose {
   const source = [member.anchorOffsetX, member.anchorOffsetZ, member.orbitRadiusM, member.orbitAngularSpeed, member.orbitPhase,
     activity.pose.x, activity.pose.z, activity.pose.yaw, activity.travel, activity.stateS, rigSeconds];

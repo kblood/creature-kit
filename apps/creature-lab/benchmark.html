@@ -12,6 +12,10 @@
 <label class="check"><input id="atlas-renderer" type="checkbox"> Atlas renderer · packed middle / far arenas</label>
 <label class="check"><input id="instancing" type="checkbox" checked> Animated instancing</label>
 <label class="check"><input id="partial-uploads" type="checkbox" checked> Upload changed skeleton rows only</label>
+<label class="check"><input id="adaptive-animation" type="checkbox" checked> Distance animation · interpolate 20 / 10 Hz samples</label>
+<label class="check"><input id="fast-far-matrices" type="checkbox" checked> Faster far-LOD bone matrices</label>
+<label class="check"><input id="reuse-working" type="checkbox" checked> Reuse renderer working buffers</label>
+<label class="check"><input id="distance-shadows" type="checkbox" checked> Fade distant animal shadows</label>
 <label class="check"><input id="share-geometry" type="checkbox" checked> Share geometry between separate meshes</label>
 <label class="check"><input id="share-pose" type="checkbox"> Share pose calculation per species</label>
 <label class="check"><input id="culling" type="checkbox" checked> Camera frustum culling</label>
@@ -21,7 +25,7 @@
 <p id="optimization-note"></p>
 <h2>Measure</h2>
 <label>Sample duration <select id="duration"><option value="5">5 seconds</option><option value="10" selected>10 seconds</option><option value="30">30 seconds</option></select></label>
-<div class="buttons"><button id="measure">Run benchmark</button><button id="compare">Compare instancing on / off</button><button id="compare-uploads">Compare partial / full uploads</button><button id="cancel" disabled>Cancel</button><button id="export" disabled>Export results JSON</button></div>
+<div class="buttons"><button id="measure">Run benchmark</button><button id="compare">Compare instancing on / off</button><button id="compare-uploads">Compare partial / full uploads</button><button id="compare-all">Compare five optimizations</button><button id="cancel" disabled>Cancel</button><button id="export" disabled>Export results JSON</button></div>
 <p id="bench-status" role="status">Ready. Runs warm up for two seconds before recording.</p>
 <div id="live-metrics"></div><div id="results"></div>
 <p class="note">Frame time includes display pacing. CPU time measures update and render submission. GPU time is optional. Memory figures cover declared buffers, not the entire browser or driver. The Atlas option uses the actual controller and packed middle/far arenas. Terrain, clouds and planet navigation are outside this scene. Results apply to this browser and device.</p>

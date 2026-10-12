@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import {COMPOSER_BUDGET, type ComposerGraph, type ComposerPose} from './fauna-composer-rig.ts';
 import {FaunaComposerPaletteWriter} from './fauna-composer-palette.ts';
 import {ComposerPaletteUploads} from './fauna-composer-palette-uploads.ts';
+import {ComposerTemporalPose,composerActiveBones} from './fauna-composer-animation.ts';
+import {composerShadowStrength} from './fauna-composer-shadows.ts';
 import {FaunaComposerInstanceBatch, FAUNA_COMPOSER_REQUIRED_ATTRIBUTES} from './fauna-composer-instance-batch.ts';
 import {FaunaComposerMergedBatch} from './fauna-composer-merged-batch.ts';
 import {isPackedComposerSkin, isGpuComposerSkin, type FaunaComposerStoredSkin, type FaunaComposerArenaStorage} from './fauna-composer-storage.ts';
@@ -19,11 +21,15 @@ export interface FaunaComposerCandidate<D> {
   rigSeconds: number;
   /** Include date, ground revision, activity and every pose option, or omit to evaluate each frame. */
   poseKey?: string;
+  /** Stable across continuous clock advancement; changes on terrain/activity/date discontinuities. */
+  animationContext?:string;
+  /** Real camera distance when a benchmark forces a different geometric tier. */
+  presentationDistanceM?:number;
 }
 export interface FaunaComposerRendererOptions<D, C extends FaunaComposerCandidate<D>> {
   provider: FaunaComposerSourceProvider<D>;
   /** Shared Kit Composer solver, including its terrain/flight options. Never a quadruped retarget. */
-  pose: (graph: ComposerGraph, candidate: C) => ComposerPose;
+  pose: (graph: ComposerGraph, candidate: C,reuseWorkingBuffers?:boolean) => ComposerPose;
   /** Attach the planet's lighting/aerial/shadow hooks to this owned mesh once. */
   onMeshAdopted?: (mesh: THREE.Mesh) => void;
   /** Optional WebGL2-owned packed arenas. Full CPU attribute mirrors are absent;
@@ -43,17 +49,23 @@ export interface FaunaComposerRendererOptions<D, C extends FaunaComposerCandidat
   coldJobsBeforeNearUpgrade?: number;
   /** Dirty RGBA row uploads; false retains the full-upload reference path. */
   partialPaletteUploads?: boolean;
+  adaptiveAnimation?:boolean;
+  reuseWorkingBuffers?:boolean;
+  fastFarMatrices?:boolean;
+  distanceShadows?:boolean;
+  shadowNearM?:number;shadowFarM?:number;
 }
 type Entry = {source: FaunaComposerSource | null; graph: ComposerGraph; levels: Partial<Record<FaunaComposerTier, FaunaComposerStoredSkin>>;
   batches: Partial<Record<FaunaComposerTier, FaunaComposerInstanceBatch>>; writer: FaunaComposerPaletteWriter;
+  activeBones:Partial<Record<FaunaComposerTier,Uint16Array>>;
   definition: string; graphIdentity: string; skinIdentity: string; graphBytes: number; used: number; cpuBytes: number;
   /** Retain measured size after discarding an unused tier, preventing budget retry loops. */
   middleFootprint?: {vertices: number; indices: number}};
-type Actor = {key: string; row: number; poseKey?: string; tier?: FaunaComposerTier; pose: ComposerPose | null; poseBytes: number};
+type Actor = {key: string; row: number; poseKey?: string; tier?: FaunaComposerTier; pose: ComposerPose | null; poseBytes: number; temporal?:ComposerTemporalPose;lastClock?:number};
 type MergedTier = 'middle'|'far';
 type Running = {key: string; definition: string; definitionRef: unknown; tiers: readonly FaunaComposerTier[]; epoch: number; abort: AbortController};
 type Prepared = {run: Running; source: FaunaComposerSource | null; graph: ComposerGraph; graphIdentity: string; skinIdentity: string; graphBytes: number;
-  levels: Partial<Record<FaunaComposerTier, FaunaComposerRenderSkin>>; writer: FaunaComposerPaletteWriter; bytes: number; buildMs: number; attempt: number};
+  levels: Partial<Record<FaunaComposerTier, FaunaComposerRenderSkin>>; activeBones:Partial<Record<FaunaComposerTier,Uint16Array>>;writer: FaunaComposerPaletteWriter; bytes: number; buildMs: number; attempt: number};
 const positive = (n: number) => Number.isSafeInteger(n) && n > 0;
 function sourceRoughness(graph: ComposerGraph): number {return (graph as ComposerGraph & {phenotype?: {roughness: number}}).phenotype?.roughness ?? .82;}
 
@@ -104,7 +116,7 @@ export class FaunaComposerRenderer<D, C extends FaunaComposerCandidate<D> = Faun
   private readonly now: () => number;
   private stats = {builds: 0, failures: 0, evictions: 0, stale: 0, budgetDrops: 0, pending: 0, poseFailures: 0,
     buildMs: 0, adoptionMs: 0, adoptionOverruns: 0, preparationMs: 0, geometryCopyMs: 0, copySliceMaxMs: 0, verificationOnMain: 0, completedOutOfView: 0,
-    stagedEvictions: 0, blockedAdmissions: 0, upgradesPending: 0, active: 0, draws: 0, triangles: 0, poseBuilds: 0, uploadBytes: 0};
+    stagedEvictions: 0, blockedAdmissions: 0, upgradesPending: 0, active: 0, draws: 0, triangles: 0, poseBuilds: 0,temporalSamples:0,temporalFrames:0,temporalBudgetFallbacks:0,boneMatricesWritten:0,boneMatricesAvailable:0,fastBoneMatrices:0,uploadBytes: 0};
   private lastError: string | null = null;
   private contextLost=false;
   private readonly onContextLost=(event:Event)=>{event.preventDefault();this.contextLost=true;this.group.visible=false;this.setContext(this.context,true);for(const batch of this.merged.values())batch.loseContext();};
@@ -174,14 +186,20 @@ export class FaunaComposerRenderer<D, C extends FaunaComposerCandidate<D> = Faun
     this.stats.active=0;this.stats.draws=0;this.stats.triangles=0;
     this.resizePalette(Math.min(16, this.maxBones));
   }
+  private shadowStrength(c:C,graph?:ComposerGraph){
+    if(!this.options.distanceShadows||!graph)return 1;
+    const scale=Math.max(1,Math.max(graph.dims.bodyLength,graph.dims.legReach*2)/4);
+    return composerShadowStrength(c.presentationDistanceM??c.distanceM,(this.options.shadowNearM??35)*scale,(this.options.shadowFarM??140)*scale);
+  }
   update(candidates: readonly C[], origin?: THREE.Vector3): ReadonlySet<string> {
     this.drawn.clear(); if (this.disposed||this.contextLost) return this.drawn;
     if (origin) this.group.position.copy(origin);
-    this.frame++;const priorKeys=this.priorSourceKeys;priorKeys.clear();for(const key of this.members.keys())priorKeys.add(key);
-    this.desired.clear();for(const group of this.members.values())group.length=0;this.stats.budgetDrops=0;this.stats.pending=0;
-    const keys=this.frameSourceKeys;keys.clear();
+    this.frame++;const priorKeys=this.options.reuseWorkingBuffers===false?new Set(this.members.keys()):this.priorSourceKeys;if(this.options.reuseWorkingBuffers!==false){priorKeys.clear();for(const key of this.members.keys())priorKeys.add(key);}
+    this.desired.clear();if(this.options.reuseWorkingBuffers===false)this.members.clear();else for(const group of this.members.values())group.length=0;this.stats.budgetDrops=0;this.stats.pending=0;
+    const keys=this.options.reuseWorkingBuffers===false?new Set<string>():this.frameSourceKeys;keys.clear();
     for (const c of candidates) {
       if ((!c.cameraVisible && !c.shadowVisible) || !c.id || !c.sourceKey || !Number.isFinite(c.distanceM) || c.distanceM < 0 || c.distanceM > (this.options.maxDistanceM ?? 600) || this.desired.has(c.id)) continue;
+      if(!c.cameraVisible&&this.shadowStrength(c,this.entries.get(c.sourceKey)?.graph)===0)continue;
       if (this.desired.size >= this.capacity) {this.stats.budgetDrops++; continue;}
       this.desired.set(c.id, c); keys.add(c.sourceKey);
       let members = this.members.get(c.sourceKey); if (!members) {members = []; this.members.set(c.sourceKey, members);} members.push(c);
@@ -216,7 +234,7 @@ export class FaunaComposerRenderer<D, C extends FaunaComposerCandidate<D> = Faun
     for (const entry of this.entries.values()) for (const batch of Object.values(entry.batches)) batch.beginFrame();
     for (const batch of this.merged.values()) batch.beginFrame();
     for (const [id, actor] of this.actors) if (this.desired.has(id) && this.desired.get(id)!.sourceKey !== actor.key) {this.releaseMerged(id); this.actors.delete(id);}
-    const rows=this.actorRows;rows.fill(0);for(const actor of this.actors.values())rows[actor.row]=1;
+    const rows=this.options.reuseWorkingBuffers===false?new Uint8Array(this.capacity):this.actorRows;rows.fill(0);for(const actor of this.actors.values())rows[actor.row]=1;
     this.stats.geometryCopyMs = 0;
     const copy = (pool: FaunaComposerMergedBatch, id: string, skin: FaunaComposerStoredSkin, row: number, roughness: number) => {
       const start = this.now(), deadline = start + Math.max(0, (this.options.adoptionBudgetMs ?? 3) - this.stats.adoptionMs - this.stats.geometryCopyMs);
@@ -225,7 +243,7 @@ export class FaunaComposerRenderer<D, C extends FaunaComposerCandidate<D> = Faun
       catch(error) {pool.release(id);this.lastError=String(error);this.stats.failures++;status='full';}
       const elapsed = this.now() - start; this.stats.geometryCopyMs += elapsed; this.stats.copySliceMaxMs = Math.max(this.stats.copySliceMaxMs, elapsed); return status;
     };
-    this.stats.active = 0; this.stats.draws = 0; this.stats.triangles = 0; this.stats.uploadBytes = 0;
+    this.stats.active = 0; this.stats.draws = 0; this.stats.triangles = 0; this.stats.uploadBytes = 0;this.stats.boneMatricesWritten=0;this.stats.boneMatricesAvailable=0;this.stats.fastBoneMatrices=0;
     for (const c of this.desired.values()) {
       const entry = this.entries.get(c.sourceKey);
       if (!entry) {this.stats.pending++; continue;}
@@ -268,19 +286,42 @@ export class FaunaComposerRenderer<D, C extends FaunaComposerCandidate<D> = Faun
       if (!available) {this.stats.budgetDrops++; continue;}
       if(available!=='middle')this.releaseMerged(c.id,'middle');
       try {
-        if (!actor.pose || c.poseKey === undefined || actor.poseKey !== c.poseKey) {
-          const pose = this.options.pose(entry.graph, c); entry.writer.write(pose, this.scratch);
-          // Typed transforms plus a conservative fixed allowance per plain contact record.
-          const poseBytes = composerTypedBytes(pose) + pose.contacts.length * 256;
-          if (!this.room(poseBytes - actor.poseBytes, keys, false)) throw new Error('Composer pose exceeds resident budget');
-          const count = entry.graph.bones.length * 16, offset = actor.row * this.paletteBones * 16;
-          let first=count,last=-1;
-          for (let i = 0; i < count; i++) if (!Object.is(this.paletteData[offset + i], this.scratch[i])) {this.paletteData[offset + i] = this.scratch[i]!;first=Math.min(first,i);last=i;}
+        const mask=this.options.fastFarMatrices&&available==='far'?entry.activeBones.far:undefined;
+        const presentationDistance=c.presentationDistanceM??c.distanceM;
+        const angular=Math.max(entry.graph.dims.bodyLength,entry.graph.dims.legReach*2,entry.graph.dims.wingSemiSpan*2)/Math.max(1,presentationDistance);
+        const temporal=!!this.options.adaptiveAnimation&&available!=='near'&&presentationDistance>=(this.options.nearM??35)&&angular<.1&&c.animationContext!==undefined;
+        let pose:ComposerPose|null=null;
+        if(temporal){
+          if(actor.temporal&&actor.lastClock===c.rigSeconds&&actor.poseKey!==c.poseKey)actor.temporal=undefined;
+          const interval=available==='far'?.1:.05;
+          if(!actor.temporal){
+            const estimated=entry.graph.bones.length*144+256+Math.max(actor.pose?.contacts.length??0,entry.graph.limbs.length)*256;
+            if(this.ownedBytes+estimated-actor.poseBytes<=this.maxBytes){const canonical=this.options.pose(entry.graph,c,this.options.reuseWorkingBuffers??true);this.stats.poseBuilds++;actor.temporal=new ComposerTemporalPose(canonical,c.rigSeconds,c.animationContext!,interval);this.stats.temporalSamples++;}
+            else this.stats.temporalBudgetFallbacks++;
+          }else if(actor.temporal.needsSample(c.rigSeconds,c.animationContext!,interval)){
+            actor.temporal.accept(this.options.pose(entry.graph,c,this.options.reuseWorkingBuffers??true),c.rigSeconds,c.animationContext!,interval);this.stats.poseBuilds++;this.stats.temporalSamples++;
+          }
+          if(actor.temporal&&(actor.lastClock!==c.rigSeconds||actor.poseKey!==c.poseKey)){pose=actor.temporal.interpolate(c.rigSeconds);this.stats.temporalFrames++;}
+        }else if(actor.temporal){actor.temporal=undefined;actor.poseKey=undefined;}
+        if(!actor.temporal&&(!actor.pose||c.poseKey===undefined||actor.poseKey!==c.poseKey)){
+          pose=this.options.pose(entry.graph,c,this.options.reuseWorkingBuffers??true);this.stats.poseBuilds++;
+        }
+        if(!pose&&this.options.fastFarMatrices&&actor.tier!==available)pose=actor.pose;
+        // New tier may reference joints not used by the previous tier.
+        if(actor.tier!==available&&actor.temporal&&!pose)pose=actor.temporal.interpolate(c.rigSeconds);
+        if(pose){
+          const fast=!!this.options.fastFarMatrices&&available==='far';entry.writer.write(pose,this.scratch,0,mask,fast);if(fast)this.stats.fastBoneMatrices+=mask?.length??entry.graph.bones.length;
+          this.stats.boneMatricesAvailable+=entry.graph.bones.length;this.stats.boneMatricesWritten+=mask?.length??entry.graph.bones.length;
+          const poseBytes=(actor.temporal?.ownedBytes??composerTypedBytes(pose))+pose.contacts.length*256;
+          if(!this.room(poseBytes-actor.poseBytes,keys,false))throw new Error('Composer pose exceeds resident budget');
+          const count=entry.graph.bones.length*16,offset=actor.row*this.paletteBones*16;let first=count,last=-1;
+          for(let k=0;k<(mask?.length??entry.graph.bones.length);k++){const bone=mask?.[k]??k;for(let j=0;j<16;j++){const i=bone*16+j;if(!Object.is(this.paletteData[offset+i],this.scratch[i])){this.paletteData[offset+i]=this.scratch[i]!;first=Math.min(first,i);last=Math.max(last,i);}}}
           if(last>=0)this.paletteUploads.mark(offset+first,last-first+1);
-          actor.pose = pose; actor.poseBytes = poseBytes; actor.poseKey = c.poseKey; this.stats.poseBuilds++;
+          actor.pose=pose;actor.poseBytes=poseBytes;actor.poseKey=c.poseKey;actor.lastClock=c.rigSeconds;
         }
         if (c.matrix.elements.some(x => !Number.isFinite(x))) throw new Error('Invalid Composer instance transform');
-        if (mergedBatch) mergedBatch.submit(c.id, c.matrix,c.cameraVisible); else batch!.submit(c.matrix, actor.row);
+        const shadow=this.shadowStrength(c,entry.graph);
+        if (mergedBatch) mergedBatch.submit(c.id, c.matrix,c.cameraVisible,shadow); else batch!.submit(c.matrix, actor.row,shadow);
         actor.tier = available; this.drawn.add(c.id); this.stats.active++;
         this.stats.triangles += entry.levels[available]!.index.length / 3;
       } catch (error) {this.stats.poseFailures++; this.lastError = String(error);}
@@ -305,13 +346,14 @@ export class FaunaComposerRenderer<D, C extends FaunaComposerCandidate<D> = Faun
   }
   private entryBytes(entry: Entry): number {
     let bytes = entry.cpuBytes + entry.writer.ownedBytes;
-    for (const b of Object.values(entry.batches)) bytes += b.uploadedGeometryBytes + b.instanceBytes * 2;
+    if(this.options.reuseWorkingBuffers===false){for(const b of Object.values(entry.batches))bytes+=b.uploadedGeometryBytes+b.instanceBytes*2;}
+    else for(const tier of FAUNA_COMPOSER_TIERS){const b=entry.batches[tier];if(b)bytes+=b.uploadedGeometryBytes+b.instanceBytes*2;}
     return bytes;
   }
   private recount(entry: Entry, key: string): void {
-    entry.cpuBytes = composerTypedBytes({source: entry.source, levels: entry.levels}, this.arenaBuffers) + (entry.definition.length + key.length + entry.graphIdentity.length + entry.skinIdentity.length) * 2 + entry.graphBytes;
+    entry.cpuBytes = composerTypedBytes({source: entry.source, levels: entry.levels,activeBones:entry.activeBones}, this.arenaBuffers) + (entry.definition.length + key.length + entry.graphIdentity.length + entry.skinIdentity.length) * 2 + entry.graphBytes;
   }
-  get ownedBytes(): number {let n = this.paletteData.byteLength * 2 + this.scratch.byteLength + this.paletteUploads.ownedBytes + this.actorRows.byteLength + (this.frameSourceKeys.size+this.priorSourceKeys.size)*64 + (this.options.provider.diagnosticBytes ?? 0); for (const e of this.entries.values()) n += this.entryBytes(e); for (const a of this.actors.values()) n += a.poseBytes; for (const b of this.merged.values()) n += b.diagnostics().ownedBytes; return n;}
+  get ownedBytes(): number {let n = this.paletteData.byteLength * 2 + this.scratch.byteLength + this.paletteUploads.ownedBytes + this.actorRows.byteLength + (this.frameSourceKeys.size+this.priorSourceKeys.size)*64 + (this.options.provider.diagnosticBytes ?? 0); for (const e of this.entries.values()) n += this.entryBytes(e); for (const a of this.actors.values()) n += a.poseBytes; for (const b of this.merged.values()) n += this.options.reuseWorkingBuffers===false?b.diagnostics().ownedBytes:b.ownedBytes; return n;}
   private get stagedBytes(): number {let bytes = 0; for (const p of this.ready.values()) bytes += p.bytes; return bytes;}
   get reservedBytes(): number {return this.disposed ? 0 : this.ownedBytes + this.workerReserveBytes + this.stagedBytes + (this.running ? this.maxResultBytes : 0);}
   /** Allocation-free counters for a live benchmark; diagnostics() remains a snapshot. */
@@ -375,12 +417,13 @@ export class FaunaComposerRenderer<D, C extends FaunaComposerCandidate<D> = Faun
     for (const tier of FAUNA_COMPOSER_TIERS) if (!run.tiers.includes(tier)) delete levels[tier];
     const source = this.fullSourceKeys.has(run.key) ? result.source : null;
     if (!source) delete levels.near;
-    const graphIdentity = isVerifiedComposerBuild(result) ? result.receipt!.graphDigest : await composerContentDigest(graph), writer = new FaunaComposerPaletteWriter(graph);
+    const graphIdentity = isVerifiedComposerBuild(result) ? result.receipt!.graphDigest : await composerContentDigest(graph), writer = new FaunaComposerPaletteWriter(graph,this.options.reuseWorkingBuffers??true);
     const skinIdentity = isVerifiedComposerBuild(result) ? result.receipt!.skinDigest : await composerContentDigest(result.source.skin);
     const graphBytes = canonicalComposerJson(graph).length * 2;
-    const bytes = graphBytes + composerTypedBytes({source, levels}) + (run.definition.length + run.key.length + graphIdentity.length + skinIdentity.length) * 2 + writer.ownedBytes;
+    const activeBones:Partial<Record<FaunaComposerTier,Uint16Array>>={};for(const tier of FAUNA_COMPOSER_TIERS)if(levels[tier])activeBones[tier]=composerActiveBones(levels[tier]!,graph.bones.length);
+    const bytes = graphBytes + composerTypedBytes({source, levels,activeBones}) + (run.definition.length + run.key.length + graphIdentity.length + skinIdentity.length) * 2 + writer.ownedBytes;
     this.stats.preparationMs = this.now() - started;
-    return {run, source, graph, graphIdentity, skinIdentity, graphBytes, levels, writer, bytes, buildMs: result.buildMs, attempt: -1};
+    return {run, source, graph, graphIdentity, skinIdentity, graphBytes, levels,activeBones, writer, bytes, buildMs: result.buildMs, attempt: -1};
   }
   private retain(prepared: Prepared): void {
     this.ready.set(prepared.run.key, prepared);
@@ -406,11 +449,11 @@ export class FaunaComposerRenderer<D, C extends FaunaComposerCandidate<D> = Faun
         const prior = this.entries.get(key);
         if (prior && (prior.graphIdentity !== p.graphIdentity || prior.skinIdentity !== p.skinIdentity)) throw new Error('Composer original source changed during upgrade');
         let source = prior?.source ?? p.source;
-        const levels = {...p.levels, ...prior?.levels};
+        const levels = {...p.levels, ...prior?.levels};const activeBones={...prior?.activeBones,...p.activeBones};
         if (!this.fullSourceKeys.has(key) && (levels.middle || levels.far)) {source = null; delete levels.near;}
         if (!Object.keys(levels).length) {this.ready.delete(key); continue;}
         const writer = prior?.writer ?? p.writer;
-        const cpuBytes = p.graphBytes + composerTypedBytes({source, levels}, this.arenaBuffers) + (p.run.definition.length + key.length + p.graphIdentity.length + p.skinIdentity.length) * 2;
+        const cpuBytes = p.graphBytes + composerTypedBytes({source, levels,activeBones}, this.arenaBuffers) + (p.run.definition.length + key.length + p.graphIdentity.length + p.skinIdentity.length) * 2;
         const width = Math.max(this.paletteBones, Math.min(this.maxBones, Math.ceil(p.graph.bones.length / 16) * 16));
         const paletteGrowth = (width - this.paletteBones) * this.capacity * 16 * 4 * 2;
         const added = cpuBytes + writer.ownedBytes - (prior ? prior.cpuBytes + prior.writer.ownedBytes : 0) + paletteGrowth;
@@ -418,7 +461,7 @@ export class FaunaComposerRenderer<D, C extends FaunaComposerCandidate<D> = Faun
         if (width !== this.paletteBones) this.resizePalette(width);
         this.identity(p.run.definitionRef, true, p.run.definition); for (const c of this.members.get(key) ?? []) this.identity(c.definition, true, c.canonicalDefinition);
         const middle = p.levels.middle;
-        this.entries.set(key, {source, graph: p.graph, graphIdentity: p.graphIdentity, skinIdentity: p.skinIdentity, graphBytes: p.graphBytes, levels, writer, definition: p.run.definition, batches: prior?.batches ?? {}, used: this.frame, cpuBytes,
+        this.entries.set(key, {source,activeBones, graph: p.graph, graphIdentity: p.graphIdentity, skinIdentity: p.skinIdentity, graphBytes: p.graphBytes, levels, writer, definition: p.run.definition, batches: prior?.batches ?? {}, used: this.frame, cpuBytes,
           middleFootprint: middle ? {vertices: middle.positions.length / 3, indices: middle.index.length} : prior?.middleFootprint});
         this.ready.delete(key); this.blocked.delete(key); this.failed.delete(key); this.stats.builds++; this.stats.buildMs += p.buildMs;
         if (!keys.has(key)) this.stats.completedOutOfView++;
@@ -517,14 +560,14 @@ export class FaunaComposerRenderer<D, C extends FaunaComposerCandidate<D> = Faun
     const actor=this.actors.get(id),entry=actor?this.entries.get(actor.key):undefined;
     if(!actor||!entry||!actor.tier)return null;
     const skin=entry.levels[actor.tier];
-    return {id,key:actor.key,tier:actor.tier,graph:entry.graph,skin:skin?FaunaComposerMergedBatch.snapshotSkin(skin):null,source:entry.source,pose:actor.pose,
+    return {id,key:actor.key,tier:actor.tier,graph:entry.graph,skin:skin?FaunaComposerMergedBatch.snapshotSkin(skin):null,source:entry.source,pose:actor.pose,presentation:actor.temporal?.metadata()??null,activeBones:entry.activeBones[actor.tier],
       palette:this.paletteData.subarray(actor.row*this.paletteBones*16,actor.row*this.paletteBones*16+entry.graph.bones.length*16)};
   }
   poseOf(id: string): ComposerPose | null {return this.actors.get(id)?.pose ?? null;}
   diagnostics() {return {version: FAUNA_COMPOSER_RENDER_VERSION, ...this.stats, contextLost:this.contextLost, capacity: this.capacity, sources: this.entries.size,
     middleSourceLimit: this.options.middleSourceCache ?? this.maxSources, middleSourcesEligible: this.middleSourceKeys.size,
     farTierBudgetFallbacks: [...this.desired.values()].filter(c => this.tier(c.distanceM, this.actors.get(c.id)?.tier) !== 'far' && this.candidateTier(c, this.actors.get(c.id)?.tier) === 'far').length,
-    actors: [...this.drawn].map(id => {const actor = this.actors.get(id)!, entry = this.entries.get(actor.key)!; return {id, key: actor.key, tier: actor.tier, bones: entry.graph.bones.length, skin: entry.levels[actor.tier!]!.version};}),
+    actors: [...this.drawn].map(id => {const actor = this.actors.get(id)!, entry = this.entries.get(actor.key)!; return {id, key: actor.key, tier: actor.tier, bones: entry.graph.bones.length, skin: entry.levels[actor.tier!]!.version,activeBones:entry.activeBones[actor.tier!]?.length??entry.graph.bones.length,presentation:actor.temporal?.metadata()??null};}),
     ownedBytes: this.ownedBytes, maxBytes: this.maxBytes, reservedBytes: this.reservedBytes, workerReserveBytes: this.workerReserveBytes,
     paletteUploadTrackingBytes:this.paletteUploads.ownedBytes,actualPaletteUploadedBytes:this.paletteUploads.uploadedBytes,paletteUploadCount:this.paletteUploads.uploadCount,pendingPaletteUploadBytes:this.paletteUploads.pendingBytes,
     paletteBones: this.paletteBones, paletteCpuBytes: this.paletteData.byteLength, paletteGpuBytes: this.paletteData.byteLength,

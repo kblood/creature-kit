@@ -26,7 +26,7 @@ export interface ComposerPoseEnvironment {
   ground?: (x: number, z: number) => number;
   contact?: (limb: ComposerLimb, phase: number, stance: boolean, target: Vec3) => ComposerGroundContact;
 }
-export interface ComposerPoseOptions {trunkMotion?: 'legacy' | 'wave-1'; environment?: ComposerPoseEnvironment}
+export interface ComposerPoseOptions {trunkMotion?: 'legacy' | 'wave-1'; reuseWorkingBuffers?:boolean; environment?: ComposerPoseEnvironment}
 /** Desktop preview budget. Not a Quest qualification. */
 export const COMPOSER_BUDGET = Object.freeze({maxBones: 160, maxVertices: 48000, maxTriangles: 80000, drawCallsPerCreature: 2});
 export const COMPOSER_MOTIONS = ['neutral', 'idle', 'walk', 'display'] as const;
@@ -1100,6 +1100,7 @@ export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time:
   let maxLen = 0, minBody = Infinity, maxPen = 0, minSwing = Infinity;
   for (let i = 0; i < n; i++) {
     const wq = world[i]!;
+    if(options.reuseWorkingBuffers===false){positions.set([wq.p.x,wq.p.y,wq.p.z],i*3);quaternions.set([wq.q.x,wq.q.y,wq.q.z,wq.q.w],i*4);continue;}
     const pi=i*3,qi=i*4;
     positions[pi]=wq.p.x;positions[pi+1]=wq.p.y;positions[pi+2]=wq.p.z;
     quaternions[qi]=wq.q.x;quaternions[qi+1]=wq.q.y;quaternions[qi+2]=wq.q.z;quaternions[qi+3]=wq.q.w;

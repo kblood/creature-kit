@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {createComposerColouredMaterial, createComposerCrispCoatMaterial} from './fauna-composer.ts';
 import type {ComposerSkin} from './fauna-composer-mesh.ts';
+import {patchComposerShadowFade} from './fauna-composer-shadows.ts';
 /** Structural skin contract shared by Atlas's render tiers and Kit previews. */
 export type FaunaComposerRenderSkin=Pick<ComposerSkin,'positions'|'normals'|'colors'|'skinIndex'|'skinWeight'|'index'|'gloss'|'coatCrisp'|'coatLayers'|'version'>;
 
@@ -30,10 +31,10 @@ export function patchFaunaComposerInstancing(shader: {vertexShader: string}): vo
     '#include <beginnormal_vertex>\nobjectNormal=(composerSkin*vec4(objectNormal,0.0)).xyz;');
   replace('#include <begin_vertex>', '#include <begin_vertex>\ntransformed=(composerSkin*vec4(transformed,1.0)).xyz;');
 }
-function install(material: THREE.Material, palette: {value: THREE.DataTexture}): void {
+function install(material: THREE.Material, palette: {value: THREE.DataTexture},shadow=false): void {
   const before = material.onBeforeCompile, key = material.customProgramCacheKey();
-  material.onBeforeCompile = (shader, renderer) => {before.call(material, shader, renderer); patchFaunaComposerInstancing(shader); shader.uniforms.composerBones = palette;};
-  material.customProgramCacheKey = () => `${key}/composer-variable-instances-1`;
+  material.onBeforeCompile = (shader, renderer) => {before.call(material, shader, renderer); patchFaunaComposerInstancing(shader);if(shadow)patchComposerShadowFade(shader,'1.0-fract(composerActor)*4.0'); shader.uniforms.composerBones = palette;};
+  material.customProgramCacheKey = () => `${key}/composer-variable-instances-1${shadow?'/shadow-fade-1':''}`;
 }
 export function faunaComposerGeometry(skin: FaunaComposerRenderSkin): THREE.BufferGeometry {
   const g = new THREE.BufferGeometry();
@@ -56,6 +57,7 @@ export class FaunaComposerInstanceBatch {
   readonly instanceBytes: number;
   private readonly actors: THREE.InstancedBufferAttribute;
   private disposed = false;
+  private shadowAllowed:boolean|undefined;private shadowActors=0;
   readonly skin: FaunaComposerRenderSkin;
   readonly capacity: number;
   constructor(skin: FaunaComposerRenderSkin, palette: {value: THREE.DataTexture}, capacity: number, roughness = .82) {
@@ -69,20 +71,23 @@ export class FaunaComposerInstanceBatch {
     install(material, palette);
     this.mesh = new THREE.InstancedMesh(geometry, material, capacity);
     this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    const depth = new THREE.MeshDepthMaterial({depthPacking: THREE.RGBADepthPacking}); install(depth, palette);
-    const distance = new THREE.MeshDistanceMaterial(); install(distance, palette);
+    const depth = new THREE.MeshDepthMaterial({depthPacking: THREE.RGBADepthPacking}); install(depth, palette,true);
+    const distance = new THREE.MeshDistanceMaterial(); install(distance, palette,true);
     this.mesh.customDepthMaterial = depth; this.mesh.customDistanceMaterial = distance;
     this.mesh.name = 'Planet Composer source instances'; this.mesh.count = 0;
     this.mesh.frustumCulled = false; this.mesh.castShadow = true; this.mesh.receiveShadow = true;
     this.instanceBytes = this.mesh.instanceMatrix.array.byteLength + this.actors.array.byteLength;
   }
-  beginFrame(): void {this.mesh.count = 0; this.mesh.visible = false;}
-  submit(matrix: THREE.Matrix4, paletteRow: number): void {
+  beginFrame(): void {this.shadowAllowed??=this.mesh.castShadow;this.shadowActors=0;this.mesh.count = 0; this.mesh.visible = false;}
+  submit(matrix: THREE.Matrix4, paletteRow: number,shadowStrength=1): void {
     const i = this.mesh.count;
     if (this.disposed || i >= this.capacity) throw new Error('Composer instance capacity exceeded');
-    this.mesh.setMatrixAt(i, matrix); this.actors.setX(i, paletteRow); this.mesh.count++; this.mesh.visible = true;
+    if(!Number.isFinite(shadowStrength)||shadowStrength<0||shadowStrength>1)throw new Error('Invalid Composer shadow strength');
+    this.mesh.setMatrixAt(i, matrix); this.actors.setX(i, paletteRow+(1-shadowStrength)*.25);if(shadowStrength>0)this.shadowActors++;this.mesh.count++; this.mesh.visible = true;
   }
   endFrame(): void {
+    this.shadowAllowed??=this.mesh.castShadow;
+    this.mesh.castShadow=!!this.shadowAllowed&&this.shadowActors>0;
     if (!this.mesh.count) return;
     this.mesh.instanceMatrix.clearUpdateRanges(); this.mesh.instanceMatrix.addUpdateRange(0, this.mesh.count * 16); this.mesh.instanceMatrix.needsUpdate = true;
     this.actors.clearUpdateRanges(); this.actors.addUpdateRange(0, this.mesh.count); this.actors.needsUpdate = true;

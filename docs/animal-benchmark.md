@@ -16,6 +16,28 @@ stress comparisons. Counts and triangles are shown in the scene summary.
 
 Live switches:
 
+- **Atlas renderer** selects the actual shared production controller, packed
+  middle/far GPU arenas, admission budgets and camera/shadow index handling.
+  It may choose a cheaper resident tier when the requested one exceeds its budget.
+- Partial skeleton uploads queue only changed RGBA ranges. First allocation,
+  resize and context restore initialize the entire texture. Exported counters
+  record actual texture-upload notifications separately from pending data.
+- Distance animation evaluates canonical poses at up to 20 Hz in the middle
+  tier and 10 Hz in the far tier, with delayed interpolation between actual
+  samples. Near animals and large angular silhouettes remain exact. Ground,
+  gait and clock discontinuities invalidate samples. Temporal pose diagnostics
+  explicitly identify source times; contact diagnostics belong to the latest
+  canonical sample. This changes presentation, not genomes or the source rig.
+- The far affine matrix path computes the same weighted-joint matrices with
+  fewer generic matrix operations. It keeps the full original skeleton; tested
+  presets still use every joint even at far LOD.
+- Working-buffer reuse avoids temporary output/validation arrays and reuses
+  group lists and row/key collections. Turning it off provides an allocation
+  reference path.
+- Distance shadows preserve close shadows and fade farther ones with stable
+  shadow-map dithering. Entire batches with zero shadow contribution skip their
+  shadow draw. Larger animals retain shadows over proportionally larger ranges.
+
 - Animated instancing uses the **same `FaunaComposerInstanceBatch` and palette
   writer as Atlas**, now maintained in creature-kit. Only identical geometry,
   LOD and appearance share a batch. Different species retain separate batches.
@@ -58,7 +80,14 @@ partial runs are never presented as completed results. Export JSON to retain
 results and context. The latest 32 results are retained. The order is fixed, so thermal and background-task effects
 can still influence a pair; repeat runs before drawing conclusions.
 
+**Compare partial / full uploads** isolates skeleton transfers. **Compare five
+optimizations** selects the Atlas controller and changes the five switches
+together, keeping the original population, camera and starting clock. CPU, GPU,
+upload bytes and solver-call distributions are exported. Separate CDP allocation
+sampling is available in the browser test harness; its extrapolated V8 heap
+bytes describe allocation churn, not peak resident memory or GPU memory.
+
 The Lab measures animal rendering in a reference scene with a ground plane.
-It does not reproduce Atlas's terrain, clouds, source-admission budgets, merged
-packed middle/far arenas or whole-world frame workload. Instancing comparisons
-are real shared-code comparisons, not a claim of overall Atlas or Quest FPS.
+The Atlas option reproduces the animal controller and its arenas and budgets.
+Terrain, clouds, navigation and whole-world frame workload require separate
+tests. Results describe the measured browser/device, not overall Atlas or Quest FPS.

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {patchComposerShadowFade} from './fauna-composer-shadows.ts';
 import {createComposerColouredMaterial, COMPOSER_COAT_CRISP_GLSL} from './fauna-composer.ts';
 import {patchFaunaComposerInstancing} from './fauna-composer-instance-batch.ts';
 import type {FaunaComposerRenderSkin} from './fauna-composer-render-source.ts';
@@ -53,6 +54,7 @@ export function patchComposerMergedShader(shader: {vertexShader: string; fragmen
     for(const layer of ['0','1','2'])shader.vertexShader=shader.vertexShader.replace(`vCoatL${layer}=coatL${layer};`,`vCoatL${layer}=coatL${layer}*2.0;`);
     shader.vertexShader=shader.vertexShader.replace('#include <color_vertex>','#include <color_vertex>\n#ifdef USE_COLOR\nvColor.rgb*=2.0;\n#endif');
   }
+  if(!lit)patchComposerShadowFade(shader,'texelFetch(composerRoots,ivec2(6,int(composerActor)),0).y');
   if (lit) shader.fragmentShader = shader.fragmentShader.replace('#include <common>', '#include <common>\nflat varying float vComposerRoughness;\n' + composerMergedCoatGlsl())
     .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor=vComposerRoughness;')
     .replace('#include <color_fragment>', 'diffuseColor.rgb *= composerCoatCrisp();');
@@ -410,18 +412,20 @@ export class FaunaComposerMergedBatch {
   }
   restoreContext():void {if(this.records.size||this.copying.size)throw new Error('Composer context restoration requires an empty arena');this.gpu?.restore();this.rootTexture.needsUpdate=true;}
   reset():void {for(const id of new Set([...this.records.keys(),...this.copying.keys()]))this.release(id);this.beginFrame();this.endFrame();}
-  beginFrame(): void {for (const p of this.copying.values()) p.seen = false; this.active = 0; this.triangles = 0; for (const r of this.records.values()) {this.roots[r.row * 28 + 23] = 0;if(this.indexOrder)r.pass=0;}}
-  submit(id: string, matrix: THREE.Matrix4, cameraVisible=true): boolean {
+  private shadowAllowed:boolean|undefined;private shadowActors=0;
+  beginFrame(): void {this.shadowAllowed??=this.mesh.castShadow;this.shadowActors=0;for (const p of this.copying.values()) p.seen = false; this.active = 0; this.triangles = 0; for (const r of this.records.values()) {this.roots[r.row * 28 + 23] = 0;if(this.indexOrder)r.pass=0;}}
+  submit(id: string, matrix: THREE.Matrix4, cameraVisible=true,shadowStrength=1): boolean {
     const r = this.records.get(id); if (!r || this.disposed) return false;
     const at = r.row * 28, crisp = r.crisp, seed = crisp?.seed ?? 0;
     matrix.toArray(this.roots, at); this.roots[at + 16] = seed & 65535; this.roots[at + 17] = seed >>> 16;
     this.roots[at + 18] = crisp?.cellsPerBody ?? 0; this.roots[at + 19] = crisp?.threshold ?? 0;
     this.roots[at + 20] = crisp?.warp ?? 0; this.roots[at + 21] = crisp?.bellyLine ?? 0; this.roots[at + 22] = crisp?.code ?? 0; this.roots[at + 23] = 1;
-    this.roots[at + 24] = r.roughness;
+    if(!Number.isFinite(shadowStrength)||shadowStrength<0||shadowStrength>1)throw new Error('Invalid Composer shadow strength');
+    this.roots[at + 24] = r.roughness;this.roots[at+25]=shadowStrength;if(shadowStrength>0)this.shadowActors++;
     if(this.indexOrder){if(!r.pass){this.active++;this.triangles+=r.indices/3;}r.pass=cameraVisible||r.pass===1?1:2;return true;}
     this.active++; this.triangles += r.indices / 3; return true;
   }
-  endFrame(): void {for (const [id, p] of this.copying) if (!p.seen) this.release(id);if(this.indexOrder)this.partitionIndices(); this.rootTexture.needsUpdate = true; this.mesh.visible = this.active > 0;}
+  endFrame(): void {this.mesh.castShadow=!!this.shadowAllowed&&this.shadowActors>0;for (const [id, p] of this.copying) if (!p.seen) this.release(id);if(this.indexOrder)this.partitionIndices(); this.rootTexture.needsUpdate = true; this.mesh.visible = this.active > 0;}
   release(id: string): void {
     const r = this.records.get(id) ?? this.copying.get(id)?.record; if (!r) return;
     if(this.indexOrder){

@@ -21,7 +21,7 @@ declare const __ANIMAL_BENCH_BUILD__:{commit:string;version:string;dirty:boolean
 const $=<T extends HTMLElement>(id:string)=>document.getElementById(id) as T;
 const select=(id:string)=>$<HTMLSelectElement>(id).value;
 const checked=(id:string)=>$<HTMLInputElement>(id).checked;
-const controlsIds=['count','collection','placement','lod','atlas-renderer','instancing','partial-uploads','share-geometry','share-pose','culling','shadows','animate','stride','duration','observer','overview','measure','compare','compare-uploads'];
+const controlsIds=['count','collection','placement','lod','atlas-renderer','instancing','partial-uploads','adaptive-animation','fast-far-matrices','reuse-working','distance-shadows','share-geometry','share-pose','culling','shadows','animate','stride','duration','observer','overview','measure','compare','compare-uploads','compare-all'];
 const scene=new THREE.Scene();scene.background=new THREE.Color('#08131a');
 const camera=new THREE.PerspectiveCamera(47,1,.1,1000);
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
@@ -51,9 +51,9 @@ let sourceRecipe=composerPreset('dinosaur'),definition:PlanetComposerDefinition|
 let runSerial=0,active:Capture|null=null,cancelled=false,running=false;
 const results:Result[]=[];
 interface Capture{id:number;start:number;frame:number[];cpu:number[];gpu:number[];calls:number[];triangles:number[];visible:number[];poseCalculations:number[];uploadBytes:number[];collecting:boolean}
-interface Result{simulationStartSeconds:number;settings:BenchmarkOptions;camera:{position:number[];target:number[]};durationSeconds:number;frameMs:ReturnType<typeof sampleStats>;cpuMs:ReturnType<typeof sampleStats>;gpuMs:ReturnType<typeof sampleStats>;gpuDropped:number;paletteUploadBytes:ReturnType<typeof sampleStats>;drawCalls:ReturnType<typeof sampleStats>;triangles:ReturnType<typeof sampleStats>;visibleAnimals:ReturnType<typeof sampleStats>;poseCalculations:ReturnType<typeof sampleStats>;memory:ReturnType<typeof memory>;prepareMs:number;timestamp:string;scene:unknown[];environment:ReturnType<typeof environment>}
+interface Result{simulationStartSeconds:number;settings:BenchmarkOptions;camera:{position:number[];target:number[]};durationSeconds:number;frameMs:ReturnType<typeof sampleStats>;cpuMs:ReturnType<typeof sampleStats>;gpuMs:ReturnType<typeof sampleStats>;gpuDropped:number;paletteUploadBytes:ReturnType<typeof sampleStats>;drawCalls:ReturnType<typeof sampleStats>;triangles:ReturnType<typeof sampleStats>;visibleAnimals:ReturnType<typeof sampleStats>;poseCalculations:ReturnType<typeof sampleStats>;atlasDiagnostics:unknown;memory:ReturnType<typeof memory>;prepareMs:number;timestamp:string;scene:unknown[];environment:ReturnType<typeof environment>}
 
-function readOptions():BenchmarkOptions{return {count:Number(select('count')),collection:select('collection') as BenchmarkOptions['collection'],placement:select('placement') as BenchmarkOptions['placement'],lod:select('lod') as BenchmarkOptions['lod'],instancing:checked('instancing'),atlasRenderer:checked('atlas-renderer'),partialUploads:checked('partial-uploads'),shareGeometry:checked('share-geometry'),sharePose:checked('share-pose'),culling:checked('culling'),shadows:checked('shadows'),animate:checked('animate'),stride:Number(select('stride'))};}
+function readOptions():BenchmarkOptions{return {count:Number(select('count')),collection:select('collection') as BenchmarkOptions['collection'],placement:select('placement') as BenchmarkOptions['placement'],lod:select('lod') as BenchmarkOptions['lod'],instancing:checked('instancing'),atlasRenderer:checked('atlas-renderer'),partialUploads:checked('partial-uploads'),adaptiveAnimation:checked('adaptive-animation'),reuseWorkingBuffers:checked('reuse-working'),fastFarMatrices:checked('fast-far-matrices'),distanceShadows:checked('distance-shadows'),shareGeometry:checked('share-geometry'),sharePose:checked('share-pose'),culling:checked('culling'),shadows:checked('shadows'),animate:checked('animate'),stride:Number(select('stride'))};}
 function observer(){camera.position.set(0,2.5,12);orbit.target.set(0,1,-70);camera.lookAt(orbit.target);orbit.update();}
 function overview(){camera.position.set(125,150,125);orbit.target.set(0,0,-130);camera.lookAt(orbit.target);orbit.update();}
 function layout(){const view=$('viewport');camera.aspect=Math.max(1,view.clientWidth)/Math.max(1,view.clientHeight);camera.updateProjectionMatrix();renderer.setSize(Math.max(1,view.clientWidth),Math.max(1,view.clientHeight));}
@@ -78,17 +78,19 @@ function batchFor(member:Member){const key=`${member.source}/${member.tier}`;let
  batch.mesh.castShadow=options.shadows;group.add(batch.mesh);batches.set(key,batch);
  }return batch;}
 function configureMeshes(){
+ for(const [id,value] of Object.entries({'atlas-renderer':options.atlasRenderer,'instancing':options.instancing,'partial-uploads':options.partialUploads,'adaptive-animation':options.adaptiveAnimation,'fast-far-matrices':options.fastFarMatrices,'reuse-working':options.reuseWorkingBuffers,'distance-shadows':options.distanceShadows}))$<HTMLInputElement>(id).checked=value;
  clearMeshes();maxBones=Math.max(...sources.map(s=>s.actor.graph.bones.length));
  if(options.atlasRenderer){
   const p=FAUNA_PLANET_COMPOSER_POLICY;
   atlas=new FaunaComposerRenderer({provider:{async build(job){const source=sources[job.definition.source]!,original={graph:source.actor.graph,skin:source.actor.skin};return {key:job.key,source:original,levels:buildFaunaComposerRequestedLevels(original,job.tiers,[p.middleTargetTriangles,p.farTargetTriangles]),buildMs:0};}},
-   pose:(graph,c)=>{if(options.sharePose){const cached=atlasPoses.get(c.definition.source);if(cached)return cached;}const pose=poseComposer(graph,'walk',c.rigSeconds);poseCalculations++;if(options.sharePose)atlasPoses.set(c.definition.source,pose);return pose;},
+   pose:(graph,c,reuse)=>{if(options.sharePose){const cached=atlasPoses.get(c.definition.source);if(cached)return cached;}const pose=poseComposer(graph,'walk',c.rigSeconds,{reuseWorkingBuffers:reuse});poseCalculations++;if(options.sharePose)atlasPoses.set(c.definition.source,pose);return pose;},
    onMeshAdopted:mesh=>{mesh.castShadow=options.shadows;},capacity:p.capacity,maxSources:p.capacity,maxBones:p.maxBones,maxBytes:p.residentBytes,maxResultBytes:p.resultBytes,workerReserveBytes:p.workerReserveBytes,
-   fullSourceCache:p.nearSources,middleSourceCache:p.middleSources,coldJobsBeforeNearUpgrade:8,nearM:p.nearM,middleM:p.middleM,maxDistanceM:p.visibleM,partialPaletteUploads:options.partialUploads,
+   fullSourceCache:p.nearSources,middleSourceCache:p.middleSources,coldJobsBeforeNearUpgrade:8,nearM:p.nearM,middleM:p.middleM,maxDistanceM:p.visibleM,partialPaletteUploads:options.partialUploads,adaptiveAnimation:options.adaptiveAnimation,reuseWorkingBuffers:options.reuseWorkingBuffers,fastFarMatrices:options.fastFarMatrices,distanceShadows:options.distanceShadows,
    mergedGpuContext:gl,mergedTiers:{middle:{maxVertices:p.middleVertices,maxIndices:p.middleIndices,maxBytes:5*1024*1024,storage:'packed-1'},far:{maxVertices:p.farVertices,maxIndices:p.farIndices,maxBytes:35*1024*1024,storage:'packed-1',activeIndexPasses:true}}});
   atlas.assertCapabilities(renderer);atlas.setViewCameras([camera]);group.add(atlas.group);
   for(const member of members){delete member.pose;atlasCandidates.push({id:String(member.id),definition:{source:member.source,key:sources[member.source]!.key},sourceKey:sources[member.source]!.key,matrix:member.matrix,distanceM:0,cameraVisible:true,rigSeconds:time});}
   sun.castShadow=options.shadows;renderer.shadowMap.needsUpdate=true;lastHud=-Infinity;
+  for(const id of ['adaptive-animation','fast-far-matrices','reuse-working','distance-shadows'])$<HTMLInputElement>(id).disabled=false;
   $<HTMLInputElement>('instancing').disabled=true;$<HTMLInputElement>('share-geometry').disabled=true;$<HTMLSelectElement>('stride').disabled=true;
   $('optimization-note').textContent='Actual Atlas controller with its packed GPU arenas, admission budgets and camera/shadow index handling. Automatic LOD requests can fall back to a cheaper resident level under those budgets.';return;
  }
@@ -102,6 +104,7 @@ function configureMeshes(){
  sun.castShadow=options.shadows;renderer.shadowMap.needsUpdate=true;
  lastHud=-Infinity;
  $('share-geometry').toggleAttribute('disabled',options.instancing);
+ for(const id of ['adaptive-animation','fast-far-matrices','reuse-working','distance-shadows'])$<HTMLInputElement>(id).disabled=true;
  $('optimization-note').textContent=options.instancing?'Instancing shares geometry within each identical specimen + LOD group. Different species use separate batches. Shared pose synchronizes the repeated animals.':'Separate skinned meshes: geometry sharing saves geometry buffers; each animal still has its own draw and skeleton. Shared pose reduces solver work.';
 }
 async function prepare(){
@@ -137,7 +140,7 @@ function update(){
   atlasPoses.clear();
   for(const member of members){const c=atlasCandidates[member.id]!,distance=camera.position.distanceTo(position.fromArray(member.position));
    member.visible=(options.lod!=='auto'||distance<=600)&&(!options.culling||frustum.intersectsSphere(member.sphere));
-   c.cameraVisible=member.visible;c.shadowVisible=options.shadows;c.distanceM=options.lod==='source'?0:options.lod==='4500'?80:options.lod==='1000'?300:distance;
+   c.presentationDistanceM=distance;c.animationContext=`walk/${options.sharePose}`;c.cameraVisible=member.visible;c.shadowVisible=options.shadows;c.distanceM=options.lod==='source'?0:options.lod==='4500'?80:options.lod==='1000'?300:distance;
    c.rigSeconds=time+(options.sharePose?0:member.id*.071);c.poseKey=String(c.rigSeconds);
   }
   atlas.update(atlasCandidates);return;
@@ -177,7 +180,7 @@ function memory(){
  return {geometryArrayBytes:[...buffers].reduce((n,b)=>n+b.byteLength,0),paletteBytes:paletteData.byteLength,separateSkeletonBytes,instanceBytes,atlasOwnedBytes:atlas?.ownedBytes??0,scope:'Reference geometry arrays plus Atlas owned bytes when selected; overlapping source arrays are not additive. Excludes complete browser/driver memory.'};
 }
 function environment(){const ext=gl.getExtension('WEBGL_debug_renderer_info');return {build:__ANIMAL_BENCH_BUILD__,crossOriginIsolated,userAgent:navigator.userAgent,devicePixelRatio,pixelRatio:renderer.getPixelRatio(),canvas:[renderer.domElement.width,renderer.domElement.height],webglVersion:gl.getParameter(gl.VERSION),vendor:ext?gl.getParameter(ext.UNMASKED_VENDOR_WEBGL):gl.getParameter(gl.VENDOR),renderer:ext?gl.getParameter(ext.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER),gpuTimerSupported:gpu.supported,visibility:document.visibilityState};}
-function lock(value:boolean){running=value;orbit.enabled=!value;for(const id of controlsIds)$<HTMLInputElement>(id).disabled=value;$<HTMLButtonElement>('cancel').disabled=!value;if(!value){$<HTMLInputElement>('share-geometry').disabled=options.instancing||options.atlasRenderer;$<HTMLInputElement>('instancing').disabled=options.atlasRenderer;$<HTMLSelectElement>('stride').disabled=options.atlasRenderer;}}
+function lock(value:boolean){running=value;orbit.enabled=!value;for(const id of controlsIds)$<HTMLInputElement>(id).disabled=value;$<HTMLButtonElement>('cancel').disabled=!value;if(!value){for(const id of ['adaptive-animation','fast-far-matrices','reuse-working','distance-shadows'])$<HTMLInputElement>(id).disabled=!options.atlasRenderer;$<HTMLInputElement>('share-geometry').disabled=options.instancing||options.atlasRenderer;$<HTMLInputElement>('instancing').disabled=options.atlasRenderer;$<HTMLSelectElement>('stride').disabled=options.atlasRenderer;}}
 function cancel(message='Cancelled.'){cancelled=true;active=null;gpu.clear();$('bench-status').textContent=message;}
 function wait(ms:number){const start=performance.now();return new Promise<void>((resolve,reject)=>{const tick=()=>{if(cancelled||document.hidden||!ready){reject(new Error('Measurement cancelled or scene unavailable.'));return;}if(performance.now()-start>=ms)resolve();else requestAnimationFrame(tick);};requestAnimationFrame(tick);});}
  async function capture(simulationStartSeconds=time):Promise<Result>{
@@ -189,7 +192,7 @@ function wait(ms:number){const start=performance.now();return new Promise<void>(
  $('bench-status').textContent=`Measuring for ${duration} seconds…`;await wait(duration*1000);c.collecting=false;
  const ended=performance.now();await wait(250);gpu.clear();active=null;
  if(c.frame.length<10)throw new Error('Too few frame samples.');
- return {simulationStartSeconds,settings:{...options},camera:{position:camera.position.toArray(),target:orbit.target.toArray()},durationSeconds:(ended-c.start)/1000,frameMs:sampleStats(c.frame),cpuMs:sampleStats(c.cpu),gpuMs:sampleStats(c.gpu),gpuDropped:gpu.dropped-dropped,paletteUploadBytes:sampleStats(c.uploadBytes),drawCalls:sampleStats(c.calls),triangles:sampleStats(c.triangles),visibleAnimals:sampleStats(c.visible),poseCalculations:sampleStats(c.poseCalculations),memory:memory(),prepareMs:buildMs,timestamp:new Date().toISOString(),scene:sources.map(s=>({recipe:s.actor.graph.recipe,definition:s.actor.group.userData.planetComposerDefinition??null,skinVersion:s.actor.skin.version,graphVersion:s.actor.graph.version,triangles:Object.fromEntries(Object.entries(s.skins).map(([k,v])=>[k,v.triangleCount]))})),environment:environment()};
+ return {simulationStartSeconds,settings:{...options},camera:{position:camera.position.toArray(),target:orbit.target.toArray()},durationSeconds:(ended-c.start)/1000,frameMs:sampleStats(c.frame),cpuMs:sampleStats(c.cpu),gpuMs:sampleStats(c.gpu),gpuDropped:gpu.dropped-dropped,paletteUploadBytes:sampleStats(c.uploadBytes),drawCalls:sampleStats(c.calls),triangles:sampleStats(c.triangles),visibleAnimals:sampleStats(c.visible),poseCalculations:sampleStats(c.poseCalculations),atlasDiagnostics:atlas?.diagnostics()??null,memory:memory(),prepareMs:buildMs,timestamp:new Date().toISOString(),scene:sources.map(s=>({recipe:s.actor.graph.recipe,definition:s.actor.group.userData.planetComposerDefinition??null,skinVersion:s.actor.skin.version,graphVersion:s.actor.graph.version,triangles:Object.fromEntries(Object.entries(s.skins).map(([k,v])=>[k,v.triangleCount]))})),environment:environment()};
 }
 const ms=(stats:ReturnType<typeof sampleStats>)=>stats?stats.median.toFixed(2):'unavailable';
 function showResults(){
@@ -197,14 +200,14 @@ function showResults(){
  const latest=results.slice(-6);$('results').innerHTML='<table><thead><tr><th>Run / animals</th><th>FPS</th><th>Frame median / p95 ms</th><th>CPU ms</th><th>GPU ms</th><th>Draws</th></tr></thead><tbody>'+latest.map((r,i)=>`<tr><td>${results.length-latest.length+i+1} · ${r.settings.atlasRenderer?'Atlas arenas':r.settings.instancing?'instances':'meshes'} · ${r.settings.count} ${r.settings.collection==='mixed'?'mixed':'same'}</td><td>${(1000/r.frameMs!.mean).toFixed(1)}</td><td>${ms(r.frameMs)} / ${r.frameMs!.p95.toFixed(2)}</td><td>${ms(r.cpuMs)}</td><td>${ms(r.gpuMs)}</td><td>${r.drawCalls!.median}</td></tr>`).join('')+'</tbody></table>';
  $<HTMLButtonElement>('export').disabled=!results.length;
 }
-async function measure(compare:boolean,uploadComparison=false){
- if(!ready||running)return;cancelled=false;lock(true);const savedTime=time,savedInstancing=options.instancing,savedAtlas=options.atlasRenderer,savedPartial=options.partialUploads;
+async function measure(compare:boolean,uploadComparison=false,allComparison=false){
+ if(!ready||running)return;cancelled=false;lock(true);const savedTime=time,savedInstancing=options.instancing,savedAtlas=options.atlasRenderer,savedPartial=options.partialUploads,savedSettings={...options};
  try{
-  if(compare){for(const enabled of [false,true]){time=savedTime;if(uploadComparison){options={...options,partialUploads:enabled};$<HTMLInputElement>('partial-uploads').checked=enabled;}else{options={...options,instancing:enabled,atlasRenderer:false};$<HTMLInputElement>('instancing').checked=enabled;}configureMeshes();for(const m of members)delete m.pose;const r=await capture(savedTime);results.push(r);showResults();}}
+  if(compare){for(const enabled of [false,true]){time=savedTime;if(allComparison){options={...options,atlasRenderer:true,partialUploads:enabled,adaptiveAnimation:enabled,fastFarMatrices:enabled,reuseWorkingBuffers:enabled,distanceShadows:enabled};}else if(uploadComparison){options={...options,partialUploads:enabled};$<HTMLInputElement>('partial-uploads').checked=enabled;}else{options={...options,instancing:enabled,atlasRenderer:false};$<HTMLInputElement>('instancing').checked=enabled;}configureMeshes();for(const m of members)delete m.pose;const r=await capture(savedTime);results.push(r);showResults();}}
   else{results.push(await capture());showResults();}
-  $('bench-status').textContent=compare?`Comparison complete. Same animals, camera and starting clock; only ${uploadComparison?'partial uploads':'instancing'} changed.`:'Benchmark complete. Results can be exported.';
+  $('bench-status').textContent=compare?`Comparison complete. Same animals, camera and starting clock; only ${allComparison?'the five optimizations':uploadComparison?'partial uploads':'instancing'} changed.`:'Benchmark complete. Results can be exported.';
  }catch(e){$('bench-status').textContent=String(e);}
- finally{active=null;gpu.clear();if(compare){options={...options,instancing:savedInstancing,atlasRenderer:savedAtlas,partialUploads:savedPartial};$<HTMLInputElement>('instancing').checked=savedInstancing;$<HTMLInputElement>('partial-uploads').checked=savedPartial;configureMeshes();for(const m of members)delete m.pose;time=savedTime;}lock(false);}
+ finally{active=null;gpu.clear();if(compare){options={...savedSettings};$<HTMLInputElement>('instancing').checked=savedInstancing;$<HTMLInputElement>('partial-uploads').checked=savedPartial;configureMeshes();for(const m of members)delete m.pose;time=savedTime;}lock(false);}
 }
 function hud(){const actual=atlas?.diagnostics(),counts={source:0,'4500':0,'1000':0};if(actual)for(const a of actual.actors)counts[a.tier==='near'?'source':a.tier==='middle'?'4500':'1000']++;else for(const m of members)counts[m.tier]++;const visible=members.filter(m=>m.visible).length;
  $('scene-summary').textContent=`${members.length} animals · ${sources.length} specimens · LOD: ${counts.source} full / ${counts['4500']} middle / ${counts['1000']} far · ${visible} in camera · orbit / drag to change viewpoint`;
@@ -222,8 +225,8 @@ function frame(now:number){
  }
  requestAnimationFrame(frame);
 }
-for(const id of controlsIds.filter(id=>!['duration','observer','overview','measure','compare','compare-uploads'].includes(id)))$(id).onchange=()=>{if(running)cancel('Settings changed; measurement cancelled.');void prepare();};
-$('observer').onclick=observer;$('overview').onclick=overview;$('measure').onclick=()=>void measure(false);$('compare').onclick=()=>void measure(true);$('compare-uploads').onclick=()=>void measure(true,true);$('cancel').onclick=()=>cancel();
+for(const id of controlsIds.filter(id=>!['duration','observer','overview','measure','compare','compare-uploads','compare-all'].includes(id)))$(id).onchange=()=>{if(running)cancel('Settings changed; measurement cancelled.');void prepare();};
+$('observer').onclick=observer;$('overview').onclick=overview;$('measure').onclick=()=>void measure(false);$('compare').onclick=()=>void measure(true);$('compare-uploads').onclick=()=>void measure(true,true);$('compare-all').onclick=()=>void measure(true,false,true);$('cancel').onclick=()=>cancel();
 $('export').onclick=()=>{const data={schema:'animal-population-benchmark-1',method:'2-second warm-up; display-paced frames; CPU update + submission; asynchronous disjoint-aware GPU queries; no readback in timed frames',results};const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='animal-benchmark.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&running)cancel('Page became hidden; measurement cancelled.');});
 renderer.domElement.addEventListener('webglcontextlost',()=>{cancel('WebGL context lost; reload to continue.');ready=false;error='WebGL context lost';});

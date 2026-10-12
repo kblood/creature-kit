@@ -50,10 +50,17 @@ measurements must not be presented as physical Quest measurements.
 
 ## Outstanding
 
-Implement and verify items 2, 3 and 5. Extend the shared controls and counters
-accordingly. Complete allocation profiling for item 4, repeat the paired tests
-after all features are combined, validate normal planetary visits and resource
-lifetimes, then integrate into main and publish. Until those gates pass, keep the
-goal active and the current public release unchanged.
+All five code paths and live controls are now implemented. Component tests cover
+temporal sampling/reset/near exactness, exact affine matrices and shadow fade
+policy. Native tests cover six presets, exact fast-matrix pixels, unchanged
+near shadows, zero far shadow draws and restoration of near shadows. One combined
+128-animal pair with shadows measured CPU medians 8.5/4.8 ms, GPU medians
+2.652/1.783 ms and mean skeleton bytes 2,621,440/268,207 per frame. CDP sampled
+allocation churn was approximately 1.784/0.879 GB over the recorded windows;
+these extrapolated sampled bytes are not resident-memory measurements.
+
+Normal-world terrain/contact, identity, lifecycle and combined resource gates,
+final repeated measurements, main integration and publication remain outstanding.
+Until those pass, keep the goal active and the public release unchanged.
 
 Evidence root in IWSDK: `Assets/_assetctl/animal-optimizations-20261012/`.
