@@ -23,7 +23,9 @@ export class FaunaComposerPaletteWriter {
     for (let i = 0; i < n; i++) {
       this.position.fromArray(pose.positions, i * 3); this.quaternion.fromArray(pose.quaternions, i * 4);
       const radial = pose.radialScale[i]!, chord = pose.chordScale[i]!;
-      if (![this.position.x, this.position.y, this.position.z, this.quaternion.x, this.quaternion.y, this.quaternion.z, this.quaternion.w, radial, chord].every(Number.isFinite) || radial <= 0 || chord <= 0) throw new Error('Invalid Composer bone pose');
+      if (!Number.isFinite(this.position.x)||!Number.isFinite(this.position.y)||!Number.isFinite(this.position.z)||
+          !Number.isFinite(this.quaternion.x)||!Number.isFinite(this.quaternion.y)||!Number.isFinite(this.quaternion.z)||!Number.isFinite(this.quaternion.w)||
+          !Number.isFinite(radial)||!Number.isFinite(chord)||radial<=0||chord<=0) throw new Error('Invalid Composer bone pose');
       this.scale.set(1, radial, radial * chord);
       this.matrix.compose(this.position, this.quaternion, this.scale).multiply(this.inverses[i]!);
       this.matrix.toArray(out, offset + i * 16);

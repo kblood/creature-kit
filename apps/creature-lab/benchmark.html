@@ -9,7 +9,9 @@
 <label>Detail <select id="lod"><option value="auto">Automatic by camera distance</option><option value="source">Full source</option><option value="4500">Middle · 4,500 target</option><option value="1000">Far · 1,000 target</option></select></label>
 <div class="buttons"><button id="observer">Observer camera</button><button id="overview">Overview camera</button></div>
 <h2>Live optimizations</h2>
+<label class="check"><input id="atlas-renderer" type="checkbox"> Atlas renderer · packed middle / far arenas</label>
 <label class="check"><input id="instancing" type="checkbox" checked> Animated instancing</label>
+<label class="check"><input id="partial-uploads" type="checkbox" checked> Upload changed skeleton rows only</label>
 <label class="check"><input id="share-geometry" type="checkbox" checked> Share geometry between separate meshes</label>
 <label class="check"><input id="share-pose" type="checkbox"> Share pose calculation per species</label>
 <label class="check"><input id="culling" type="checkbox" checked> Camera frustum culling</label>
@@ -19,8 +21,8 @@
 <p id="optimization-note"></p>
 <h2>Measure</h2>
 <label>Sample duration <select id="duration"><option value="5">5 seconds</option><option value="10" selected>10 seconds</option><option value="30">30 seconds</option></select></label>
-<div class="buttons"><button id="measure">Run benchmark</button><button id="compare">Compare instancing on / off</button><button id="cancel" disabled>Cancel</button><button id="export" disabled>Export results JSON</button></div>
+<div class="buttons"><button id="measure">Run benchmark</button><button id="compare">Compare instancing on / off</button><button id="compare-uploads">Compare partial / full uploads</button><button id="cancel" disabled>Cancel</button><button id="export" disabled>Export results JSON</button></div>
 <p id="bench-status" role="status">Ready. Runs warm up for two seconds before recording.</p>
 <div id="live-metrics"></div><div id="results"></div>
-<p class="note">Frame time includes the browser's display pacing. CPU time measures update and render submission. GPU time is optional. Memory figures cover owned geometry and pose buffers, not the entire browser or driver. This scene uses Atlas's shared animated instancing, but does not include planet terrain, clouds or its merged packed arenas. Results apply to this browser and device.</p>
+<p class="note">Frame time includes display pacing. CPU time measures update and render submission. GPU time is optional. Memory figures cover declared buffers, not the entire browser or driver. The Atlas option uses the actual controller and packed middle/far arenas. Terrain, clouds and planet navigation are outside this scene. Results apply to this browser and device.</p>
 </aside></main><script type="module" src="./src/benchmark-main.ts"></script></body></html>

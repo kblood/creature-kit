@@ -1100,7 +1100,9 @@ export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time:
   let maxLen = 0, minBody = Infinity, maxPen = 0, minSwing = Infinity;
   for (let i = 0; i < n; i++) {
     const wq = world[i]!;
-    positions.set([wq.p.x, wq.p.y, wq.p.z], i * 3); quaternions.set([wq.q.x, wq.q.y, wq.q.z, wq.q.w], i * 4);
+    const pi=i*3,qi=i*4;
+    positions[pi]=wq.p.x;positions[pi+1]=wq.p.y;positions[pi+2]=wq.p.z;
+    quaternions[qi]=wq.q.x;quaternions[qi+1]=wq.q.y;quaternions[qi+2]=wq.q.z;quaternions[qi+3]=wq.q.w;
   }
   for (const limb of graph.limbs) {
     for (let k = 0; k + 1 < limb.bones.length && k < limb.segments.length; k++) {
