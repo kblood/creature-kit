@@ -17,6 +17,11 @@ The Lab previews geometry; Atlas additionally uses bounded caches and packed GPU
 arenas. This is not a GPU performance benchmark of the planetary renderer.
 
 The library's historical presentation remains available as `skin-5`.
+
+Population benchmarks are available from the editor's group control and at
+`benchmark.html`; see [the benchmark guide](animal-benchmark.md) for distance
+groups, mixed collections, live optimization switches and measurement scope.
+
 `realism-1` adds joined, shaped feet and anatomy-aware foot LOD protection.
 Neither changes the encoded recipe. The current planetary Composer adapter uses
 the shared Composer rig with the planet caller's dated activity and terrain.

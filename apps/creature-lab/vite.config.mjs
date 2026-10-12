@@ -24,6 +24,6 @@ export default defineConfig(({command}) => ({
     emptyOutDir: true,
     // three.js alone is about 700 kB minified; the page is one chunk by design.
     chunkSizeWarningLimit: 1024,
-    rollupOptions: {input: {index:resolve(app,'index.html'),composer:resolve(app,'creature-lab.html'),planet:resolve(app,'planet-skin.html')}},
+    rollupOptions: {input: {index:resolve(app,'index.html'),composer:resolve(app,'creature-lab.html'),planet:resolve(app,'planet-skin.html'),benchmark:resolve(app,'benchmark.html')}},
   },
 }));

@@ -1,0 +1,63 @@
+import assert from 'node:assert/strict';
+import {mkdir,writeFile,readFile} from 'node:fs/promises';
+import {join,resolve} from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {execFileSync} from 'node:child_process';
+import {preview} from 'vite';
+import {chromium} from 'playwright';
+import {browserArgs} from './browser-options.mjs';
+import {withGpuLock} from '../helpers/gpu-lock.mjs';
+import {generateCreatureGenome} from '../../src/planet-v1/creature-model.ts';
+import {planetComposerDefinition} from '../../src/planet-composer.ts';
+const kit=fileURLToPath(new URL('../../',import.meta.url));
+const output=resolve(process.env.CREATURE_LAB_RESULTS??join(kit,'test-results','animal-benchmark',new Date().toISOString().replace(/[:.]/g,'-')));
+await mkdir(output,{recursive:true});
+const server=process.env.CREATURE_LAB_URL?null:await preview({root:resolve(kit,'apps/creature-lab'),configFile:false,build:{outDir:'dist'},preview:{host:'127.0.0.1',port:5287,strictPort:false}});
+const base=process.env.CREATURE_LAB_URL??server.resolvedUrls.local[0],report={ok:false,url:base,checks:[],errors:[]};
+try{await withGpuLock({owner:'animal-benchmark',timeoutMs:600000,retryMs:10000},async()=>{
+ const browser=await chromium.launch({headless:true,args:browserArgs});
+ try{
+  const page=await browser.newPage({viewport:{width:1440,height:1000}});page.on('pageerror',e=>report.errors.push(e.message));
+  const state=()=>page.evaluate(()=>window.__animalBenchmark.state);
+  const settle=()=>page.waitForFunction(()=>window.__animalBenchmark?.ready&&!window.__animalBenchmark?.state.building,{},{timeout:90000});
+  await page.goto(base,{waitUntil:'networkidle'});await page.waitForFunction(()=>window.__creatureLab?.ready);await page.selectOption('#composer-preset','turtle');await page.click('#benchmark-open');await settle();
+  assert.equal((await state()).sources[0].recipe.armor,'dome');
+  assert.equal(new Set((await state()).members.map(m=>m.tier)).size,3);assert.equal((await state()).members.length,64);
+  await page.uncheck('#animate');await settle();await page.uncheck('#culling');await settle();
+  await page.selectOption('#count','16');await settle();
+  await page.selectOption('#lod','1000');await settle();
+  await page.locator('#viewport').screenshot({path:join(output,'instances.png')});let instanced=await state();
+  await page.uncheck('#instancing');await settle();await page.locator('#viewport').screenshot({path:join(output,'meshes.png')});let separate=await state();
+  assert(instanced.renderer.calls<separate.renderer.calls);assert.equal(instanced.renderer.triangles,separate.renderer.triangles);
+  const pixel=JSON.parse(execFileSync('python',['-c','from PIL import Image; import numpy as np,json,sys; a=np.array(Image.open(sys.argv[1]).convert("RGB"),dtype=float); b=np.array(Image.open(sys.argv[2]).convert("RGB"),dtype=float); print(json.dumps({"meanError":float(np.abs(a-b).mean()),"largeDifferenceFraction":float((np.max(np.abs(a-b),axis=2)>12).mean())}))',join(output,'instances.png'),join(output,'meshes.png')],{encoding:'utf8'}));
+  assert(pixel.meanError<2,JSON.stringify(pixel));assert(pixel.largeDifferenceFraction<.015,JSON.stringify(pixel));report.checks.push({check:'real native instancing / separate animated mesh render parity',pixel,instanceDraws:instanced.renderer.calls,separateDraws:separate.renderer.calls});
+  const shared=separate.memory.geometryArrayBytes;await page.uncheck('#share-geometry');await settle();assert((await state()).memory.geometryArrayBytes>shared);
+  await page.check('#instancing');await settle();await page.check('#animate');await settle();await page.check('#share-pose');await settle();await page.waitForTimeout(100);
+  assert((await state()).poseCalculations<=1);await page.selectOption('#stride','4');await settle();await page.selectOption('#stride','1');await settle();
+  await page.check('#shadows');await settle();await page.uncheck('#shadows');await settle();
+  await page.selectOption('#collection','mixed');await settle();await page.selectOption('#lod','auto');await settle();
+  assert.equal((await state()).sources.length,6);assert.equal(new Set((await state()).members.map(m=>m.tier)).size,3);
+  await page.screenshot({path:join(output,'mixed-distances.png')});
+  await page.click('#overview');await page.waitForTimeout(200);await page.click('#observer');await page.waitForTimeout(200);
+  await page.selectOption('#count','64');await settle();
+  await page.selectOption('#duration','5');await page.click('#compare');await page.waitForFunction(()=>!window.__animalBenchmark.running&&window.__animalBenchmark.results.length===2,{},{timeout:90000});
+  const runs=await page.evaluate(()=>window.__animalBenchmark.results);assert.equal(runs.length,2);assert.equal(runs[0].settings.instancing,false);assert.equal(runs[1].settings.instancing,true);
+  assert.deepEqual(runs[0].scene,runs[1].scene);assert.deepEqual(runs[0].camera,runs[1].camera);assert(runs.every(r=>r.frameMs.samples>=10&&r.cpuMs.samples>=10));
+  assert.equal(runs[0].simulationStartSeconds,runs[1].simulationStartSeconds);
+  assert(runs[1].drawCalls.median<runs[0].drawCalls.median);
+  assert.equal(runs[0].triangles.median,runs[1].triangles.median);assert.equal(runs[0].visibleAnimals.median,runs[1].visibleAnimals.median);
+  if((await state()).environment.gpuTimerSupported)assert(runs.every(r=>r.gpuMs?.samples>0));else assert(runs.every(r=>r.gpuMs===null));
+  report.checks.push({check:'actual paired 5-second measurements with warm-up',runs});
+  const download=page.waitForEvent('download');await page.click('#export');const file=await download;await file.saveAs(join(output,'benchmark-export.json'));assert.equal(JSON.parse(await readFile(join(output,'benchmark-export.json'),'utf8')).results.length,2);
+  await page.click('#measure');await page.waitForTimeout(200);await page.click('#cancel');await page.waitForFunction(()=>!window.__animalBenchmark.running);assert.equal(await page.evaluate(()=>window.__animalBenchmark.results.length),2);
+  const memoryBefore=(await state()).memory;for(let i=0;i<3;i++){await page.uncheck('#instancing');await settle();await page.check('#instancing');await settle();}assert.deepEqual((await state()).memory,memoryBefore);
+  await page.selectOption('#count','256');await settle();assert.equal((await state()).members.length,256);await page.selectOption('#count','64');await settle();
+  await page.check('#culling');await settle();const inCamera=(await state()).members.filter(m=>m.visible).length;await page.uncheck('#culling');await settle();assert(inCamera<=(await state()).members.filter(m=>m.visible).length);
+  await page.setViewportSize({width:375,height:812});await page.screenshot({path:join(output,'mobile.png')});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+  const definition=planetComposerDefinition(generateCreatureGenome('benchmark-original-planet','runner'),{individualId:'original/benchmark/member',speciesId:'original/benchmark/species'});
+  const editor=new URL('creature-lab.html?mode=composer&presentation=realism-1',base);editor.hash=new URLSearchParams({planetDefinition:JSON.stringify(definition)}).toString();
+  await page.goto(editor.href,{waitUntil:'networkidle'});await page.waitForFunction(()=>window.__creatureLab?.ready);await page.click('#benchmark-open');await settle();assert.deepEqual((await state()).sources[0].definition,definition);report.checks.push('256 animals, repeated buffer lifecycle, culling, mobile and exact original planet definition transfer');
+  assert.deepEqual(report.errors,[]);report.ok=true;
+ }finally{await browser.close();}
+});}catch(error){report.error=error.stack;process.exitCode=1;}
+finally{await new Promise(done=>server?server.httpServer.close(done):done());await writeFile(join(output,'report.json'),JSON.stringify(report,null,2));console.log(JSON.stringify({ok:report.ok,error:report.error,checks:report.checks.length,output}));}

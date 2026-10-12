@@ -13,6 +13,7 @@ import {assertCaptureOutsideSlot} from '../helpers/gpu-lock.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url)), kit = resolve(here, '../..');
 export const BROWSER_TESTS = Object.freeze([
+  {name: 'animal-benchmark', file: 'animal-benchmark.browser.mjs', what: 'animated instance/mesh pixel parity, mixed populations, live optimizations, GPU/CPU A/B capture, cancellation, memory and mobile'},
   {name: 'animal-lab-lod', file: 'animal-lab-lod.browser.mjs', what: 'source/middle/far comparison, planet identity and animation, limbless and many-legged bodies, mobile'},
   {name: 'planet-lab-ui', file: 'planet-lab-ui.browser.mjs', what: 'canonical genome editor, exact imports, anatomy/coat controls, original comparison, playback, six families and mobile', ownServer: true},
   {name: 'fauna-composer', file: 'fauna-composer.browser.mjs', what: 'panel, presets, links, motion, malformed links, herd, lighting, disposal, mode rejection'},
