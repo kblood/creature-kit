@@ -405,6 +405,7 @@
         "composerFeatherFanSpan",
         "composerFrame",
         "composerLimbMass",
+        "composerMotionPeriod",
         "composerSkeletonSegments",
         "composerStructure",
         "composerTailTipBounds",

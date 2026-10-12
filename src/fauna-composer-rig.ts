@@ -29,7 +29,7 @@ export interface ComposerPoseEnvironment {
 export interface ComposerPoseOptions {trunkMotion?: 'legacy' | 'wave-1'; reuseWorkingBuffers?:boolean; environment?: ComposerPoseEnvironment}
 /** Desktop preview budget. Not a Quest qualification. */
 export const COMPOSER_BUDGET = Object.freeze({maxBones: 160, maxVertices: 48000, maxTriangles: 80000, drawCallsPerCreature: 2});
-export const COMPOSER_MOTIONS = ['neutral', 'idle', 'walk', 'display'] as const;
+export const COMPOSER_MOTIONS = ['neutral', 'idle', 'walk', 'display', 'run', 'eat', 'fly', 'glide'] as const;
 export type ComposerMotion = typeof COMPOSER_MOTIONS[number];
 export type ComposerPart = 'torso' | 'tail' | 'neck' | 'head' | 'trunk' | 'leg' | 'foot' | 'arm' | 'hand' | 'finger' | 'wing';
 export type Vec3 = [number, number, number];
@@ -834,6 +834,31 @@ function solveArm(limb: ComposerLimb, shoulder: THREE.Vector3, target: THREE.Vec
 
 // ------------------------------------------------------------------ pose
 const TAU = Math.PI * 2;
+/** Main authored cycle; secondary idle/look oscillations retain their legacy periods. */
+export function composerMotionPeriod(graph: ComposerGraph, motion: ComposerMotion): number {
+  if (motion === 'run') return graph.locomotion.period * 0.64;
+  if (motion === 'fly') return clamp(0.72 * Math.pow(graph.dims.bodyLength, 0.25), 0.32, 1.25) * graph.traits.motion.periodScale;
+  if (motion === 'glide') return 4.8;
+  if (motion === 'eat') return clamp(2.8 * Math.pow(graph.dims.bodyLength, 0.2), 1.8, 4.8);
+  return graph.locomotion.period;
+}
+/** Airborne legs use a body-relative folded chain, with the feet trailing behind.
+ * There is deliberately no terrain target or ground contact in this solve. */
+function solveFlightLeg(limb: ComposerLimb, socket: THREE.Vector3, heading: THREE.Quaternion): Solved {
+  const s = limb.segments, two = s[0]! + s[1]!;
+  const pole = v3(limb.pole).applyQuaternion(heading), up = UP.clone().applyQuaternion(heading);
+  const hock = socket.clone().add(V(-0.22 * two, -0.3 * two, limb.side * 0.06 * two).applyQuaternion(heading));
+  const {joint, end, reachError} = composerTwoBone(socket, hock, s[0]!, s[1]!, pole);
+  const points = [socket.clone(), joint, end], frames: THREE.Quaternion[] = [];
+  if (s.length === 3) points.push(end.clone().add(V(-0.6 * s[2]!, -0.8 * s[2]!, 0).applyQuaternion(heading)));
+  const plane = V().crossVectors(end.clone().sub(socket), pole).normalize();
+  for (let k = 0; k < s.length; k++) {
+    const dir = points[k + 1]!.clone().sub(points[k]!);
+    frames.push(composerFrame(dir, V().crossVectors(plane, dir).normalize()));
+  }
+  frames.push(composerFrame(V(-1, -0.15, limb.side * 0.05).applyQuaternion(heading), up));
+  return {points, frames, reachError};
+}
 /** Deterministic pose for a motion at `time` seconds (bounded 0..120). */
 export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time: number, options: ComposerPoseOptions = {}): ComposerPose {
   if (options.trunkMotion !== undefined && options.trunkMotion !== 'legacy' && options.trunkMotion !== 'wave-1') throw new Error('Unknown Composer trunk motion');
@@ -849,15 +874,20 @@ export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time:
   }
   const t = environment?.clock ?? clamp(Number.isFinite(time) ? time : 0, 0, 120);
   const n = graph.bones.length, recipe = graph.recipe, loco = graph.locomotion;
+  const wingLimbs = graph.limbs.filter(l => l.kind === 'wing');
+  const airborne = (motion === 'fly' || motion === 'glide') && wingLimbs.length > 0;
+  const flightFallback = (motion === 'fly' || motion === 'glide') && !airborne;
+  const running = motion === 'run', eating = motion === 'eat';
+  const period = composerMotionPeriod(graph, motion), duty = running ? Math.min(loco.duty, recipe.layout === 'biped' ? 0.46 : 0.5) : loco.duty;
   const positions = new Float64Array(n * 3), quaternions = new Float64Array(n * 4), radialScale = new Float64Array(n).fill(1), chordScale = new Float64Array(n).fill(1);
   const world: {p: THREE.Vector3; q: THREE.Quaternion}[] = new Array(n);
   const offsets: (THREE.Quaternion | undefined)[] = new Array(n);
   // individual desync: a herd started together does not step, breathe or look around in lockstep
   const desync = graph.traits.motion;
-  const cycle = environment?.cycle ?? t / loco.period + desync.phase;
-  const stride = environment?.stride ?? loco.stride, speed = environment?.speed ?? loco.speed;
-  const walkWeight = environment?.walkWeight ?? (motion === 'walk' ? 1 : 0), idleWeight = environment?.idleWeight ?? (motion === 'idle' ? 1 : 0);
-  const moving = motion === 'walk' || walkWeight > 0, idle = motion === 'idle' || idleWeight > 0, display = motion === 'display';
+  const cycle = environment?.cycle ?? t / period + desync.phase;
+  const stride = environment?.stride ?? (running ? loco.stride * 0.85 : loco.stride), speed = environment?.speed ?? (running ? stride / (duty * period) : loco.speed);
+  const walkWeight = airborne ? 0 : environment?.walkWeight ?? (motion === 'walk' || running ? 1 : 0), idleWeight = airborne ? 0 : environment?.idleWeight ?? (motion === 'idle' || flightFallback ? 1 : 0);
+  const moving = !airborne && (motion === 'walk' || running || walkWeight > 0), idle = motion === 'idle' || flightFallback || idleWeight > 0, display = motion === 'display';
   const add = (i: number, q: THREE.Quaternion) => { offsets[i] = offsets[i] ? offsets[i]!.multiply(q) : q; };
   const pitchQ = (a: number) => axisQ(Z_AXIS, a), yawQ = (a: number) => axisQ(Y_AXIS, a), rollQ = (a: number) => axisQ(X_AXIS, a);
   const {torso, tail, neck, head, trunk} = graph.chains;
@@ -868,7 +898,7 @@ export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time:
 
   // ---- axial motion offsets
   if (moving && !limbless) {
-    travel = environment ? 0 : loco.speed * t;
+    travel = environment ? 0 : (running ? speed : loco.speed) * t;
     const twoStep = Math.cos(TAU * cycle * 2);
     if (recipe.layout === 'biped') { rootP.y += -loco.bob * twoStep * walkWeight; rootQ.multiply(rollQ(0.035 * Math.sin(TAU * cycle) * walkWeight)).multiply(yawQ(0.04 * Math.sin(TAU * cycle) * walkWeight)); }
     else if (recipe.layout === 'quadruped') { rootP.y += -loco.bob * twoStep * walkWeight; rootQ.multiply(rollQ(0.015 * Math.sin(TAU * cycle) * walkWeight)); }
@@ -896,11 +926,37 @@ export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time:
     add(head, pitchQ(display ? 0.18 : nod * 0.5));
     tail.forEach((bi, i) => add(bi, yawQ((idle ? 0.1 * idleWeight : 0.16) * Math.sin(TAU * (t / (idle ? 3.1 : 1.9) + lp) - 0.6 * i)).multiply(pitchQ(display && i < 3 ? 0.12 : 0))));
   }
+  if (eating) {
+    const chew = TAU * (t / period + desync.lookPhase), dip = 0.65 + 0.35 * Math.cos(chew);
+    const headBone = graph.bones[head]!, span = graph.dims.neckLength + graph.dims.headLength + graph.dims.snoutLength;
+    // Short, low heads peck shallowly; a long raised neck can bow much further.
+    const room = Math.max(0, headBone.restPosition[1] - 2 * headBone.start.h);
+    const bow = clamp(Math.atan2(room, Math.max(span, 1e-6)) * 0.65, 0.025, 0.8);
+    neck.forEach(bi => add(bi, pitchQ(-bow * dip / Math.max(1, neck.length))));
+    add(head, pitchQ(-bow * (0.25 + 0.08 * Math.sin(chew * 4))));
+    tail.forEach((bi, i) => add(bi, yawQ(0.035 * Math.sin(chew - i * 0.6))));
+    for (const bi of torso) radialScale[bi] = 1 + 0.006 * Math.sin(chew);
+  }
+  if (airborne) {
+    const beat = TAU * (t / period + desync.phase), flapping = motion === 'fly';
+    // Additive to the usual rootHeight environment translation. The authoring
+    // altitude clears the full downstroke, including low, short-legged bodies.
+    rootP.y += Math.max(0.6 * graph.dims.bodyLength, 0.8 * graph.dims.wingSemiSpan) + graph.dims.bodyLength * (flapping ? 0.035 * Math.sin(beat - 0.6) : 0.018 * Math.sin(beat));
+    rootQ.multiply(pitchQ(-graph.dims.torsoPitch + 0.05 + (flapping ? 0.018 * Math.sin(beat) : 0.02 * Math.sin(beat))));
+    if (!flapping) rootQ.multiply(rollQ(0.065 * Math.sin(beat)));
+    neck.forEach(bi => add(bi, pitchQ(-0.12 / Math.max(1, neck.length))));
+    add(head, pitchQ(0.06));
+    tail.forEach((bi, i) => add(bi, yawQ(0.025 * Math.sin(beat - 0.35 * i))));
+    travel = environment ? 0 : graph.dims.bodyLength * (flapping ? 2.2 : 2.6) * t;
+  }
   const lowestTorso = () => torso.reduce((lo, bi) => Math.min(lo, world[bi]!.p.y - graph.bones[bi]!.start.h), Infinity);
   // trunk curl
   if (trunk.length && motion !== 'neutral') {
     const lp = desync.lookPhase;
-    if (options.trunkMotion === 'wave-1') {
+    if (airborne || eating) {
+      const phase = TAU * (t / period + lp);
+      trunk.forEach((bi, i) => add(bi, pitchQ((airborne ? 0.12 + 0.025 * Math.sin(phase - i * 0.35) : 0.16 + 0.12 * Math.sin(phase - i * 0.4)) * (0.15 + i * 0.2)).multiply(yawQ(0.025 * Math.sin(phase - i * 0.4)))));
+    } else if (options.trunkMotion === 'wave-1') {
       const curlWeights = [0.08, 0.45, 0.85, 1.25, 1.6, 1.85], swayWeights = [0.12, 0.35, 0.55, 0.65, 0.65, 0.65];
       trunk.forEach((bi, i) => {
         const lag = 0.45 * i;
@@ -919,8 +975,8 @@ export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time:
     }
   }
   // wings: fold (idle/walk), spread and slow grounded display beats
-  const wingLimbs = graph.limbs.filter(l => l.kind === 'wing');
   for (const limb of wingLimbs) {
+    if (airborne) continue;
     const fold = motion === 'neutral' ? 0 : display ? 0.1 + 0.1 * Math.sin(TAU * t / 3) : 1;
     const flap = display ? 0.38 * Math.sin(TAU * t / 1.6) : moving ? 0.04 * Math.sin(TAU * cycle * 2) : 0;
     const [hum, fore, hand] = limb.bones as [number, number, number];
@@ -954,7 +1010,7 @@ export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time:
     if (offsets[i]) q.multiply(offsets[i]!);
     q.normalize();
     // free chains stay above the ground
-    if ((bone.part === 'tail' || bone.part === 'trunk' || ((bone.part === 'neck' || bone.part === 'head') && limbless)) && motion !== 'neutral') {
+    if (!airborne && (bone.part === 'tail' || bone.part === 'trunk' || ((bone.part === 'neck' || bone.part === 'head') && limbless)) && motion !== 'neutral') {
       // The tip clears the deepest section touching it (a head is deeper mid-length, and its start is deeper than the
       // neck end it hangs from); the 6% covers skin blended across a bend at the joint.
       const under = (x: ComposerSection) => x.h - x.yc, carriesHead = limbless && bone.part === 'neck' && i === neck[neck.length - 1];
@@ -966,11 +1022,11 @@ export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time:
     }
     world[i] = {p, q};
   };
-  if (limbless && motion !== 'neutral') {
+  if (limbless && motion !== 'neutral' && !airborne) {
     // limbless crawl places the torso and tail along a travelling track; everything else follows by FK
     // Turning the neck relative to the front segment sags the skin blended across that joint; lift the joint to cover it.
     const neckTurn = neck.length && offsets[neck[0]!] ? 2 * Math.acos(Math.min(1, Math.abs(offsets[neck[0]!]!.w))) : 0;
-    travel = crawl(graph, motion, t, world, radialScale, neckTurn);
+    travel = crawl(graph, running ? 'walk' : flightFallback ? 'idle' : motion, running ? t / 0.64 : t, world, radialScale, neckTurn);
     for (let i = 0; i < n; i++) { const part = graph.bones[i]!.part; if (graph.bones[i]!.driver === 'fk' && part !== 'torso' && part !== 'tail') fkBone(i); }
   } else for (let i = 0; i < n; i++) if (graph.bones[i]!.driver === 'fk') fkBone(i);
   // ---- legs
@@ -979,13 +1035,14 @@ export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time:
   const heading = new THREE.Quaternion();
   const legTargets: {limb:ComposerLimb;contact:THREE.Vector3;stance:boolean;footPitch:number;groundNormal?:Vec3;groundForward?:Vec3}[] = [];
   for (const limb of graph.limbs) {
-    if (limb.kind !== 'leg') continue;
+    if (limb.kind !== 'leg' || airborne) continue;
     const rest = v3(limb.rest);
     let stance = true, footPitch = 0;
-    const phase = ((cycle + limb.phase) % 1 + 1) % 1;
+    const limbPhase = running && recipe.layout === 'quadruped' ? (limb.side < 0 ? 0 : 0.5) + (limb.front ? 0.5 : 0) : limb.phase;
+    const phase = ((cycle + limbPhase) % 1 + 1) % 1;
     const contact = rest.clone();
     if (moving) {
-      if (phase < loco.duty) { const u = phase / loco.duty; contact.x = rest.x + stride * (0.5 - u); }
+      if (phase < duty) { const u = phase / duty; contact.x = rest.x + stride * (0.5 - u); }
       else {
         // Swing, in the body frame, from -stride/2 to +stride/2. The world foot follows a minimum-jerk path: it covers
         // stride + speed x swing time with the quintic 6u^5 - 15u^4 + 10u^3, so it leaves and meets the ground with zero
@@ -994,10 +1051,10 @@ export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time:
         // foot does. (A cubic Hermite with the same end tangents still reaches ~0.3 x body speed within 2% of liftoff.)
         // y = lift 16u^2(1-u)^2 has zero vertical velocity at touchdown. Pitch: toe down (heel up) through push-off,
         // toe up before heel strike; both factors vanish at u = 0.5, so the asymmetric scale introduces no jump.
-        const u = (phase - loco.duty) / (1 - loco.duty), u3 = u * u * u;
-        const carried = environment?.cycleLength !== undefined ? (1-loco.duty)*environment.cycleLength : speed * (1 - loco.duty) * loco.period, s = u3 * (10 + u * (6 * u - 15));
+        const u = (phase - duty) / (1 - duty), u3 = u * u * u;
+        const carried = environment?.cycleLength !== undefined ? (1-duty)*environment.cycleLength : speed * (1 - duty) * period, s = u3 * (10 + u * (6 * u - 15));
         contact.x = rest.x - stride * 0.5 + (stride + carried) * s - carried * u;
-        contact.y = loco.lift * 16 * u * u * (1 - u) * (1 - u); stance = false;
+        contact.y = loco.lift * (running ? 1.3 : 1) * 16 * u * u * (1 - u) * (1 - u); stance = false;
         footPitch = recipe.feet === 'spike' ? 0 : -0.35 * Math.sin(TAU * u) * Math.sin(Math.PI * u) * (u < 0.5 ? 1 : 0.4);
         // Toe-down pitch rotates the front of the sole down by front*sin(pitch); never more than the current lift.
         const reach = footPitch < 0 ? limb.footExtent[1] : limb.footExtent[0];
@@ -1045,7 +1102,27 @@ export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time:
     }
   }
   // wings: raise the whole wing about its final shoulder after support fitting
-  for (const limb of wingLimbs) liftWing(graph, limb, world, chordScale, 0.004 * graph.dims.bodyLength);
+  for (const limb of wingLimbs) {
+    if (!airborne) { liftWing(graph, limb, world, chordScale, 0.004 * graph.dims.bodyLength); continue; }
+    const carrier = world[limb.socketBone]!, beat = TAU * (t / period + desync.phase), flapping = motion === 'fly';
+    let p = v3(limb.socket).applyQuaternion(carrier.q).add(carrier.p);
+    limb.bones.forEach((bi, k) => {
+      const angle = flapping ? 0.08 + (0.62 + k * 0.12) * Math.sin(beat - k * 0.16) : 0.13 + 0.025 * Math.sin(beat - k * 0.2);
+      const recovery = flapping ? (1 + Math.cos(beat)) * 0.5 : 0;
+      const direction = V(-0.16 - k * 0.07 - k * 0.1 * recovery, Math.sin(angle), limb.side * Math.cos(angle)).normalize();
+      const q = carrier.q.clone().multiply(composerFrame(direction, UP));
+      world[bi] = {p: p.clone(), q};
+      chordScale[bi] = 1 - 0.075 * k * recovery;
+      p = p.clone().add(V(graph.bones[bi]!.length, 0, 0).applyQuaternion(q));
+    });
+  }
+  if (airborne) for (const limb of graph.limbs) {
+    if (limb.kind !== 'leg') continue;
+    const carrier = world[limb.socketBone]!, socket = v3(limb.socket).applyQuaternion(carrier.q).add(carrier.p);
+    const solved = solveFlightLeg(limb, socket, carrier.q);
+    maxReach = Math.max(maxReach, solved.reachError);
+    limb.bones.forEach((bi, k) => { world[bi] = {p: solved.points[k]!, q: solved.frames[k]!}; });
+  }
   for (const {limb,contact,stance,footPitch,groundNormal,groundForward} of legTargets) {
     const carrier = world[limb.socketBone]!;
     const sock = v3(limb.socket).applyQuaternion(carrier.q).add(carrier.p);
@@ -1076,18 +1153,20 @@ export function poseComposer(graph: ComposerGraph, motion: ComposerMotion, time:
       if (swing > 0) target.x += swing * 0.22 * reach * Math.cos(TAU * (cycle + limb.phase));
     }
     if (idle) { curl = 0.35 + 0.25 * Math.sin(TAU * t / 2.8 + limb.side); }
+    if (eating) { target.add(V(0.05 * reach, 0.22 * reach, 0)); curl = 0.8 + 0.15 * Math.sin(TAU * t / period * 4); wrist = 0.35; }
+    if (airborne) { target.copy(sock).add(V(-0.35 * reach, -0.3 * reach, limb.side * 0.12 * reach).applyQuaternion(carrier.q)); curl = 0.75; wrist = 0.35; }
     // display raises the arms forward and up; graph-4 (EC4) spreads them sideways so the raised hands frame the face
     // instead of passing in front of it
     if (display) { target.add(V(DISPLAY_ARM_RAISE[0] * reach, DISPLAY_ARM_RAISE[1] * reach + 0.1 * reach * Math.sin(TAU * t / 1.7 + limb.side), limb.side * DISPLAY_ARM_RAISE[2] * reach)); curl = 0.9 + 0.5 * Math.sin(TAU * t / 1.3); wrist = -0.3; }
     const floor = limb.segments[2]! + limb.segments[3]! + 0.02 * reach;
-    if (target.y < floor) target.y = floor;
+    if (!airborne && target.y < floor) target.y = floor;
     const grip = recipe.hands === 'pincer' ? Math.max(0, curl) * 0.6 : curl;
     // a low shoulder can swing the elbow into the ground; turn the elbow upward just enough
     const margin = 0.004 * graph.dims.bodyLength, elbowFloor = graph.bones[limb.bones[0]!]!.end.h * 1.3 + margin;
-    const solve = () => { let out = solveArm(limb, sock, target, heading, wrist, grip); for (const raise of [0.5, 1, 2, 4, 16]) { if (out.points[1]!.y >= elbowFloor) break; out = solveArm(limb, sock, target, heading, wrist, grip, raise); } return out; };
+    const solve = () => { let out = solveArm(limb, sock, target, airborne ? carrier.q : heading, wrist, grip); for (const raise of [0.5, 1, 2, 4, 16]) { if (airborne || out.points[1]!.y >= elbowFloor) break; out = solveArm(limb, sock, target, heading, wrist, grip, raise); } return out; };
     let solved = solve();
     // fingers, pincers and claws reach up to ARM_DIGIT_REACH finger lengths past the finger joint; raise the hand to clear them
-    for (let k = 0; k < 3; k++) {
+    for (let k = 0; !airborne && k < 3; k++) {
       const deficit = margin - armHandLowest(graph, limb, solved);
       if (deficit <= 0) break;
       target.y += deficit; solved = solve();

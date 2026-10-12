@@ -77,7 +77,7 @@ test('compatibility explanations retain selected modules instead of rewriting re
  for(const term of['Legs and feet','Neck','Shell','Wings','Wing span','Horns','Arms','Tail length'])assert.ok(constraints.some(c=>c.part===term),`Disclosure for ${term}`);
  assert.equal(recipe.horns,'nasal');assert.equal(recipe.trunk,'none');assert.ok(!constraints.some(c=>c.part==='Trunk'||c.part==='Horn'));
  for(const c of constraints){assert.equal(typeof c.chosen,'string');assert.ok(c.effect.length>10);}
- assert.deepEqual(recipe,snapshot);assert.ok(constraints.some(c=>c.effect.includes('Flight is not simulated')));
+ assert.deepEqual(recipe,snapshot);assert.ok(constraints.some(c=>c.effect.includes('flight and gliding')));
 });
 
 test('versioned recipe equality does not equate an unsupported future recipe with v1',()=>{

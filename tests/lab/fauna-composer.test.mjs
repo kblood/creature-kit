@@ -113,7 +113,7 @@ test('recipe text and lab URLs round-trip every field', () => {
   assert.ok(!url.searchParams.has('bodyCondition') && !url.searchParams.has('assetHash'), 'composer links carry only composer state');
   for (const key of COMPOSER_RECIPE_KEYS) assert.match(url.searchParams.get('recipe'), new RegExp(`\\*${key}_`));
   assert.equal(creatureLabComposerInputError('?mode=composer&recipe=a&recipe=b'), 'Invalid composer link: repeated recipe');
-  assert.match(creatureLabComposerInputError('?mode=composer&motion=fly'), /unknown motion/);
+  assert.match(creatureLabComposerInputError('?mode=composer&motion=teleport'), /unknown motion/);
   assert.match(decodeComposerRecipe(parseCreatureLabState(`?mode=composer&recipe=v1*${'x'.repeat(3000)}`).recipe).error, /longer than/);
   assert.match(decodeComposerRecipe('v5*layout_biped').error, /Unsupported/);
   assert.match(decodeComposerRecipe('v999*layout_biped').error, /Unsupported/);

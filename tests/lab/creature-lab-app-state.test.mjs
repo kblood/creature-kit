@@ -23,11 +23,20 @@ test('a link without mode gets the composer checks: repeated keys and unknown mo
     const q = new URLSearchParams({recipe: giraffe}); q.append(key, key === 'motion' ? 'walk' : key === 'herd' ? '6' : key === 'light' ? 'studio' : 'x'); q.append(key, key === 'motion' ? 'idle' : key === 'herd' ? '9' : key === 'light' ? 'planet-noon' : 'y');
     assert.equal(creatureLabComposerInputError(q), `Invalid composer link: repeated ${key}`, key);
   }
-  assert.match(creatureLabComposerInputError('?motion=fly'), /unknown motion "fly"/);
+  assert.match(creatureLabComposerInputError('?motion=teleport'), /unknown motion "teleport"/);
   assert.equal(creatureLabLightInputError('?light=studio&light=planet-noon'), 'Invalid link: repeated light');
   const notices = creatureLabInputNotices('?herd=7&light=disco');
   assert.equal(notices.length, 2); assert.match(notices[0], /Herd size "7"/); assert.match(notices[1], /Lighting "disco"/);
   assert.equal(creatureLabComposerInputError(`?recipe=${encodeURIComponent(giraffe)}`), null);
+});
+
+test('new animation selections survive shared links', () => {
+  for (const motion of ['run', 'eat', 'fly', 'glide']) {
+    const state = parseCreatureLabState(`?mode=composer&motion=${motion}`);
+    assert.equal(creatureLabComposerInputError(`?motion=${motion}`), null);
+    assert.equal(state.motion, motion);
+    assert.equal(parseCreatureLabState(new URL(creatureLabUrl('https://example.test/creature-lab.html', state)).search).motion, motion);
+  }
 });
 
 test('a link naming another mode is rejected visibly, not reinterpreted', () => {

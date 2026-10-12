@@ -42,6 +42,15 @@ const SPECIMENS = {
 };
 const cache = new Map();
 const exported = name => { if (!cache.has(name)) cache.set(name, exportCreatureGlb(SPECIMENS[name])); return cache.get(name); };
+
+test('export: new procedural motion clips can be baked explicitly', () => {
+  const motions = ['run','eat','fly','glide'];
+  const {glb,report} = exportCreatureGlb(SPECIMENS.bird,{clips:motions.map(motion=>({motion,duration:.5,fps:12}))});
+  const {json} = readComposerGlb(glb);
+  assert.deepEqual(json.animations.map(a=>a.name),motions);
+  assert.deepEqual(report.clips.map(c=>c.motion),motions);
+  for (const clip of report.clips) {assert.equal(clip.duration,.5);assert.equal(clip.keys,7);}
+});
 const accessorArray = (json, bin, index) => {
   const a = json.accessors[index], v = json.bufferViews[a.bufferView];
   const C = {5126: Float32Array, 5123: Uint16Array, 5125: Uint32Array, 5121: Uint8Array}[a.componentType];
@@ -109,7 +118,7 @@ test('export: a second export of the same recipe is byte-identical (GLB, sidecar
 test('export: recipe text and recipe object export the same bytes; options are validated', () => {
   const text = encodeComposerRecipe(SPECIMENS.bird);
   assert.equal(Buffer.compare(Buffer.from(exportCreatureGlb(text, {clips: ['walk']}).glb), Buffer.from(exportCreatureGlb(SPECIMENS.bird, {clips: ['walk']}).glb)), 0);
-  assert.throws(() => exportCreatureGlb(SPECIMENS.bird, {clips: ['run']}), /unknown motion/);
+  assert.throws(() => exportCreatureGlb(SPECIMENS.bird, {clips: ['teleport']}), /unknown motion/);
   assert.throws(() => exportCreatureGlb(SPECIMENS.bird, {clips: ['walk', 'walk']}), /listed twice/);
   assert.throws(() => exportCreatureGlb(SPECIMENS.bird, {gloss: 'shiny'}), /gloss/);
   assert.throws(() => exportCreatureGlb('v9*layout_biped'), /Unsupported composer recipe version/);

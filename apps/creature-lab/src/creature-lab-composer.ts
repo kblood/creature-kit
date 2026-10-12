@@ -4,7 +4,8 @@ import {COMPOSER_CHOICES, COMPOSER_PRESET_IDS, COMPOSER_PRESET_LABELS, COMPOSER_
   type ComposerChoiceKey, type ComposerNumberKey, type ComposerPresetId, type ComposerRecipe} from "../../../src/fauna-composer-recipe.ts";
 import {coherentComposerSpecies, type ComposerArchetype} from "../../../src/fauna-composer-species.ts";
 import {COAT_MARK_BITS, COAT_MARK_NAMES, resolveCoatPattern, type CoatMarkName} from "../../../src/fauna-coat-vocab.ts";
-import {COMPOSER_MOTIONS, type ComposerMotion} from "../../../src/fauna-composer-rig.ts";
+import {COMPOSER_MOTIONS,composerMotionPeriod, type ComposerMotion} from "../../../src/fauna-composer-rig.ts";
+import {COMPOSER_MOTION_LABELS} from './composer-motion-labels.ts';
 import {type ComposerCreature} from "../../../src/fauna-composer.ts";
 import {PLANET_COMPOSER_SOURCE_VERSION, type PlanetComposerDefinition} from "../../../src/planet-composer.ts";
 import {COAT_GENOME_RANGES} from "../../../src/fauna-coat-fields.ts";
@@ -162,7 +163,7 @@ function eyeSelectOptions(){return `<option value="auto">${esc(VALUE["eyes:auto"
 const ARCHETYPE_LABEL:Record<ComposerArchetype,string>={"ungulate-grazer":"grazing hoofed animal",giraffid:"giraffid",pachyderm:"pachyderm","cursorial-carnivore":"running carnivore",theropod:"theropod",ratite:"ratite",
  bird:"ground bird","sprawler-lizard":"lizard",tortoise:"tortoise",primate:"primate",myriapod:"myriapod",worm:"worm"};
 const HERD_LABEL:Record<ComposerHerdSize,string>={1:"1 animal",6:"Herd of 6",9:"Herd of 9",12:"Herd of 12"};
-const MOTION_LABEL:Record<ComposerMotion,string>={neutral:"Rest pose (unanimated)",idle:"Standing",walk:"Walking",display:"Display (wings, arms, trunk)"};
+const MOTION_LABEL=COMPOSER_MOTION_LABELS;
 const isChoice=(key:Key):key is ComposerChoiceKey=>key in COMPOSER_CHOICES;
 /** Controls drawn as a select: the choice keys, plus the eye-rules epoch (a number key with two named values). */
 const isSelect=(key:Key)=>isChoice(key)||key==="eyeRules";
@@ -625,15 +626,15 @@ export function createComposerLab(host:ComposerLabHost):ComposerLab{
  playButton.onclick=()=>setPlaying(!playing);
  const seek=(time:number)=>{setPlaying(false);host.setTime(Math.max(0,Math.min(120,time)));host.refresh();};
  timeInput.oninput=()=>{const v=Number(timeInput.value);if(timeInput.value.trim()&&Number.isFinite(v))seek(v);};
- phaseInput.oninput=()=>{const period=actors[0]?.creature.graph.locomotion.period??1,time=host.getTime(),start=Math.floor(time/period)*period;seek(Math.min(120,start+Number(phaseInput.value)*period));};
+ phaseInput.oninput=()=>{const period=actors[0]?composerMotionPeriod(actors[0].creature.graph,motion()):1,time=host.getTime(),start=Math.floor(time/period)*period;seek(Math.min(120,start+Number(phaseInput.value)*period));};
 
  const motion=()=>(COMPOSER_MOTIONS as readonly string[]).includes(motionSelect.value)?motionSelect.value as ComposerMotion:"walk";
  function disposeActors(){buildToken++;building=false;provisional=null;for(const a of actors){a.creature.dispose();a.track?.dispose();}actors=[];herdTrack?.dispose();herdTrack=null;}
  /** Local bounds over a full motion cycle so framing does not crop wings, tails or swinging feet. */
  function sampleEnvelope(creature:ComposerCreature){
-  const box=new THREE.Box3(),m=motion(),span=m==="neutral"?0:Math.max(creature.graph.locomotion.period,4.8);
+  const box=new THREE.Box3(),m=motion(),expanded=m==='run'||m==='eat'||m==='fly'||m==='glide',span=m==="neutral"?0:expanded?composerMotionPeriod(creature.graph,m):Math.max(creature.graph.locomotion.period,4.8),samples=expanded?24:12;
   creature.group.position.set(0,0,0);
-  for(let k=0;k<=(m==="neutral"?0:12);k++){creature.update(m,span*k/12);box.union(creature.bounds());}
+  for(let k=0;k<=(m==="neutral"?0:samples);k++){creature.update(m,span*k/samples);box.union(creature.bounds());}
   return box;
  }
  function makeActor(side:Side,index:number,recipe:ComposerRecipe,options:{skeleton:boolean;neutral:boolean},track:boolean):Actor{
@@ -702,7 +703,7 @@ export function createComposerLab(host:ComposerLabHost):ComposerLab{
  }
  function syncTime(time:number){
   if(document.activeElement!==timeInput)timeInput.value=time.toFixed(2);
-  const period=actors[0]?.creature.graph.locomotion.period??1;if(document.activeElement!==phaseInput)phaseInput.value=((time%period)/period).toFixed(3);
+  const period=actors[0]?composerMotionPeriod(actors[0].creature.graph,motion()):1;if(document.activeElement!==phaseInput)phaseInput.value=((time%period)/period).toFixed(3);
  }
  function actorTitle(a:Actor){
   if(compareBox.checked)return a.side==="first"?"First (left)":"Second (right)";
@@ -716,7 +717,8 @@ export function createComposerLab(host:ComposerLabHost):ComposerLab{
  function renderConstraints(){
   const herdView=actors.length>1&&!compareBox.checked;
   const out=actors.map((a,i)=>{const list=a.creature.graph.constraints;const title=actorTitle(a);
-   const fit=list.length?`<ul>${list.map(c=>`<li><b>${esc(c.part)}</b> (${esc(c.chosen)}): ${esc(c.effect)}</li>`).join("")}</ul>`:"<p>No adjustments: every chosen part is built as selected.</p>";
+   const flightWarning=(motion()==='fly'||motion()==='glide')&&!a.creature.graph.limbs.some(l=>l.kind==='wing')?'<p class="composer-hint">This animal has no wings. Flying and gliding require wings; it remains standing on the ground.</p>':'';
+   const fit=flightWarning+(list.length?`<ul>${list.map(c=>`<li><b>${esc(c.part)}</b> (${esc(c.chosen)}): ${esc(c.effect)}</li>`).join("")}</ul>`:"<p>No adjustments: every chosen part is built as selected.</p>");
    if(herdView)return `${i===0?fit:""}<details class="composer-individual"><summary>${esc(title)} · ${a.creature.individual.deltas.length} differences</summary>${deltaList(a)}</details>`;
    return `${title?`<b>${esc(title)}</b>`:""}${fit}<div class="composer-individual"><b>This individual</b>${deltaList(a)}</div>`;}).join("");
   $("composer-constraints").innerHTML=out;
@@ -797,7 +799,7 @@ export function createComposerLab(host:ComposerLabHost):ComposerLab{
    return {title:"Modular creature composer",
     description:"Build a creature from independent parts: start from an animal, swap body layout, face (a trunk is the Proboscis face), eyes, headgear, neck, legs, feet, arms, tail, shell or wings, set its coat, then step through individuals or show a herd. Random plausible species follow real body plans; wild hybrids mix anything.",
     captionTitle:cmp?`${caption(firstActor,recipes.first)} | ${caption(secondActor,recipes.second)}`:herdView?`${speciesLabel(recipes.first)} · ${herdSummary()}`:caption(firstActor,recipes.first),
-    captionCopy:cmp?"Left: first animal. Right: second animal. Same metre scale, light and pose time. Each ground track scrolls with its own walk.":herdView?"Individuals of one species at true metre scale, sharing light and clock; each walks with its own gait and scrolls its own ground track. Desktop preview, not a headset scene.":"Experimental procedural shapes at true metre scale. The animal stays centred while the ground track scrolls under its feet.",
+    captionCopy:cmp?"Left: first animal. Right: second animal. Same metre scale, light and pose time. Ground tracks show each animal's travel.":herdView?"Individuals of one species at true metre scale, sharing light, motion and clock. Ground tracks show their travel. Desktop preview, not a headset scene.":(motion()==='fly'||motion()==='glide')?"Winged animals fly above the ground with legs tucked. Animals without wings remain standing. The animal stays centred while the ground track shows its travel.":"Experimental procedural shapes at true metre scale. The animal stays centred while the ground track shows its travel.",
     detail};
   },
   metrics(){

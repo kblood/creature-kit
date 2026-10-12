@@ -42,7 +42,7 @@ function corpus() {
   for (const text of [...v4, ...v1, ...v2]) links.push(q([['recipe', text]]));
   for (const herd of ['1', '6', '9', '12', '7', '0', '6.0', '-6', 'x', '']) links.push(q([['recipe', giraffe], ['herd', herd]]));
   for (const light of ['studio', 'planet-noon', 'planet-evening', 'disco', '']) links.push(q([['recipe', giraffe], ['light', light]]));
-  for (const motion of ['neutral', 'idle', 'walk', 'display', 'fly', '']) links.push(q([['recipe', giraffe], ['motion', motion]]));
+  for (const motion of ['neutral', 'idle', 'walk', 'display', 'teleport', '']) links.push(q([['recipe', giraffe], ['motion', motion]]));
   for (const time of ['0', '3.5', '47.25', '120', '999', '-4', 'Infinity', 'NaN', '', ' ']) links.push(q([['recipe', giraffe], ['time', time]]));
   for (const view of ['three-quarter', 'side', 'front', 'top']) links.push(q([['recipe', giraffe], ['view', view]]));
   for (const flag of ['compare', 'neutral', 'skeleton']) for (const value of ['1', '0', 'true', '']) links.push(q([['recipe', giraffe], [flag, value]]));

@@ -1,4 +1,5 @@
 import {COMPOSER_RECIPE_MAX_TEXT} from '../../../src/fauna-composer-recipe.ts';
+import {COMPOSER_MOTIONS} from '../../../src/fauna-composer-rig.ts';
 import {FAUNA_REVIEW_PRESET_IDS, type FaunaReviewPresetId} from './fauna-review-environment.ts';
 import type {ComposerSkinPresentation} from '../../../src/fauna-composer-mesh.ts';
 import {LAB_PLANET_DEFINITION_MAX_BYTES,parseLabPlanetDefinition,serializeLabPlanetDefinition,parseLabJson} from './creature-lab-planet.ts';
@@ -12,12 +13,14 @@ import {LAB_PLANET_DEFINITION_MAX_BYTES,parseLabPlanetDefinition,serializeLabPla
  *   shown as something else.
  * - `presentation` is an app-only surface selection (modern by default), separately validated and shared; it never
  *   changes either recipe. The legacy portion of parser/URL behavior remains covered by Atlas parity tests.
+ * - Motion choices follow the kit rig, including running, eating, flying and gliding. Legacy motions keep their
+ *   original URL behavior; these extra authored clips are a standalone Lab extension.
  * - The planetary-mode keys (seed, profile, species, variant, growth, frame, family, pose, date, compareVariant,
  *   compareGrowth, source, assetHash, sidecarHash, replayVersion, templateRecipe, morphLocks and the six morph values)
  *   are neither parsed nor written: Atlas never writes them into a composer link either.
  * Camera gestures are deliberately excluded: shared links open the same named frame, measured in metres. */
 export type LabMode = 'composer';
-export const COMPOSER_LAB_MOTIONS = ['neutral', 'idle', 'walk', 'display'] as const;
+export const COMPOSER_LAB_MOTIONS = COMPOSER_MOTIONS;
 export type ComposerLabMotion = typeof COMPOSER_LAB_MOTIONS[number];
 /** Composer herd sizes: one animal, or a herd of individuals of the same species. */
 export const COMPOSER_HERD_SIZES = [1, 6, 9, 12] as const;

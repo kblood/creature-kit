@@ -1,5 +1,15 @@
 # creature-kit
 
+Since `0.11.0`, the shared rig adds `run`, `eat`, `fly` and `glide`.
+Animal Lab exposes all eight motions, including source/middle/far LOD previews,
+and the benchmark can measure the selected motion. Flight articulates the
+original wings, folds the legs behind the body and has no planted-foot contacts.
+Wingless animals fall back to standing when a flight preview is selected.
+Planet callers supply a dated airborne path; the shared planet pose selects
+flight for winged animals. These are procedural cycles, with no takeoff/landing
+transition or aerodynamic simulation. GLB export retains its original four
+default clips; request the new motion names explicitly to bake them.
+
 Since `0.8.0`, `creature-kit/planet` exposes the same Composer source used by
 **Animal Lab** for existing planetary genomes. The caller supplies the original
 individual/species IDs, resolved metre dimensions and appearance. The adapter

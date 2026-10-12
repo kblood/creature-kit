@@ -42,7 +42,7 @@ import * as THREE from 'three';
 import type {ComposerBuildPhenotype} from './fauna-composer-phenotype.ts';
 import {createComposerCreature} from './fauna-composer.ts';
 import {COMPOSER_RECIPE_VERSION, decodeComposerRecipe, encodeComposerRecipe, normalizeComposerRecipe, type ComposerRecipe} from './fauna-composer-recipe.ts';
-import {COMPOSER_BUDGET, COMPOSER_GRAPH_VERSION, COMPOSER_MOTIONS, COMPOSER_TRUNK_MOTION_VERSION, poseComposer, type ComposerGraph, type ComposerMotion, type ComposerPose, type ComposerPoseOptions} from './fauna-composer-rig.ts';
+import {COMPOSER_BUDGET, COMPOSER_GRAPH_VERSION, COMPOSER_MOTIONS, COMPOSER_TRUNK_MOTION_VERSION, composerMotionPeriod, poseComposer, type ComposerGraph, type ComposerMotion, type ComposerPose, type ComposerPoseOptions} from './fauna-composer-rig.ts';
 import {COMPOSER_SKIN_VERSION, COMPOSER_REALISM_SKIN_VERSION, type ComposerSkinPresentation} from './fauna-composer-mesh.ts';
 import {COMPOSER_INDIVIDUAL_VERSION, composerSpeciesKey} from './fauna-composer-individual.ts';
 import {COMPOSER_FACE_VERSION} from './fauna-composer-face.ts';
@@ -131,7 +131,7 @@ export interface ComposerExportOptions extends ComposerPoseOptions {
   phenotype?: ComposerBuildPhenotype;
   /** Surface revision, independent of recipe identity. Omitted exports skin-5. */
   presentation?: ComposerSkinPresentation;
-  /** Motions (or explicit clip windows) to bake; default every COMPOSER_MOTIONS entry. */
+  /** Motions (or explicit clip windows) to bake; default the original four clips for compatibility. New motions can be requested explicitly. */
   clips?: readonly (ComposerMotion | ComposerClipRequest)[];
   fps?: number;
   gloss?: ComposerGlossMode;
@@ -273,9 +273,9 @@ export function composerClipWindow(graph: ComposerGraph, motion: ComposerMotion,
     return {duration: 1, keys: 2, seamPosition: 0, seamAngle: 0, seamScale: 0, seamless: true, method: 'static'};
   const {minSeconds, maxSeconds, walkMinSeconds} = COMPOSER_EXPORT_CLIP_WINDOW;
   const tried: ComposerClipWindow[] = [];
-  if (motion === 'walk') {
+  if (motion === 'walk' || motion === 'run' || motion === 'fly' || motion === 'glide' || motion === 'eat') {
     // legged gaits recur after one gait period; take the shortest whole number of periods that closes
-    const period = graph.locomotion.period;
+    const period = composerMotionPeriod(graph, motion);
     for (let k = 1; k * period <= Math.max(maxSeconds, period); k++) {
       const w = window(k * period, 'gait-periods'); tried.push(w);
       if (w.seamless) return w;
@@ -719,7 +719,7 @@ export function exportCreatureGlb(input: ComposerRecipe | string, options: Compo
   const gloss = options.gloss ?? 'attribute', forward = options.forward ?? '+Z';
   if (gloss !== 'attribute' && gloss !== 'drop') throw new Error(`composer export: unknown gloss mode ${String(gloss)}`);
   if (!Object.hasOwn(FORWARD_ROOT, forward)) throw new Error(`composer export: unknown forward axis ${String(forward)}`);
-  const requests: ComposerClipRequest[] = (options.clips ?? COMPOSER_MOTIONS).map(c => typeof c === 'string' ? {motion: c} : {...c});
+  const requests: ComposerClipRequest[] = (options.clips ?? ['neutral', 'idle', 'walk', 'display'] as const).map(c => typeof c === 'string' ? {motion: c} : {...c});
   assertFps(fps);
   for (const r of requests) {
     if (!(COMPOSER_MOTIONS as readonly string[]).includes(r.motion)) throw new Error(`composer export: unknown motion ${String(r.motion)}`);

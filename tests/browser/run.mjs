@@ -13,6 +13,7 @@ import {assertCaptureOutsideSlot} from '../helpers/gpu-lock.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url)), kit = resolve(here, '../..');
 export const BROWSER_TESTS = Object.freeze([
+  {name:'animal-motion',file:'animal-motion.browser.mjs',what:'airborne bird flight/glide, new authored clips, LODs, wingless fallback and population benchmark motion'},
   {name:'animal-atlas-benchmark',file:'animal-atlas-benchmark.browser.mjs',what:'actual packed Atlas arenas and paired palette upload measurements'},
   {name:'animal-five-optimizations',file:'animal-five-optimizations.browser.mjs',what:'combined optimization pair and CDP allocation sampling'},
   {name: 'animal-benchmark', file: 'animal-benchmark.browser.mjs', what: 'animated instance/mesh pixel parity, mixed populations, live optimizations, GPU/CPU A/B capture, cancellation, memory and mobile'},

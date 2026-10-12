@@ -258,7 +258,7 @@ try {
         ['unsupported-version', '?mode=composer&recipe=v9*layout_biped', /Unsupported composer recipe version/],
         ['oversize', `?mode=composer&recipe=v1*${'x'.repeat(1400)}`, /longer than/],
         ['repeated', '?mode=composer&recipe=v1*layout_biped&recipe=v1*layout_limbless', /repeated recipe/],
-        ['bad-motion', '?mode=composer&motion=fly', /unknown motion/],
+        ['bad-motion', '?mode=composer&motion=teleport', /unknown motion/],
       ]) {
         const p = await context.newPage(); p.on('pageerror', e => errors.push(`${name}: ${e.message}`));
         await p.goto(lab(query), {waitUntil: 'networkidle'});

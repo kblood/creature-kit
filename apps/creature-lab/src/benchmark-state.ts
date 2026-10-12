@@ -1,5 +1,6 @@
+import type {ComposerMotion} from '../../../src/fauna-composer-rig.ts';
 export type BenchmarkTier='source'|'4500'|'1000';
-export interface BenchmarkOptions{count:number;collection:'selected'|'mixed';placement:'distances'|'near';lod:'auto'|BenchmarkTier;instancing:boolean;atlasRenderer:boolean;partialUploads:boolean;adaptiveAnimation:boolean;reuseWorkingBuffers:boolean;fastFarMatrices:boolean;distanceShadows:boolean;shareGeometry:boolean;sharePose:boolean;culling:boolean;shadows:boolean;animate:boolean;stride:number}
+export interface BenchmarkOptions{count:number;collection:'selected'|'mixed';placement:'distances'|'near';lod:'auto'|BenchmarkTier;instancing:boolean;atlasRenderer:boolean;partialUploads:boolean;adaptiveAnimation:boolean;reuseWorkingBuffers:boolean;fastFarMatrices:boolean;distanceShadows:boolean;shareGeometry:boolean;sharePose:boolean;culling:boolean;shadows:boolean;animate:boolean;motion:ComposerMotion;stride:number}
 export interface BenchmarkMember{id:number;source:number;position:[number,number,number]}
 export const BENCHMARK_PRESETS=['dinosaur','turtle','worm','centipede','giraffe','bird'] as const;
 export function benchmarkMembers(options:BenchmarkOptions):BenchmarkMember[]{

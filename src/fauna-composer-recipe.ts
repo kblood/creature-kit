@@ -335,7 +335,7 @@ export function composerConstraints(recipe: ComposerRecipe): ComposerConstraint[
   if (recipe.wings !== 'none') {
     const limit = composerWingSpanLimit(recipe);
     if (recipe.wingSpan > limit) out.push({ part: 'Wing span', chosen: recipe.wingSpan.toFixed(2), effect: `Limited to ${limit.toFixed(2)} body lengths so folded wings stay off the ground.` });
-    out.push({ part: 'Wings', chosen: recipe.wings, effect: 'Grounded display and folding only. Flight is not simulated.' });
+    out.push({ part: 'Wings', chosen: recipe.wings, effect: 'Folded at rest; articulated wingbeats and extended wings for flight and gliding.' });
   }
   if (recipe.tail === 'none' && recipe.tailLength > 0)
     out.push({ part: 'Tail length', chosen: recipe.tailLength.toFixed(2), effect: 'Ignored because no tail is selected.' });

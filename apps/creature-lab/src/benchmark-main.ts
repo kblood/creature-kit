@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {composerPreset,normalizeComposerRecipe,encodeComposerRecipe,type ComposerRecipe} from '../../../src/fauna-composer-recipe.ts';
 import {createComposerColouredMaterial,createComposerCrispCoatMaterial,type ComposerCreature} from '../../../src/fauna-composer.ts';
-import {poseComposer,type ComposerPose} from '../../../src/fauna-composer-rig.ts';
+import {poseComposer,COMPOSER_MOTIONS,type ComposerMotion,type ComposerPose} from '../../../src/fauna-composer-rig.ts';
+import {COMPOSER_MOTION_LABELS} from './composer-motion-labels.ts';
 import {composerPreviewLod} from '../../../src/fauna-composer-preview-lod.ts';
 import {FaunaComposerInstanceBatch,faunaComposerGeometry,FAUNA_COMPOSER_REQUIRED_ATTRIBUTES} from '../../../src/fauna-composer-instance-batch.ts';
 import {FaunaComposerPaletteWriter} from '../../../src/fauna-composer-palette.ts';
@@ -21,7 +22,9 @@ declare const __ANIMAL_BENCH_BUILD__:{commit:string;version:string;dirty:boolean
 const $=<T extends HTMLElement>(id:string)=>document.getElementById(id) as T;
 const select=(id:string)=>$<HTMLSelectElement>(id).value;
 const checked=(id:string)=>$<HTMLInputElement>(id).checked;
-const controlsIds=['count','collection','placement','lod','atlas-renderer','instancing','partial-uploads','adaptive-animation','fast-far-matrices','reuse-working','distance-shadows','share-geometry','share-pose','culling','shadows','animate','stride','duration','observer','overview','measure','compare','compare-uploads','compare-all'];
+const controlsIds=['count','collection','placement','lod','atlas-renderer','instancing','partial-uploads','adaptive-animation','fast-far-matrices','reuse-working','distance-shadows','share-geometry','share-pose','culling','shadows','animate','motion','stride','duration','observer','overview','measure','compare','compare-uploads','compare-all'];
+$<HTMLSelectElement>('motion').innerHTML=COMPOSER_MOTIONS.map(m=>`<option value="${m}">${COMPOSER_MOTION_LABELS[m]}</option>`).join('');
+$<HTMLSelectElement>('motion').value='walk';
 const scene=new THREE.Scene();scene.background=new THREE.Color('#08131a');
 const camera=new THREE.PerspectiveCamera(47,1,.1,1000);
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
@@ -53,7 +56,7 @@ const results:Result[]=[];
 interface Capture{id:number;start:number;frame:number[];cpu:number[];gpu:number[];calls:number[];triangles:number[];visible:number[];poseCalculations:number[];uploadBytes:number[];collecting:boolean}
 interface Result{simulationStartSeconds:number;settings:BenchmarkOptions;camera:{position:number[];target:number[]};durationSeconds:number;frameMs:ReturnType<typeof sampleStats>;cpuMs:ReturnType<typeof sampleStats>;gpuMs:ReturnType<typeof sampleStats>;gpuDropped:number;paletteUploadBytes:ReturnType<typeof sampleStats>;drawCalls:ReturnType<typeof sampleStats>;triangles:ReturnType<typeof sampleStats>;visibleAnimals:ReturnType<typeof sampleStats>;poseCalculations:ReturnType<typeof sampleStats>;atlasDiagnostics:unknown;memory:ReturnType<typeof memory>;prepareMs:number;timestamp:string;scene:unknown[];environment:ReturnType<typeof environment>}
 
-function readOptions():BenchmarkOptions{return {count:Number(select('count')),collection:select('collection') as BenchmarkOptions['collection'],placement:select('placement') as BenchmarkOptions['placement'],lod:select('lod') as BenchmarkOptions['lod'],instancing:checked('instancing'),atlasRenderer:checked('atlas-renderer'),partialUploads:checked('partial-uploads'),adaptiveAnimation:checked('adaptive-animation'),reuseWorkingBuffers:checked('reuse-working'),fastFarMatrices:checked('fast-far-matrices'),distanceShadows:checked('distance-shadows'),shareGeometry:checked('share-geometry'),sharePose:checked('share-pose'),culling:checked('culling'),shadows:checked('shadows'),animate:checked('animate'),stride:Number(select('stride'))};}
+function readOptions():BenchmarkOptions{return {count:Number(select('count')),collection:select('collection') as BenchmarkOptions['collection'],placement:select('placement') as BenchmarkOptions['placement'],lod:select('lod') as BenchmarkOptions['lod'],instancing:checked('instancing'),atlasRenderer:checked('atlas-renderer'),partialUploads:checked('partial-uploads'),adaptiveAnimation:checked('adaptive-animation'),reuseWorkingBuffers:checked('reuse-working'),fastFarMatrices:checked('fast-far-matrices'),distanceShadows:checked('distance-shadows'),shareGeometry:checked('share-geometry'),sharePose:checked('share-pose'),culling:checked('culling'),shadows:checked('shadows'),animate:checked('animate'),motion:select('motion') as ComposerMotion,stride:Number(select('stride'))};}
 function observer(){camera.position.set(0,2.5,12);orbit.target.set(0,1,-70);camera.lookAt(orbit.target);orbit.update();}
 function overview(){camera.position.set(125,150,125);orbit.target.set(0,0,-130);camera.lookAt(orbit.target);orbit.update();}
 function layout(){const view=$('viewport');camera.aspect=Math.max(1,view.clientWidth)/Math.max(1,view.clientHeight);camera.updateProjectionMatrix();renderer.setSize(Math.max(1,view.clientWidth),Math.max(1,view.clientHeight));}
@@ -83,7 +86,7 @@ function configureMeshes(){
  if(options.atlasRenderer){
   const p=FAUNA_PLANET_COMPOSER_POLICY;
   atlas=new FaunaComposerRenderer({provider:{async build(job){const source=sources[job.definition.source]!,original={graph:source.actor.graph,skin:source.actor.skin};return {key:job.key,source:original,levels:buildFaunaComposerRequestedLevels(original,job.tiers,[p.middleTargetTriangles,p.farTargetTriangles]),buildMs:0};}},
-   pose:(graph,c,reuse)=>{if(options.sharePose){const cached=atlasPoses.get(c.definition.source);if(cached)return cached;}const pose=poseComposer(graph,'walk',c.rigSeconds,{reuseWorkingBuffers:reuse});poseCalculations++;if(options.sharePose)atlasPoses.set(c.definition.source,pose);return pose;},
+   pose:(graph,c,reuse)=>{if(options.sharePose){const cached=atlasPoses.get(c.definition.source);if(cached)return cached;}const pose=poseComposer(graph,options.motion,c.rigSeconds,{reuseWorkingBuffers:reuse});poseCalculations++;if(options.sharePose)atlasPoses.set(c.definition.source,pose);return pose;},
    onMeshAdopted:mesh=>{mesh.castShadow=options.shadows;},capacity:p.capacity,maxSources:p.capacity,maxBones:p.maxBones,maxBytes:p.residentBytes,maxResultBytes:p.resultBytes,workerReserveBytes:p.workerReserveBytes,
    fullSourceCache:p.nearSources,middleSourceCache:p.middleSources,coldJobsBeforeNearUpgrade:8,nearM:p.nearM,middleM:p.middleM,maxDistanceM:p.visibleM,partialPaletteUploads:options.partialUploads,adaptiveAnimation:options.adaptiveAnimation,reuseWorkingBuffers:options.reuseWorkingBuffers,fastFarMatrices:options.fastFarMatrices,distanceShadows:options.distanceShadows,
    mergedGpuContext:gl,mergedTiers:{middle:{maxVertices:p.middleVertices,maxIndices:p.middleIndices,maxBytes:5*1024*1024,storage:'packed-1'},far:{maxVertices:p.farVertices,maxIndices:p.farIndices,maxBytes:35*1024*1024,storage:'packed-1',activeIndexPasses:true}}});
@@ -109,6 +112,7 @@ function configureMeshes(){
 }
 async function prepare(){
  const token=++buildToken;ready=false;building=true;error=null;const started=performance.now();options=readOptions();clearMeshes();
+ const edit=new URL($<HTMLAnchorElement>('edit-animal').href);edit.searchParams.set('motion',options.motion);$<HTMLAnchorElement>('edit-animal').href=edit.href;
  $('bench-status').textContent='Preparing source animals and LODs…';
  try{
   if(options.instancing&&gl.getParameter(gl.MAX_VERTEX_ATTRIBS)<FAUNA_COMPOSER_REQUIRED_ATTRIBUTES)throw new Error('Animated instancing needs at least 15 vertex attributes on this device.');
@@ -140,7 +144,7 @@ function update(){
   atlasPoses.clear();
   for(const member of members){const c=atlasCandidates[member.id]!,distance=camera.position.distanceTo(position.fromArray(member.position));
    member.visible=(options.lod!=='auto'||distance<=600)&&(!options.culling||frustum.intersectsSphere(member.sphere));
-   c.presentationDistanceM=distance;c.animationContext=`walk/${options.sharePose}`;c.cameraVisible=member.visible;c.shadowVisible=options.shadows;c.distanceM=options.lod==='source'?0:options.lod==='4500'?80:options.lod==='1000'?300:distance;
+   c.presentationDistanceM=distance;c.animationContext=`${options.motion}/${options.sharePose}`;c.cameraVisible=member.visible;c.shadowVisible=options.shadows;c.distanceM=options.lod==='source'?0:options.lod==='4500'?80:options.lod==='1000'?300:distance;
    c.rigSeconds=time+(options.sharePose?0:member.id*.071);c.poseKey=String(c.rigSeconds);
   }
   atlas.update(atlasCandidates);return;
@@ -158,7 +162,7 @@ function update(){
    const source=sources[member.source]!;
    const needsPose=!member.pose||(options.animate&&frameNumber%options.stride===0);
    if(needsPose){let pose=options.sharePose?poses.get(member.source):undefined;
-    if(!pose){pose=poseComposer(source.actor.graph,'walk',time+(options.sharePose?0:member.id*.071));poseCalculations++;if(options.sharePose)poses.set(member.source,pose);}
+    if(!pose){pose=poseComposer(source.actor.graph,options.motion,time+(options.sharePose?0:member.id*.071));poseCalculations++;if(options.sharePose)poses.set(member.source,pose);}
     member.pose=pose;
     if(options.instancing){if(!writtenRows.has(member.row)){
      const offset=member.row*maxBones*16,count=source.actor.graph.bones.length*16;
@@ -233,6 +237,7 @@ renderer.domElement.addEventListener('webglcontextlost',()=>{cancel('WebGL conte
 addEventListener('pagehide',()=>{cancel();clearMeshes();for(const source of cache.values()){source.actor.dispose();for(const geometry of Object.values(source.geometries))geometry.dispose();}cache.clear();gpu.dispose();orbit.dispose();renderer.dispose();});
 try{
  const input=new URLSearchParams(location.hash.slice(1));if(input.get('presentation')==='skin-5')presentation='skin-5';
+ const motion=input.get('motion');if(motion!==null){if(!(COMPOSER_MOTIONS as readonly string[]).includes(motion))throw new Error('Unknown benchmark motion');$<HTMLSelectElement>('motion').value=motion;}
  if(input.has('planetDefinition')){definition=parseLabPlanetDefinition(input.get('planetDefinition')!);sourceRecipe=definition.recipe;}
  else if(input.has('recipe'))sourceRecipe=normalizeComposerRecipe(parseLabJson(input.get('recipe')!) as ComposerRecipe).recipe;
  const edit=new URL('./creature-lab.html?mode=composer',location.href);edit.searchParams.set('presentation',presentation);

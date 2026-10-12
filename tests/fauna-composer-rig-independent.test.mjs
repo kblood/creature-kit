@@ -157,7 +157,7 @@ test('independent torso section support clears floor, with real belly support fo
       const low=centre.y-Math.hypot(s.h*scale*yAxis.y,s.w*scale*zAxis.y);minClearance=Math.min(minClearance,low);support=Math.min(support,low);
       if(low < -1e-6) failures.push({id,motion,time,bone:b.name,atEnd,reason:'torso support penetrates floor',clearance:low});
     }
-    if(g.recipe.layout==='limbless') {maxLimblessGap=Math.max(maxLimblessGap,support); if(support>1e-3) failures.push({id,motion,time,reason:'limbless body has no floor support',support});}
+    if(g.recipe.layout==='limbless' && !(['fly','glide'].includes(motion) && g.dims.wingSemiSpan>0)) {maxLimblessGap=Math.max(maxLimblessGap,support); if(support>1e-3) failures.push({id,motion,time,reason:'limbless body has no floor support',support});}
   }
   finish('body-support',failures,{minClearance,maxLimblessGap});
 });

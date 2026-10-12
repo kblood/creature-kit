@@ -6,6 +6,7 @@ import {anatomyCorpus} from './helpers/composer-lod-anatomy.mjs';
 import {volumeRatios} from './helpers/composer-lod-volume.mjs';
 import {buildComposerLodChain,composerAnatomyLodConstraints} from '../src/fauna-composer-lod.ts';
 import {posePlanetComposer} from '../src/planet-composer-pose.ts';
+import {composerMotionPeriod} from '../src/fauna-composer-rig.ts';
 
 const hash=value=>createHash('sha256').update(typeof value==='string'?value:new Uint8Array(value.buffer,value.byteOffset,value.byteLength)).digest('hex');
 const jsonHash=value=>hash(JSON.stringify(value));
@@ -31,7 +32,11 @@ test('saved twelve adult/young source specimens remain byte-pinned; direct and s
  }
  // SHA256 aggregate of the preserved lod-anatomy-release-chain source graph,
  // metadata and every typed attribute descriptor, including crisp coat data.
- assert.equal(jsonHash(receipts),'d1505ba29238da881542975e9486b78097815a26ce6898994f244e2362ca89dc');
+ // Motion-library repin from d1505ba2: checked all twelve specimens against
+ // 0.10.1 (animal-optimizations-root). Only the two winged graph.constraints
+ // descriptions changed from grounded-only to flight support. Every raw skin
+ // array, metadata field and all other graph fields remain exactly identical.
+ assert.equal(jsonHash(receipts),'bfffb5f22c6048e8bf5a2555abe757a640ec139fca139e2d2a60c65a28deaedf');
 });
 test('actual reduced triangle sections resist torso/neck/limb collapse and preserve membrane area at the same budgets',()=>{
  for(const s of corpus){const{source,chain}=built(s);for(const l of chain.levels){const m=volumeRatios(source.skin,l,source.graph);
@@ -50,20 +55,21 @@ function deform(skin,graph,pose){
  for(let v=0;v<positions.length/3;v++){p.fromArray(skin.positions,v*3);out.set(0,0,0);for(let k=0;k<4;k++){const w=skin.skinWeight[v*4+k];if(w>0)out.addScaledVector(q.copy(p).applyMatrix4(matrices[skin.skinIndex[v*4+k]]),w);}out.toArray(positions,v*3);}
  return{...skin,positions};
 }
-test('real posed triangle sections and planted soles retain source support on sloping terrain at several gait phases',t=>{
+test('real posed sections preserve grounded support and airborne foot clearance across LODs on sloping terrain',t=>{
  const member={id:'lod-volume-gait',anchorOffsetX:1,anchorOffsetZ:-2,orbitRadiusM:6,orbitAngularSpeed:.1,orbitPhase:.37,gaitPeriodS:1};
- const ground=(x,z)=>.07*x-.04*z,minima={torso:1,neck:1,leg:1},coverage=[];let soleDifference=0,stance=0,swing=0,pawStance=0,pawSwing=0;
+ const ground=(x,z)=>.07*x-.04*z,minima={torso:1,neck:1,leg:1},coverage=[];let soleDifference=0,stance=0,swing=0,pawStance=0,pawSwing=0,airborneFeet=0,minFlightClearance=Infinity;
  const revolutionS=Math.PI*20;
  const activityAt=(travel,stateS)=>{const angle=member.orbitPhase+travel*Math.PI*2;return{pose:{x:member.anchorOffsetX+Math.cos(angle)*6,z:member.anchorOffsetZ+Math.sin(angle)*6,yaw:angle+Math.PI/2,gait:'walk'},travel,revolutionS,stateS};};
  for(const s of corpus){const{source,direct}=built(s),{graph}=source;
   const cycles=posePlanetComposer(graph,member,activityAt(.25,.7),ground,1600).planet.cyclesPerRevolution;
-  const period=revolutionS/cycles,base=Math.floor(.25*cycles)/cycles,observed=[];
+  const airborne=graph.dims.wingSemiSpan>0,period=airborne?composerMotionPeriod(graph,'fly'):revolutionS/cycles,base=Math.floor(.25*cycles)/cycles,observed=[];
   const feet=source.skin.parts.filter(p=>p.part==='foot'||p.part==='paw');
   const legs=graph.limbs.filter(l=>l.kind==='leg');
   assert.equal(feet.length,legs.length,`${s.id}: every actual leg has a tested sole`);
   for(const step of [0,.17,.39,.61,.83,1]){
    const travel=base+step/cycles,activity=activityAt(travel,(2+step)*period);
    const pose=posePlanetComposer(graph,member,activity,ground,1600+step*period),full=deform(source.skin,graph,pose),low=deform(direct,graph,pose);
+   if(airborne){assert.equal(pose.motion,'fly');assert.equal(pose.contacts.length,0);assert.equal(pose.diagnostics.supportHeight,undefined);}
    const cycleError=Math.abs(pose.planet.cycle-step%1);assert.ok(Math.min(cycleError,1-cycleError)<1e-12,`${s.id}: actual Composer cycle ${pose.planet.cycle} must cover phase ${step}`);observed.push(pose.planet.cycle);
    for(let v=0;v<direct.vertices;v++)for(let k=0;k<3;k++)assert.ok(Math.abs(low.positions[v*3+k]-full.positions[direct.sourceVertex[v]*3+k])<1e-12,'original weighted vertex is unchanged by LOD selection');
    const posedGraph={...graph,bones:graph.bones.map((b,i)=>({...b,restPosition:Array.from(pose.positions.slice(i*3,i*3+3)),restQuaternion:Array.from(pose.quaternions.slice(i*4,i*4+4))}))};
@@ -72,12 +78,19 @@ test('real posed triangle sections and planted soles retain source support on sl
    const c=Math.cos(activity.pose.yaw),si=Math.sin(activity.pose.yaw),origin=ground(activity.pose.x,activity.pose.z);
    const gap=(mesh,part)=>{let min=Infinity;for(const v of new Set(mesh.index.slice(part.firstTriangle*3,(part.firstTriangle+part.triangles)*3))){const[x,y,z]=mesh.positions.slice(v*3,v*3+3);min=Math.min(min,origin+y-ground(activity.pose.x+c*x+si*z,activity.pose.z+si*x-c*z));}return min;};
    for(const foot of feet){const limb=legs.find(l=>foot.label===`${graph.recipe.feet} ${l.pair+1}${l.side<0?'L':'R'}`),contact=pose.contacts.find(c=>c.limb===limb?.index),lowFoot=low.parts.find(p=>p.part===foot.part&&p.label===foot.label);
-    assert.ok(limb&&contact&&lowFoot,`${s.id}/${foot.label}: sole maps to its actual limb and contact`);
+    assert.ok(limb&&lowFoot,`${s.id}/${foot.label}: sole maps to its actual limb`);
+    if(airborne){
+     assert.equal(contact,undefined,`${s.id}/${foot.label}: airborne feet have no planted contact`);
+     const fullGap=gap(full,foot),lowGap=gap(low,lowFoot);minFlightClearance=Math.min(minFlightClearance,fullGap,lowGap);airborneFeet++;
+     assert.ok(fullGap>0&&lowGap>0,`${s.id}/${foot.label}: full and reduced airborne feet clear terrain (${fullGap}, ${lowGap})`);
+     continue;
+    }
+    assert.ok(contact,`${s.id}/${foot.label}: grounded sole maps to its actual contact`);
     const paw=foot.part==='paw'||foot.label.startsWith('paw ');
     if(contact.stance){stance++;if(paw)pawStance++;const difference=Math.abs(gap(full,foot)-gap(low,lowFoot));soleDifference=Math.max(soleDifference,difference);assert.ok(difference<.003,`${s.id}/${foot.label}: LOD sole differs from source ${difference}m`);}else{ swing++;if(paw)pawSwing++;}
    }
   }
-  assert.equal(new Set(observed.slice(0,-1).map(x=>x.toFixed(9))).size,5,`${s.id}: distinct full-cycle phases`);coverage.push({id:s.id,cyclesPerRevolution:cycles,period,observed});
+  assert.equal(new Set(observed.slice(0,-1).map(x=>x.toFixed(9))).size,5,`${s.id}: distinct full-cycle phases`);coverage.push({id:s.id,airborne,cyclesPerRevolution:cycles,period,observed});
  }
- assert.ok(stance>0&&swing>0&&pawStance>0&&pawSwing>0);t.diagnostic(JSON.stringify({minima,soleDifference,stance,swing,pawStance,pawSwing,coverage}));
+ assert.ok(stance>0&&swing>0&&pawStance>0&&pawSwing>0&&airborneFeet>0);t.diagnostic(JSON.stringify({minima,soleDifference,stance,swing,pawStance,pawSwing,airborneFeet,minFlightClearance,coverage}));
 });
