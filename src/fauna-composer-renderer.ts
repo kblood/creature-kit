@@ -289,11 +289,13 @@ export class FaunaComposerRenderer<D, C extends FaunaComposerCandidate<D> = Faun
         const mask=this.options.fastFarMatrices&&available==='far'?entry.activeBones.far:undefined;
         const presentationDistance=c.presentationDistanceM??c.distanceM;
         const angular=Math.max(entry.graph.dims.bodyLength,entry.graph.dims.legReach*2,entry.graph.dims.wingSemiSpan*2)/Math.max(1,presentationDistance);
-        const temporal=!!this.options.adaptiveAnimation&&available!=='near'&&presentationDistance>=(this.options.nearM??35)&&angular<.1&&c.animationContext!==undefined;
+        const temporal=!!this.options.adaptiveAnimation&&available!=='near'&&presentationDistance>=100&&angular<.1&&c.animationContext!==undefined;
         let pose:ComposerPose|null=null;
         if(temporal){
           if(actor.temporal&&actor.lastClock===c.rigSeconds&&actor.poseKey!==c.poseKey)actor.temporal=undefined;
-          const interval=available==='far'?.1:.05;
+          // Reserve one 60 Hz frame for scheduling quantization. Closer animals
+          // sample more often so interpolation displacement stays small on screen.
+          const interval=Math.max(1/60,Math.min(available==='far'?.1:.05,presentationDistance/3000-1/60));
           if(!actor.temporal){
             const estimated=entry.graph.bones.length*144+256+Math.max(actor.pose?.contacts.length??0,entry.graph.limbs.length)*256;
             if(this.ownedBytes+estimated-actor.poseBytes<=this.maxBytes){const canonical=this.options.pose(entry.graph,c,this.options.reuseWorkingBuffers??true);this.stats.poseBuilds++;actor.temporal=new ComposerTemporalPose(canonical,c.rigSeconds,c.animationContext!,interval);this.stats.temporalSamples++;}

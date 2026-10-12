@@ -22,9 +22,9 @@ Live switches:
 - Partial skeleton uploads queue only changed RGBA ranges. First allocation,
   resize and context restore initialize the entire texture. Exported counters
   record actual texture-upload notifications separately from pending data.
-- Distance animation evaluates canonical poses at up to 20 Hz in the middle
-  tier and 10 Hz in the far tier, with delayed interpolation between actual
-  samples. Near animals and large angular silhouettes remain exact. Ground,
+- Distance animation reduces canonical pose evaluations toward 20 Hz in the
+  middle tier and 10 Hz farther away, with delayed interpolation between actual
+  samples. Animals closer than 100 metres and large angular silhouettes remain exact. Ground,
   gait and clock discontinuities invalidate samples. Temporal pose diagnostics
   explicitly identify source times; contact diagnostics belong to the latest
   canonical sample. This changes presentation, not genomes or the source rig.
