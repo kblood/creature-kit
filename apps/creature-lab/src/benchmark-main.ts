@@ -12,6 +12,7 @@ import {createLabComposerActor,parseLabPlanetDefinition,parseLabJson} from './cr
 import {benchmarkMembers,benchmarkTier,sampleStats,BENCHMARK_PRESETS,type BenchmarkOptions,type BenchmarkTier,type BenchmarkMember} from './benchmark-state.ts';
 import {BenchmarkGpuTimer} from './benchmark-gpu.ts';
 import './benchmark.css';
+declare const __ANIMAL_BENCH_BUILD__:{commit:string;version:string;dirty:boolean};
 
 const $=<T extends HTMLElement>(id:string)=>document.getElementById(id) as T;
 const select=(id:string)=>$<HTMLSelectElement>(id).value;
@@ -140,7 +141,7 @@ function memory(){
  let instanceBytes=0;for(const b of batches.values()){take(b.mesh.geometry);instanceBytes+=b.instanceBytes;}
  return {geometryArrayBytes:[...buffers].reduce((n,b)=>n+b.byteLength,0),paletteBytes:paletteData.byteLength,separateSkeletonBytes,instanceBytes,scope:'Retained geometry typed arrays, pose palette or skeleton arrays and instance buffers; excludes JS objects, driver allocations and ground/shadow textures.'};
 }
-function environment(){const ext=gl.getExtension('WEBGL_debug_renderer_info');return {userAgent:navigator.userAgent,devicePixelRatio,pixelRatio:renderer.getPixelRatio(),canvas:[renderer.domElement.width,renderer.domElement.height],webglVersion:gl.getParameter(gl.VERSION),vendor:ext?gl.getParameter(ext.UNMASKED_VENDOR_WEBGL):gl.getParameter(gl.VENDOR),renderer:ext?gl.getParameter(ext.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER),gpuTimerSupported:gpu.supported,visibility:document.visibilityState};}
+function environment(){const ext=gl.getExtension('WEBGL_debug_renderer_info');return {build:__ANIMAL_BENCH_BUILD__,crossOriginIsolated,userAgent:navigator.userAgent,devicePixelRatio,pixelRatio:renderer.getPixelRatio(),canvas:[renderer.domElement.width,renderer.domElement.height],webglVersion:gl.getParameter(gl.VERSION),vendor:ext?gl.getParameter(ext.UNMASKED_VENDOR_WEBGL):gl.getParameter(gl.VENDOR),renderer:ext?gl.getParameter(ext.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER),gpuTimerSupported:gpu.supported,visibility:document.visibilityState};}
 function lock(value:boolean){running=value;orbit.enabled=!value;for(const id of controlsIds)$<HTMLInputElement>(id).disabled=value;$<HTMLButtonElement>('cancel').disabled=!value;if(!value)$<HTMLInputElement>('share-geometry').disabled=options.instancing;}
 function cancel(message='Cancelled.'){cancelled=true;active=null;gpu.clear();$('bench-status').textContent=message;}
 function wait(ms:number){const start=performance.now();return new Promise<void>((resolve,reject)=>{const tick=()=>{if(cancelled||document.hidden||!ready){reject(new Error('Measurement cancelled or scene unavailable.'));return;}if(performance.now()-start>=ms)resolve();else requestAnimationFrame(tick);};requestAnimationFrame(tick);});}

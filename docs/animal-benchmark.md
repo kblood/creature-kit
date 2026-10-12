@@ -45,6 +45,8 @@ is reported as unavailable. Queries are bounded and never force a GPU finish or
 framebuffer readback during sampling. JSON includes sample counts, mean, median,
 p95, p99, draw calls, triangles, visible animals, solver calls, camera, actual
 LOD triangle counts, specimen definitions, browser/GPU and canvas resolution.
+The export also records the creature-kit commit, package version and dirty state
+embedded by the build, so different software revisions can be distinguished.
 Memory values cover retained geometry arrays and pose/instance buffers; they
 exclude JS object overhead and complete driver/browser memory.
 

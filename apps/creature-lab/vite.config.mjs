@@ -7,11 +7,14 @@
 import {defineConfig} from 'vite';
 import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {execFileSync} from 'node:child_process';
+import {readFileSync} from 'node:fs';
 
 const app = fileURLToPath(new URL('.', import.meta.url));
 const kit = resolve(app, '../..');
 
 export default defineConfig(({command}) => ({
+  define:{__ANIMAL_BENCH_BUILD__:JSON.stringify({commit:execFileSync('git',['-C',kit,'rev-parse','HEAD'],{encoding:'utf8'}).trim(),version:JSON.parse(readFileSync(resolve(kit,'package.json'),'utf8')).version,dirty:execFileSync('git',['-C',kit,'status','--porcelain'],{encoding:'utf8'}).trim().length>0})},
   root: command === 'build' ? app : kit,
   base: './',
   publicDir: false,
