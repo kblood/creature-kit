@@ -1,6 +1,6 @@
 {
   "schema": "planet-runtime-exports-1",
-  "packageVersion": "0.10.0",
+  "packageVersion": "0.10.1",
   "values": [
     "BONE",
     "COAT_PATTERN_CRISP_GLSL",
