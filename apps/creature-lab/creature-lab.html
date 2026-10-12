@@ -34,6 +34,13 @@
           <label>Random seed <input id="composer-seed" maxlength="160" value="composer-1"></label>
           <div class="composer-random-row"><button id="composer-randomize" type="button" title="Every part drawn independently: anything can combine with anything.">Wild hybrid</button><button id="composer-random-species" type="button" title="A plausible animal drawn from real body plans (hoofed animals, carnivores, birds, lizards ...).">Random plausible species</button><button id="composer-next-seed" type="button" title="Next seed with the random kind used last.">New seed</button></div>
           <label class="check"><input id="composer-compare" type="checkbox"> Compare two animals</label>
+          <fieldset class="composer-group"><legend>LOD preview</legend>
+            <label>First animal <select id="composer-lod-first"><option value="source">Near · full model</option><option value="4500">Middle · target 4,500 triangles</option><option value="1000">Far · target 1,000 triangles</option></select></label>
+            <label>Second animal <select id="composer-lod-second"><option value="source">Near · full model</option><option value="4500">Middle · target 4,500 triangles</option><option value="1000" selected>Far · target 1,000 triangles</option></select></label>
+            <button id="composer-lod-compare" type="button">Compare this animal's LODs</button>
+            <p class="composer-hint">Copies the edited animal to both sides with the same pose time. Choose a detail level for each side. Targets match Atlas; anatomy protection can keep extra triangles. Preview choices stay in this session; exports keep their own LOD settings.</p>
+            <p id="composer-lod-status" class="composer-hint" role="status"></p>
+          </fieldset>
           <label>Show <select id="composer-herd"></select><small id="composer-herd-why" class="composer-why" hidden>Comparison shows one animal per recipe; turn it off to show a herd.</small></label>
           <label hidden>Edit which animal <select id="composer-edit-target"><option value="first">First (left)</option><option value="second">Second (right)</option></select></label>
           <p id="composer-edit-hint" role="status"></p>

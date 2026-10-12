@@ -5,6 +5,17 @@ Composer with the existing visual controls, multi-layout recipes, eyes, herds,
 comparison and animated poses. Snakes, worms, turtles, dinosaurs and many-legged
 animals belong here. Proboscis is a head/nose shape with a six-bone trunk.
 
+The LOD preview offers the full source, middle (4,500 triangle target) and far
+(1,000 triangle target), matching Atlas's current planet policy. Actual counts
+are shown because anatomical protection can stop reduction above a target.
+Choose a level for each comparison side, or use **Compare this animal's LODs**
+to copy the edited specimen, including its complete planet definition, to both
+sides. Both use the same pose clock, scale and lighting. This also works with
+limbless and many-legged recipes. Preview selections stay in the current session;
+share links and GLB exports retain their existing source and export settings.
+The Lab previews geometry; Atlas additionally uses bounded caches and packed GPU
+arenas. This is not a GPU performance benchmark of the planetary renderer.
+
 The library's historical presentation remains available as `skin-5`.
 `realism-1` adds joined, shaped feet and anatomy-aware foot LOD protection.
 Neither changes the encoded recipe. The current planetary Composer adapter uses

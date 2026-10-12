@@ -455,6 +455,8 @@ export function createComposerLab(host:ComposerLabHost):ComposerLab{
  const presetSelect=$<HTMLSelectElement>("composer-preset"),seedInput=$<HTMLInputElement>("composer-seed"),compareBox=$<HTMLInputElement>("composer-compare"),target=$<HTMLSelectElement>("composer-edit-target");
  const motionSelect=$<HTMLSelectElement>("composer-motion"),timeInput=$<HTMLInputElement>("composer-time"),phaseInput=$<HTMLInputElement>("composer-phase"),viewSelect=$<HTMLSelectElement>("composer-view"),playButton=$<HTMLButtonElement>("composer-play");
  const herdSelect=$<HTMLSelectElement>("composer-herd"),focusSelect=$<HTMLSelectElement>("composer-focus");
+ const lodSelect={first:$<HTMLSelectElement>('composer-lod-first'),second:$<HTMLSelectElement>('composer-lod-second')};
+ const lodTarget=(side:Side)=>lodSelect[side].value==='source'?undefined:Number(lodSelect[side].value);
  /** Full rebuilds of the actors (a diagnostic: re-rendering option text must never trigger one). */
  let builds=0,hintRenders=0;
  let error:string|null=host.inputError,issues:string[]=[...(init.mode==="composer"?host.notices??[]:[])],playing=false,actors:Actor[]=[];
@@ -606,6 +608,15 @@ export function createComposerLab(host:ComposerLabHost):ComposerLab{
  };
  herdSelect.onchange=()=>{issues=issues.filter(i=>!/^Herd size/.test(i));host.rebuild();};
  target.onchange=showControls;
+ for(const side of ['first','second'] as const)lodSelect[side].onchange=()=>host.rebuild();
+ $('composer-lod-compare').onclick=()=>{
+  const side=editing(),recipe={...recipes[side]},definition=definitions[side];
+  recipes.first={...recipe};recipes.second={...recipe};
+  if(definition){definitions.first=parseLabPlanetDefinition(definition);definitions.second=parseLabPlanetDefinition(definition);}
+  else {delete definitions.first;delete definitions.second;}
+  secondConfigured=true;compareBox.checked=true;target.value='first';herdSelect.value='1';
+  lodSelect.first.value='source';lodSelect.second.value='1000';host.rebuild();
+ };
  motionSelect.onchange=()=>host.rebuild();
  viewSelect.onchange=()=>{arrange();host.fit();};
  $("composer-frame").onclick=()=>host.fit();
@@ -626,7 +637,7 @@ export function createComposerLab(host:ComposerLabHost):ComposerLab{
   return box;
  }
  function makeActor(side:Side,index:number,recipe:ComposerRecipe,options:{skeleton:boolean;neutral:boolean},track:boolean):Actor{
-  const planetDefinition=definitions[side],creature=createLabComposerActor(recipe,planetDefinition,host.getPresentation?.()??'skin-5'),envelope=sampleEnvelope(creature);
+  const planetDefinition=definitions[side],creature=createLabComposerActor(recipe,planetDefinition,host.getPresentation?.()??'skin-5',lodTarget(side)),envelope=sampleEnvelope(creature);
   creature.setSkeletonVisible(options.skeleton);creature.setNeutral(options.neutral);
   const actor:Actor={side,index,recipe,planetDefinition,creature,offset:new THREE.Vector3(),envelope,track:track?makeTrack(envelope):null,skinDigest:digest(creature.skin.positions),colorDigest:digest(creature.skin.colors)};
   if(actor.track)host.group.add(actor.track.group);host.group.add(creature.group);
@@ -652,7 +663,12 @@ export function createComposerLab(host:ComposerLabHost):ComposerLab{
  function finishHerd(){
   building=false;provisional=null;arrangeHerd();
   herdTrack=makeHerdTrack(actors);host.group.add(herdTrack.lines);
-  buildFinished=performance.now();renderConstraints();showControls();update(host.getTime());host.progress(true);
+  buildFinished=performance.now();renderConstraints();showControls();update(host.getTime());renderLodStats();host.progress(true);
+ }
+ function renderLodStats(){
+  lodSelect.second.disabled=!compareBox.checked;
+  const sides:Side[]=compareBox.checked?['first','second']:['first'];
+  $('composer-lod-status').textContent=sides.map(side=>{const shown=actors.filter(a=>a.side===side),triangles=shown.reduce((n,a)=>n+a.creature.skin.triangleCount,0),vertices=shown.reduce((n,a)=>n+a.creature.skin.vertexCount,0);return `${side==='first'?'First':'Second'}: ${lodTarget(side)===undefined?'full model':`target ${thousands(lodTarget(side)!)}`} · ${thousands(triangles)} actual triangles · ${thousands(vertices)} vertices${shown.length>1?` across ${shown.length} animals`:''}`;}).join(' | ');
  }
  function build(options:{skeleton:boolean;neutral:boolean}){
   disposeActors();builds++;
@@ -676,6 +692,7 @@ export function createComposerLab(host:ComposerLabHost):ComposerLab{
    }else for(const side of sides)actors.push(makeActor(side,0,recipes[side],options,true));
   }catch(e){disposeActors();throw e;}
   arrange();update(host.getTime());showControls();renderConstraints();syncTime(host.getTime());
+  renderLodStats();
   if(herdTarget===1)buildFinished=performance.now();
  }
  function update(time:number){

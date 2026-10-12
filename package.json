@@ -1,6 +1,6 @@
 {
   "name": "creature-kit",
-  "version": "0.8.5",
+  "version": "0.8.6",
   "private": true,
   "description": "Procedural fauna composer: recipe links -> species -> individual -> rig graph -> skinned vertex-coloured mesh, plus a headless GLB exporter with an LOD chain. Extracted from universe-atlas.",
   "license": "UNLICENSED",

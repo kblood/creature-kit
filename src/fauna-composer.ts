@@ -116,12 +116,15 @@ export function createComposerCrispCoatMaterial(crisp: ComposerCoatCrisp): THREE
   return material;
 }
 
-export function createComposerCreature(input: ComposerRecipe, options: ComposerSourceOptions & ComposerPoseOptions = {}): ComposerCreature {
+/** Optional preview skin transformation keeps the core independent of LOD
+ * reduction. The caller must preserve the source graph's joint indices. */
+export function createComposerCreature(input: ComposerRecipe, options: ComposerSourceOptions & ComposerPoseOptions & {transformSkin?:(skin:ComposerSkin,graph:ComposerGraph)=>ComposerSkin} = {}): ComposerCreature {
   // Capture the chosen motion once; mutating the caller's options cannot change
   // an already built creature without updating its version metadata.
   const poseOptions: ComposerPoseOptions = {trunkMotion: options.trunkMotion ?? 'legacy'};
   const started = performance.now();
-  const {recipe, individual: derived, graph, skin} = buildComposerSource(input, options);
+  const {recipe, individual: derived, graph, skin:sourceSkin} = buildComposerSource(input, options);
+  const skin=options.transformSkin?options.transformSkin(sourceSkin,graph):sourceSkin;
   if (skin.vertexCount > COMPOSER_BUDGET.maxVertices || skin.triangleCount > COMPOSER_BUDGET.maxTriangles)
     throw new Error(`Composer skin exceeds the desktop preview budget (${skin.vertexCount} vertices, ${skin.triangleCount} triangles).`);
   const geometry = new THREE.BufferGeometry();

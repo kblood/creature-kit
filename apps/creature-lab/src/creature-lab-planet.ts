@@ -1,5 +1,6 @@
 import {parsePlanetComposerDefinition,serializePlanetComposerDefinition,PLANET_COMPOSER_SOURCE_VERSION,type PlanetComposerDefinition,type ComposerBuildPhenotype} from '../../../src/planet-composer.ts';
 import {createComposerCreature} from '../../../src/fauna-composer.ts';
+import {composerPreviewLod} from '../../../src/fauna-composer-preview-lod.ts';
 import {normalizeComposerRecipe,composerRecipesEqual,type ComposerRecipe} from '../../../src/fauna-composer-recipe.ts';
 import type {ComposerSkinPresentation} from '../../../src/fauna-composer-mesh.ts';
 import {srgbToLinear,linearToSrgb,type CoatRGB} from '../../../src/fauna-coat-fields.ts';
@@ -53,8 +54,8 @@ export function labComposerBuildOptions(recipe:ComposerRecipe,definition:PlanetC
  return {presentation,phenotype:parsed.phenotype};
 }
 /** Actual Lab actor path, also used by unit/browser replay checks. */
-export function createLabComposerActor(recipe:ComposerRecipe,definition:PlanetComposerDefinition|undefined,presentation:ComposerSkinPresentation){
- const actor=createComposerCreature(recipe,labComposerBuildOptions(recipe,definition,presentation));
+export function createLabComposerActor(recipe:ComposerRecipe,definition:PlanetComposerDefinition|undefined,presentation:ComposerSkinPresentation,lodTargetTriangles?:number){
+ const actor=createComposerCreature(recipe,{...labComposerBuildOptions(recipe,definition,presentation),...(lodTargetTriangles===undefined?{}:{transformSkin:(skin,graph)=>composerPreviewLod(skin,graph,lodTargetTriangles)})});
  if(definition){actor.group.userData.planetComposerDefinition=structuredClone(definition);Object.assign(actor.mesh.geometry.userData.composer,{definitionVersion:definition.schema,sourceVersion:PLANET_COMPOSER_SOURCE_VERSION});}
  return actor;
 }
