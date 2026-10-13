@@ -73,17 +73,24 @@ for any single module. Node refuses to type-strip `.ts` inside `node_modules`, s
 ## Dependencies
 
 `three` is a **peer** dependency, pinned to `npm:super-three@0.181.0` (the same alias Atlas uses; the gloss shader patch
-depends on three's internals). Dev: `typescript@5.9.3`, `@types/three@0.181.0`, and `vite@7.3.6` for the Creature Lab app.
-Nothing else declared. **Known hidden dependency:** the app's browser tests (`tests/browser/`) import `playwright`,
-which is NOT in `devDependencies`; it resolves only through the junctioned Atlas `node_modules` (below). A standalone
-checkout cannot run `npm run test:browser` until it is declared (planned with the Atlas cut-over, phase 4b).
+depends on three's internals). The lockfile pins the development toolchain, including `typescript@5.9.3`,
+`@types/three@0.181.0`, `vite@7.3.6`, and `playwright@1.61.1` for the Creature Lab browser tests.
 
-No `package-lock.json` exists yet and `npm install` has not been run: in this workspace `node_modules` is a **junction**
-to `C:/LLM/IWSDK/universe-atlas/node_modules`, which has exactly these versions. To recreate it:
+For a clean checkout, use Node `>=22.18` and run:
 
 ```powershell
-cmd /c mklink /J C:\LLM\IWSDK\creature-kit\node_modules C:\LLM\IWSDK\universe-atlas\node_modules
+npm ci
+npm run build
+npm test
+npm run test:lab
+npm run lab:build
+npx playwright install chromium
+npm run test:browser
 ```
+
+The browser install is separate because Playwright's browser binaries are machine-level tools, not npm package files.
+The Atlas working copy may still use a `node_modules` junction for convenience, but it is no longer required to build
+or test Creature Kit. The committed lockfile was generated from an isolated package directory without that junction.
 
 ## Commands
 
