@@ -91,6 +91,7 @@ npm run test:browser
 The browser install is separate because Playwright's browser binaries are machine-level tools, not npm package files.
 The Atlas working copy may still use a `node_modules` junction for convenience, but it is no longer required to build
 or test Creature Kit. The committed lockfile was generated from an isolated package directory without that junction.
+See [clean-checkout verification](docs/clean-checkout-verification-2026-10-13.md) for the recorded install and test results.
 
 ## Commands
 
