@@ -31,8 +31,8 @@ Library release `0.2.0` adds public `creature-kit/planet`, built from
   universe-atlas@ab6042c, unchanged"). The earlier history of each file is in universe-atlas; the last Atlas commit that
   touched each file is listed below, so `git -C universe-atlas log <commit> -- <path>` recovers it.
 - **Owner decision:** Kasper, 2026-10-07: the creature kit is its own repo, consumed by Atlas (universe-atlas
-  `docs/owner-decisions-2026-10-04.md`, "Owner answers 2026-10-07", A18 Q6). Plan:
-  [creature-kit extraction plan](https://github.com/kblood/universe-atlas/blob/main/docs/creature-kit-extraction-plan-2026-10-04.md).
+  `docs/owner-decisions-2026-10-04.md`, "Owner answers 2026-10-07", A18 Q6). Current consumption is documented in
+  [Atlas's Creature Kit notes](https://github.com/kblood/universe-atlas/blob/main/docs/creature-kit-consumption.md).
 - **Licence:** `UNLICENSED` (all rights reserved; public visibility does not grant reuse rights), the same as the rest of the owner's projects. Owner decision A13, 2026-10-07: "Den licens skal være den samme som resten".
 
 ## Per-file record (at the import commit)
