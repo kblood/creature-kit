@@ -1,8 +1,8 @@
 # creature-kit
 
-Private Git remote (`origin`, branch `main`):
-`caldor@192.168.50.17:/srv/git/repositories/creature-kit.git` (the same SSH
-Git server used by Universe Atlas).
+Public GitHub repository: <https://github.com/kblood/creature-kit> (`main`).
+Its contents remain `UNLICENSED` and all rights reserved; public visibility
+does not grant reuse rights.
 
 Since `0.11.1`, biped running includes loading, push-off and two suspension
 intervals per cycle, with raised knees and bent-arm pumping. Quadrupeds use a
@@ -52,7 +52,9 @@ The procedural fauna composer, extracted from `universe-atlas`: a recipe link (`
 individual, a rig graph and a skinned, vertex-coloured mesh, deterministically. A headless exporter writes the creature
 as a GLB with baked clips, an optional LOD chain (`MSFT_lod`) and a provenance sidecar.
 
-Status: **experimental**, private, all rights reserved (`UNLICENSED`, same as Universe Atlas and Civilization Lab; owner decision A13, 2026-10-07). Generated creatures stay
+Status: **experimental**, public on GitHub, all rights reserved
+(`UNLICENSED`, same as Universe Atlas and Civilization Lab; owner decision
+A13, 2026-10-07). Generated creatures stay
 experimental until topology, deformation and in-headset checks pass.
 
 Where it came from, file by file: `PROVENANCE.md`. Extraction plan: `C:/LLM/IWSDK/docs/creature-kit-extraction-plan-2026-10-04.md`.

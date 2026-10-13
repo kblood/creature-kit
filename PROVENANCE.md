@@ -17,7 +17,7 @@ it does not replace those animals with composer presets or claim the two
 generator formats have already converged. No composer generator source moved.
 
 Library release `0.2.0` adds public `creature-kit/planet`, built from
-`src/planet-v1/index.ts`. All source arrays, source identity and private
+`src/planet-v1/index.ts`. All source arrays, source identity and
 `UNLICENSED` provenance are retained.
 
 ## Source
@@ -33,7 +33,7 @@ Library release `0.2.0` adds public `creature-kit/planet`, built from
 - **Owner decision:** Kasper, 2026-10-07: the creature kit is its own repo, consumed by Atlas (universe-atlas
   `docs/owner-decisions-2026-10-04.md`, "Owner answers 2026-10-07", A18 Q6). Plan:
   `C:/LLM/IWSDK/docs/creature-kit-extraction-plan-2026-10-04.md`.
-- **Licence:** `UNLICENSED` (private, all rights reserved), the same as the rest of the owner's projects. Owner decision A13, 2026-10-07: "Den licens skal være den samme som resten".
+- **Licence:** `UNLICENSED` (all rights reserved; public visibility does not grant reuse rights), the same as the rest of the owner's projects. Owner decision A13, 2026-10-07: "Den licens skal være den samme som resten".
 
 ## Per-file record (at the import commit)
 
@@ -119,7 +119,7 @@ Up to export v2, `src/fauna-composer-export.ts` wrote `asset.generator = "univer
 "exported headless from universe-atlas" into the sidecar and brief; the brief template's id was
 `atlas-creature-export-quest-3`. They were part of the pinned GLB and sidecar bytes, so the byte-identical extraction
 kept them. Export v3 (`fauna-composer-export-3`, branch `kit/export-3`, `docs/creature-export-v3.md`) renames them in one
-versioned change, together with the private licence (owner decision A13): the generator, provider and project are
+versioned change, together with the no-grant licence metadata (owner decision A13): the generator, provider and project are
 `creature-kit`, the template id is `creature-kit-export-quest-3`, and the sidecars, briefs and template say
 `UNLICENSED`. Only the JSON chunk strings moved; every GLB BIN chunk that needs no skeleton reduction is byte-identical
 to the import (ledger in `docs/creature-export-v3.md`). From this change on, `src/fauna-composer-export.ts`,
