@@ -517,7 +517,7 @@ export class FaunaComposerRenderer<D, C extends FaunaComposerCandidate<D> = Faun
   }
   private trimFullSources(): void {
     for (const [key, entry] of this.entries) if (!this.fullSourceKeys.has(key) && entry.source && (entry.levels.middle || entry.levels.far)) {
-      this.revision++; entry.batches.near?.dispose(); delete entry.batches.near; delete entry.levels.near; entry.source = null;
+      this.revision++; entry.batches.near?.dispose(); delete entry.batches.near; delete entry.levels.near; delete entry.activeBones.near; entry.source = null;
       this.recount(entry, key);
     }
   }
@@ -527,7 +527,7 @@ export class FaunaComposerRenderer<D, C extends FaunaComposerCandidate<D> = Faun
       const members = this.members.get(key) ?? [];
       if (!members.length || members.some(c => this.candidateTier(c, this.actors.get(c.id)?.tier) !== 'far' || this.actors.get(c.id)?.tier !== 'far')) continue;
       for(const [id,binding]of this.mergedBindings)if(binding.middle===key)this.releaseMerged(id,'middle');
-      this.revision++; entry.batches.middle?.dispose(); delete entry.batches.middle; delete entry.levels.middle;
+      this.revision++; entry.batches.middle?.dispose(); delete entry.batches.middle; delete entry.levels.middle; delete entry.activeBones.middle;
       this.recount(entry, key);
     }
   }
@@ -549,7 +549,7 @@ export class FaunaComposerRenderer<D, C extends FaunaComposerCandidate<D> = Faun
       if (this.levelOwners.get(ownerKey) === id) {
         const replacement = [...this.mergedBindings].find(([other, b]) => other !== id && b[kind]===key);
         if (replacement && entry?.levels[kind]) {entry.levels[kind] = pool.residentSkin(replacement[0], entry.levels[kind]!); this.levelOwners.set(ownerKey, replacement[0]);}
-        else {if (entry) delete entry.levels[kind]; this.levelOwners.delete(ownerKey);}
+        else {if (entry) {delete entry.levels[kind];delete entry.activeBones[kind];} this.levelOwners.delete(ownerKey);}
         if (entry) this.recount(entry, key);
       }
       pool.release(id);delete bindings[kind];this.revision++;
