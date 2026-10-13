@@ -57,7 +57,7 @@ Status: **experimental**, public on GitHub, all rights reserved
 A13, 2026-10-07). Generated creatures stay
 experimental until topology, deformation and in-headset checks pass.
 
-Where it came from, file by file: `PROVENANCE.md`. Extraction plan: `C:/LLM/IWSDK/docs/creature-kit-extraction-plan-2026-10-04.md`.
+Where it came from, file by file: [PROVENANCE.md](PROVENANCE.md). Extraction plan: [Creature Kit extraction plan](https://github.com/kblood/universe-atlas/blob/main/docs/creature-kit-extraction-plan-2026-10-04.md).
 
 ## Layout
 

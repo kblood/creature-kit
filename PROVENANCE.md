@@ -22,7 +22,7 @@ Library release `0.2.0` adds public `creature-kit/planet`, built from
 
 ## Source
 
-- **Source repository:** `C:/LLM/IWSDK/universe-atlas` (local, no remote).
+- **Source repository:** [`kblood/universe-atlas`](https://github.com/kblood/universe-atlas).
 - **Source commit:** `ab6042c567b3c854b534427f83c7c515733e11d5` (`ab6042c`, universe-atlas `main` on 2026-10-07, after the
   composer-stability, export-v2 and ocellus-seam merges).
 - **Method:** copy, not move. No history-preserving tool fits: `git filter-repo` is not installed, and `git subtree split`
@@ -32,7 +32,7 @@ Library release `0.2.0` adds public `creature-kit/planet`, built from
   touched each file is listed below, so `git -C universe-atlas log <commit> -- <path>` recovers it.
 - **Owner decision:** Kasper, 2026-10-07: the creature kit is its own repo, consumed by Atlas (universe-atlas
   `docs/owner-decisions-2026-10-04.md`, "Owner answers 2026-10-07", A18 Q6). Plan:
-  `C:/LLM/IWSDK/docs/creature-kit-extraction-plan-2026-10-04.md`.
+  [creature-kit extraction plan](https://github.com/kblood/universe-atlas/blob/main/docs/creature-kit-extraction-plan-2026-10-04.md).
 - **Licence:** `UNLICENSED` (all rights reserved; public visibility does not grant reuse rights), the same as the rest of the owner's projects. Owner decision A13, 2026-10-07: "Den licens skal være den samme som resten".
 
 ## Per-file record (at the import commit)
