@@ -1,5 +1,9 @@
 # creature-kit
 
+Private Git remote (`origin`, branch `main`):
+`caldor@192.168.50.17:/srv/git/repositories/creature-kit.git` (the same SSH
+Git server used by Universe Atlas).
+
 Since `0.11.1`, biped running includes loading, push-off and two suspension
 intervals per cycle, with raised knees and bent-arm pumping. Quadrupeds use a
 hind/front gallop sequence with a short left/right lag, spinal flexion and
